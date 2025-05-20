@@ -3,7 +3,7 @@ import { ref, onValue, push, set, remove, get } from "firebase/database";
 import { database } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { 
   AlertTriangle, 
   Plus, 
@@ -30,16 +31,16 @@ import {
   XCircle,
   CalendarClock,
   MapPin,
-  Gauge,
-  ChevronRight
+  Clock,
+  Eye
 } from "lucide-react";
 import { Device, WaterLevel, WasteBin } from "@/types";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "wouter";
-import { motion } from "framer-motion";
+import { Link, useLocation } from "wouter";
 
 export default function Devices() {
   const { user } = useAuth();
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const [devices, setDevices] = useState<Device[]>([]);
   const [waterLevels, setWaterLevels] = useState<Record<string, WaterLevel>>({});
@@ -197,17 +198,21 @@ export default function Devices() {
 
   // Helper function to get water level status color
   const getWaterLevelColor = (level: number): string => {
-    if (level > 85) return "bg-destructive";
-    if (level > 65) return "bg-warning";
-    return "bg-success";
+    if (level > 85) return "text-destructive";
+    if (level > 65) return "text-warning";
+    return "text-success";
   };
 
   // Helper function to get bin fullness color
   const getBinFullnessColor = (fullness: number): string => {
-    if (fullness > 85) return "bg-destructive";
-    if (fullness > 60) return "bg-warning";
-    return "bg-success";
+    if (fullness > 85) return "text-destructive";
+    if (fullness > 60) return "text-warning";
+    return "text-success";
   };
+  
+  // Calculate active status based on recent data updates (last 5 minutes)
+  const fiveMinutesAgo = new Date();
+  fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
 
   return (
     <DashboardLayout 
@@ -343,144 +348,117 @@ export default function Devices() {
           </Dialog>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {devices.map((device, index) => {
-            // Get associated sensor data for this device
-            const waterLevel = waterLevels[device.id];
-            const wasteBin = wasteBins[device.id];
-            
-            // Check if device is active (updated in the last 5 minutes)
-            const lastUpdatedWater = waterLevel?.lastUpdated ? new Date(waterLevel.lastUpdated) : null;
-            const lastEmptiedBin = wasteBin?.lastEmptied ? new Date(wasteBin.lastEmptied) : null;
-            const fiveMinutesAgo = new Date();
-            fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
-            
-            // Device is active if any sensor has been updated in the last 5 minutes
-            const isActive = (
-              (lastUpdatedWater && lastUpdatedWater >= fiveMinutesAgo) ||
-              (lastEmptiedBin && lastEmptiedBin >= fiveMinutesAgo)
-            );
-            
-            return (
-              <motion.div
-                key={device.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.05 * index }}
-                whileHover={{ scale: 1.02 }}
-              >
-                <Card className="h-full border-2 hover:border-primary hover:shadow-lg transition-all duration-300 overflow-hidden">
-                  <CardHeader className="pb-3 bg-gradient-to-r from-blue-50 to-transparent">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <div className="flex -space-x-1">
-                          <div className="w-4 h-4 rounded-full bg-primary flex items-center justify-center">
-                            <Droplet className="h-2.5 w-2.5 text-white" />
-                          </div>
-                          <div className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center">
-                            <Trash className="h-2.5 w-2.5 text-white" />
-                          </div>
-                        </div>
-                        <CardTitle className="text-base font-medium text-gray-800">
-                          {device.name}
-                        </CardTitle>
-                      </div>
-                      <Badge 
-                        variant={isActive ? "default" : "outline"}
-                        className={isActive ? "" : "bg-gray-100 text-gray-500"}
-                      >
-                        {isActive ? "Active" : "Inactive"}
-                      </Badge>
-                    </div>
-                    <CardDescription className="flex items-center mt-1 text-sm text-gray-500">
-                      <MapPin className="h-3.5 w-3.5 mr-1" />
-                      {device.location}
-                    </CardDescription>
-                  </CardHeader>
-                  
-                  <CardContent className="pt-2">
-                    <div className="mb-4">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm text-gray-500">Water Level</span>
-                        <span className="text-sm font-medium">{waterLevel?.level || 0}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                        <div 
-                          className={`h-2.5 rounded-full ${getWaterLevelColor(waterLevel?.level || 0)}`} 
-                          style={{ width: `${waterLevel?.level || 0}%` }}
-                        ></div>
-                      </div>
-                    </div>
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Device</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Water Level</TableHead>
+                  <TableHead>Bin Fullness</TableHead>
+                  <TableHead>Weight</TableHead>
+                  <TableHead>Last Updated</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {devices.map((device) => {
+                  const waterLevel = waterLevels[device.id];
+                  const wasteBin = wasteBins[device.id];
                     
-                    <div className="grid grid-cols-2 gap-4 mb-2">
-                      <div>
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-sm text-gray-500">Bin Fullness</span>
-                          <span className="text-sm font-medium">{wasteBin?.fullness || 0}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                          <div 
-                            className={`h-2.5 rounded-full ${getBinFullnessColor(wasteBin?.fullness || 0)}`} 
-                            style={{ width: `${wasteBin?.fullness || 0}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-sm text-gray-500">Weight</span>
-                          <span className="text-sm font-medium">{wasteBin?.weight || 0} kg</span>
-                        </div>
-                        <div className="flex items-center">
-                          <Scale className="h-4 w-4 text-blue-500 mr-1" />
-                          <span className="text-xs text-gray-500">Capacity: 100kg</span>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                  
-                  <CardFooter className="flex justify-between pt-0">
-                    <div className="flex items-center text-xs text-gray-500">
-                      <CalendarClock className="h-3.5 w-3.5 mr-1" />
-                      Last seen: {device.lastSeen}
-                    </div>
+                  // Check if device is active (updated in the last 5 minutes)
+                  const lastUpdatedWater = waterLevel?.lastUpdated ? new Date(waterLevel.lastUpdated) : null;
+                  const lastEmptiedBin = wasteBin?.lastEmptied ? new Date(wasteBin.lastEmptied) : null;
                     
-                    <div className="flex items-center gap-2">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500">
-                            <Trash2 className="h-4 w-4" />
+                  // Device is active if any sensor has been updated in the last 5 minutes
+                  const isActive = (
+                    (lastUpdatedWater && lastUpdatedWater >= fiveMinutesAgo) ||
+                    (lastEmptiedBin && lastEmptiedBin >= fiveMinutesAgo)
+                  );
+                  
+                  // Get last updated time
+                  const lastUpdated = lastUpdatedWater && lastEmptiedBin 
+                  ? new Date(Math.max(lastUpdatedWater.getTime(), lastEmptiedBin.getTime())).toLocaleString()
+                  : (lastUpdatedWater 
+                      ? new Date(lastUpdatedWater).toLocaleString() 
+                      : (lastEmptiedBin 
+                          ? new Date(lastEmptiedBin).toLocaleString() 
+                          : 'Never'
+                        )
+                    );
+
+                  return (
+                    <TableRow key={device.id}>
+                      <TableCell className="font-medium">{device.name}</TableCell>
+                      <TableCell>{device.location}</TableCell>
+                      <TableCell>
+                        <Badge variant={isActive ? "default" : "outline"} className={isActive ? "" : "bg-gray-100 text-gray-500"}>
+                          {isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className={getWaterLevelColor(waterLevel?.level || 0)}>
+                          {waterLevel?.level || 0}%
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className={getBinFullnessColor(wasteBin?.fullness || 0)}>
+                          {wasteBin?.fullness || 0}%
+                        </div>
+                      </TableCell>
+                      <TableCell>{wasteBin?.weight || 0} kg</TableCell>
+                      <TableCell className="text-xs text-gray-500">
+                        {lastUpdated}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end space-x-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => setLocation(`/water-level-details?id=${device.id}`)}
+                          >
+                            <Eye className="h-4 w-4" />
                           </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Remove Device</DialogTitle>
-                            <DialogDescription>
-                              Are you sure you want to remove {device.name}? This action cannot be undone.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <DialogFooter>
-                            <DialogClose asChild>
-                              <Button variant="outline">Cancel</Button>
-                            </DialogClose>
-                            <DialogClose asChild>
-                              <Button 
-                                variant="destructive" 
-                                onClick={() => handleRemoveDevice(device.id)}
-                              >
-                                Remove
+                          
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="text-red-500">
+                                <Trash2 className="h-4 w-4" />
                               </Button>
-                            </DialogClose>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
-                  </CardFooter>
-                </Card>
-              </motion.div>
-            );
-          })}
-        </div>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Remove Device</DialogTitle>
+                                <DialogDescription>
+                                  Are you sure you want to remove {device.name}? This action cannot be undone.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <DialogFooter>
+                                <DialogClose asChild>
+                                  <Button variant="outline">Cancel</Button>
+                                </DialogClose>
+                                <DialogClose asChild>
+                                  <Button 
+                                    variant="destructive" 
+                                    onClick={() => handleRemoveDevice(device.id)}
+                                  >
+                                    Remove
+                                  </Button>
+                                </DialogClose>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
     </DashboardLayout>
   );

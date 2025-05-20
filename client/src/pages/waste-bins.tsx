@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { 
   BarChart, 
   Bar, 
+  LineChart,
+  Line,
   XAxis, 
   YAxis, 
   CartesianGrid, 
