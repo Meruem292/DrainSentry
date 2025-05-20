@@ -49,6 +49,21 @@ export default function Devices() {
   const [deviceId, setDeviceId] = useState("");
   const [deviceName, setDeviceName] = useState("");
   const [deviceLocation, setDeviceLocation] = useState("");
+  const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  
+  // Threshold settings
+  const [waterLevelThreshold, setWaterLevelThreshold] = useState(80);
+  const [binFullnessThreshold, setBinFullnessThreshold] = useState(80);
+  const [wasteWeightThreshold, setWasteWeightThreshold] = useState(80);
+  
+  // Notification settings
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [notifyOnWaterLevel, setNotifyOnWaterLevel] = useState(true);
+  const [notifyOnBinFullness, setNotifyOnBinFullness] = useState(true);
+  const [notifyOnWeight, setNotifyOnWeight] = useState(true);
+  const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   
   useEffect(() => {
     if (!user) return;
@@ -56,6 +71,7 @@ export default function Devices() {
     const devicesRef = ref(database, `users/${user.uid}/devices`);
     const waterLevelsRef = ref(database, `users/${user.uid}/waterLevels`);
     const wasteBinsRef = ref(database, `users/${user.uid}/wasteBins`);
+    const contactsRef = ref(database, `users/${user.uid}/contacts`);
     
     // Get all devices
     const devicesUnsubscribe = onValue(devicesRef, (snapshot) => {
@@ -92,10 +108,25 @@ export default function Devices() {
       }
     });
 
+    // Get all contacts
+    const contactsUnsubscribe = onValue(contactsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const contactsList = Object.entries(data).map(([id, value]) => ({
+          id,
+          ...value as any
+        }));
+        setContacts(contactsList);
+      } else {
+        setContacts([]);
+      }
+    });
+
     return () => {
       devicesUnsubscribe();
       waterLevelsUnsubscribe();
       wasteBinsUnsubscribe();
+      contactsUnsubscribe();
     };
   }, [user]);
 
@@ -117,6 +148,18 @@ export default function Devices() {
         location: deviceLocation.trim() || "Unknown",
         status: "inactive",
         lastSeen: new Date().toISOString(),
+        thresholds: {
+          waterLevel: waterLevelThreshold,
+          binFullness: binFullnessThreshold,
+          wasteWeight: wasteWeightThreshold
+        },
+        notifications: {
+          enabled: notificationsEnabled,
+          notifyOnWaterLevel,
+          notifyOnBinFullness,
+          notifyOnWeight,
+          notifyContacts: selectedContacts
+        }
       };
       
       const devicesRef = ref(database, `users/${user.uid}/devices`);
@@ -161,6 +204,96 @@ export default function Devices() {
     }
   };
 
+  const handleEditDevice = async (device: Device) => {
+    if (!user) return;
+    
+    setSelectedDevice(device);
+    setDeviceName(device.name);
+    setDeviceLocation(device.location);
+    
+    // Set threshold values
+    setWaterLevelThreshold(device.thresholds?.waterLevel || 80);
+    setBinFullnessThreshold(device.thresholds?.binFullness || 80);
+    setWasteWeightThreshold(device.thresholds?.wasteWeight || 80);
+    
+    // Set notification values
+    setNotificationsEnabled(device.notifications?.enabled || true);
+    setNotifyOnWaterLevel(device.notifications?.notifyOnWaterLevel || true);
+    setNotifyOnBinFullness(device.notifications?.notifyOnBinFullness || true);
+    setNotifyOnWeight(device.notifications?.notifyOnWeight || true);
+    setSelectedContacts(device.notifications?.notifyContacts || []);
+    
+    setEditMode(true);
+  };
+  
+  const handleUpdateDevice = async () => {
+    if (!user || !selectedDevice) return;
+    
+    try {
+      const updatedDevice = {
+        ...selectedDevice,
+        name: deviceName.trim() || selectedDevice.name,
+        location: deviceLocation.trim() || selectedDevice.location,
+        thresholds: {
+          waterLevel: waterLevelThreshold,
+          binFullness: binFullnessThreshold,
+          wasteWeight: wasteWeightThreshold
+        },
+        notifications: {
+          enabled: notificationsEnabled,
+          notifyOnWaterLevel,
+          notifyOnBinFullness,
+          notifyOnWeight,
+          notifyContacts: selectedContacts
+        }
+      };
+      
+      const deviceRef = ref(database, `users/${user.uid}/devices/${selectedDevice.id}`);
+      await set(deviceRef, updatedDevice);
+      
+      // Update associated water level location
+      if (deviceLocation !== selectedDevice.location) {
+        const waterRef = ref(database, `users/${user.uid}/waterLevels/${selectedDevice.id}`);
+        const waterSnapshot = await get(waterRef);
+        if (waterSnapshot.exists()) {
+          const waterData = waterSnapshot.val();
+          await set(waterRef, {
+            ...waterData,
+            location: deviceLocation.trim() || selectedDevice.location
+          });
+        }
+        
+        // Update associated waste bin location
+        const wasteRef = ref(database, `users/${user.uid}/wasteBins/${selectedDevice.id}`);
+        const wasteSnapshot = await get(wasteRef);
+        if (wasteSnapshot.exists()) {
+          const wasteData = wasteSnapshot.val();
+          await set(wasteRef, {
+            ...wasteData,
+            location: deviceLocation.trim() || selectedDevice.location
+          });
+        }
+      }
+      
+      toast({
+        title: "Device Updated",
+        description: "Your device has been updated successfully",
+      });
+      
+      // Reset form and close dialog
+      setSelectedDevice(null);
+      setDeviceName("");
+      setDeviceLocation("");
+      setEditMode(false);
+    } catch (error) {
+      toast({
+        title: "Error Updating Device",
+        description: "There was an error updating your device. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+  
   const handleRemoveDevice = async (deviceId: string) => {
     if (!user) return;
     

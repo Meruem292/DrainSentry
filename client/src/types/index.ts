@@ -20,6 +20,18 @@ export interface Device {
   location: string;
   status: "active" | "inactive";
   lastSeen: string;
+  thresholds?: {
+    waterLevel?: number;
+    binFullness?: number;
+    wasteWeight?: number;
+  };
+  notifications?: {
+    enabled: boolean;
+    notifyOnWaterLevel: boolean;
+    notifyOnBinFullness: boolean;
+    notifyOnWeight: boolean;
+    notifyContacts: string[]; // IDs of contacts to notify
+  };
 }
 
 export interface Contact {
