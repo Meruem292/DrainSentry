@@ -6,11 +6,13 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { InfoIcon } from "lucide-react";
+import { InfoIcon, Droplet, Trash2, BadgeAlert, Info } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { WaterLevel, WasteBin } from "@/types";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
+import { Badge } from "@/components/ui/badge";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -81,32 +83,94 @@ export default function Dashboard() {
         
         <TabsContent value="overview" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-500">Water Monitoring Stations</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{waterData.length}</div>
-              </CardContent>
-            </Card>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              whileHover={{ scale: 1.02 }}
+              className="flex"
+            >
+              <Card className="w-full border-2 hover:border-primary/70 hover:shadow-lg transition-all duration-300">
+                <CardHeader className="pb-2 bg-gradient-to-r from-blue-50 to-transparent">
+                  <div className="flex items-center">
+                    <Droplet className="h-5 w-5 text-primary mr-2" />
+                    <CardTitle className="text-sm font-medium text-gray-700">Monitoring Devices</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-3xl font-bold text-gray-800">{waterData.length}</div>
+                      <div className="text-xs text-gray-500 mt-1">Active devices</div>
+                    </div>
+                    <Badge variant="outline" className="bg-blue-50 text-primary">
+                      Multi-parameter
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
             
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-500">Total Waste Bins</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{totalBins}</div>
-              </CardContent>
-            </Card>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+              whileHover={{ scale: 1.02 }}
+              className="flex"
+            >
+              <Card className="w-full border-2 hover:border-green-600/70 hover:shadow-lg transition-all duration-300">
+                <CardHeader className="pb-2 bg-gradient-to-r from-green-50 to-transparent">
+                  <div className="flex items-center">
+                    <Trash2 className="h-5 w-5 text-green-600 mr-2" />
+                    <CardTitle className="text-sm font-medium text-gray-700">Waste Management</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-3xl font-bold text-gray-800">{totalBins}</div>
+                      <div className="text-xs text-gray-500 mt-1">Monitored bins</div>
+                    </div>
+                    <Badge variant="outline" className="bg-green-50 text-green-600">
+                      {wasteData.filter(bin => bin.fullness > 75).length} critical
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
             
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-500">Total Waste Collected</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{totalWeight}kg</div>
-              </CardContent>
-            </Card>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+              whileHover={{ scale: 1.02 }}
+              className="flex"
+            >
+              <Card className="w-full border-2 hover:border-amber-500/70 hover:shadow-lg transition-all duration-300">
+                <CardHeader className="pb-2 bg-gradient-to-r from-amber-50 to-transparent">
+                  <div className="flex items-center">
+                    <BadgeAlert className="h-5 w-5 text-amber-600 mr-2" />
+                    <CardTitle className="text-sm font-medium text-gray-700">Total Waste Collected</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-3xl font-bold text-gray-800">{totalWeight}kg</div>
+                      <div className="text-xs text-gray-500 mt-1">Total weight</div>
+                    </div>
+                    <motion.div 
+                      whileHover={{ rotate: 15 }}
+                      className="p-2 rounded-full bg-amber-50"
+                    >
+                      <div className="h-8 w-8 rounded-full flex items-center justify-center bg-amber-100">
+                        <Info className="h-4 w-4 text-amber-600" />
+                      </div>
+                    </motion.div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           </div>
           
           {waterData.length === 0 && wasteData.length === 0 && !loading && (
@@ -132,12 +196,12 @@ export default function Dashboard() {
                         <span className="text-sm font-medium">{bin.location} ({bin.id})</span>
                         <span className="text-sm font-medium">{bin.fullness}%</span>
                       </div>
-                      <Progress 
-                        value={bin.fullness} 
-                        max={100} 
-                        className="h-2"
-                        indicatorClassName={bin.fullness > 85 ? "bg-destructive" : "bg-warning"}
-                      />
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full ${bin.fullness > 85 ? "bg-destructive" : "bg-warning"}`} 
+                          style={{ width: `${bin.fullness}%` }}
+                        ></div>
+                      </div>
                       <div className="flex justify-between mt-1">
                         <span className="text-xs text-gray-500">Last emptied: {bin.lastEmptied}</span>
                         <span className="text-xs font-medium">
@@ -187,12 +251,12 @@ export default function Dashboard() {
                       <span className="text-sm font-medium">{station.location} ({station.id})</span>
                       <span className="text-sm font-medium">{station.level}%</span>
                     </div>
-                    <Progress 
-                      value={station.level} 
-                      max={100} 
-                      className="h-2"
-                      indicatorClassName={getWaterLevelColor(station.level)}
-                    />
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full ${getWaterLevelColor(station.level)}`} 
+                        style={{ width: `${station.level}%` }}
+                      ></div>
+                    </div>
                     <div className="flex justify-between mt-1">
                       <span className="text-xs text-gray-500">Last updated: {station.lastUpdated}</span>
                       <span className="text-xs font-medium">

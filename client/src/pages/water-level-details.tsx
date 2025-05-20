@@ -7,10 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Info, ArrowLeft } from "lucide-react";
+import { Info, ArrowLeft, Droplet, BarChart3, AlertTriangle, Activity, CalendarClock } from "lucide-react";
 import { WaterLevel } from "@/types";
 import { Link, useLocation } from "wouter";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area } from "recharts";
+import { motion } from "framer-motion";
+import { Badge } from "@/components/ui/badge";
 
 export default function WaterLevelDetails() {
   const { user } = useAuth();
@@ -164,71 +166,148 @@ export default function WaterLevelDetails() {
         <>
           {/* Overview cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-500">Current Level</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.current}%</div>
-                <div className="mt-2">
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className={`h-2 rounded-full ${getWaterLevelColor(stats.current)}`} 
-                      style={{ width: `${stats.current}%` }}
-                    ></div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              whileHover={{ scale: 1.02 }}
+              className="flex"
+            >
+              <Card className="w-full border-2 hover:border-primary/70 hover:shadow-lg transition-all duration-300">
+                <CardHeader className="pb-2 bg-gradient-to-r from-blue-50 to-transparent">
+                  <div className="flex items-center">
+                    <Droplet className="h-5 w-5 text-primary mr-2" />
+                    <CardTitle className="text-sm font-medium text-gray-700">Current Level</CardTitle>
                   </div>
-                  <div className="text-xs mt-1 text-gray-500">Last updated: {stationData.lastUpdated}</div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-3xl font-bold text-gray-800">{stats.current}%</div>
+                    <Badge 
+                      variant="outline" 
+                      className={`${stats.current > 85 ? 'bg-red-50 text-red-600' : stats.current > 65 ? 'bg-amber-50 text-amber-600' : 'bg-green-50 text-green-600'}`}
+                    >
+                      {getWaterLevelStatus(stats.current)}
+                    </Badge>
+                  </div>
+                  <div className="mt-2">
+                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${stats.current}%` }}
+                        transition={{ duration: 1, ease: "easeOut" }}
+                        className={`h-2 rounded-full ${getWaterLevelColor(stats.current)}`}
+                      ></motion.div>
+                    </div>
+                    <div className="text-xs mt-1 text-gray-500 flex items-center">
+                      <CalendarClock className="h-3 w-3 mr-1" />
+                      Last updated: {stationData.lastUpdated}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
             
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-500">Average Level</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.avg}%</div>
-                <div className="mt-2 h-10">
-                  {getTrendData().length > 0 && (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={getTrendData()} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
-                        <Line 
-                          type="monotone" 
-                          dataKey="value" 
-                          stroke="#2196F3" 
-                          strokeWidth={2}
-                          dot={false}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+              whileHover={{ scale: 1.02 }}
+              className="flex"
+            >
+              <Card className="w-full border-2 hover:border-blue-400/70 hover:shadow-lg transition-all duration-300">
+                <CardHeader className="pb-2 bg-gradient-to-r from-blue-50 to-transparent">
+                  <div className="flex items-center">
+                    <Activity className="h-5 w-5 text-blue-500 mr-2" />
+                    <CardTitle className="text-sm font-medium text-gray-700">Average Level</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <div className="text-3xl font-bold text-gray-800">{stats.avg}%</div>
+                  <div className="mt-3 h-12">
+                    {getTrendData().length > 0 && (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={getTrendData()} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                          <Line 
+                            type="monotone" 
+                            dataKey="value" 
+                            stroke="#3b82f6" 
+                            strokeWidth={2}
+                            dot={false}
+                          />
+                          <Tooltip 
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                return (
+                                  <div className="bg-white/90 backdrop-blur-sm p-2 border border-gray-200 rounded-md shadow-sm">
+                                    <p className="text-xs">{`${payload[0].value}%`}</p>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
             
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-500">Maximum Level</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.max}%</div>
-                <div className="mt-2 text-xs text-gray-500">
-                  {getWaterLevelStatus(stats.max)}
-                </div>
-              </CardContent>
-            </Card>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+              whileHover={{ scale: 1.02 }}
+              className="flex"
+            >
+              <Card className="w-full border-2 hover:border-amber-500/70 hover:shadow-lg transition-all duration-300">
+                <CardHeader className="pb-2 bg-gradient-to-r from-amber-50 to-transparent">
+                  <div className="flex items-center">
+                    <AlertTriangle className="h-5 w-5 text-amber-500 mr-2" />
+                    <CardTitle className="text-sm font-medium text-gray-700">Maximum Level</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <div className="text-3xl font-bold text-gray-800">{stats.max}%</div>
+                  <div className="mt-3 flex items-center">
+                    <div className={`w-3 h-3 rounded-full ${getWaterLevelColor(stats.max)} mr-2`}></div>
+                    <div className="text-xs text-gray-600">
+                      {stats.max > 85 ? 'Critical threshold exceeded' : 
+                        stats.max > 65 ? 'Warning threshold exceeded' : 
+                        'Within normal parameters'}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
             
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-500">Minimum Level</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.min}%</div>
-                <div className="mt-2 text-xs text-gray-500">
-                  {getWaterLevelStatus(stats.min)}
-                </div>
-              </CardContent>
-            </Card>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.3 }}
+              whileHover={{ scale: 1.02 }}
+              className="flex"
+            >
+              <Card className="w-full border-2 hover:border-green-500/70 hover:shadow-lg transition-all duration-300">
+                <CardHeader className="pb-2 bg-gradient-to-r from-green-50 to-transparent">
+                  <div className="flex items-center">
+                    <BarChart3 className="h-5 w-5 text-green-600 mr-2" />
+                    <CardTitle className="text-sm font-medium text-gray-700">Minimum Level</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <div className="text-3xl font-bold text-gray-800">{stats.min}%</div>
+                  <div className="mt-3 flex items-center">
+                    <div className={`w-3 h-3 rounded-full ${getWaterLevelColor(stats.min)} mr-2`}></div>
+                    <div className="text-xs text-gray-600">
+                      {getWaterLevelStatus(stats.min)}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           </div>
           
           {/* Main chart */}
