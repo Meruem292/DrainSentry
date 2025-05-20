@@ -158,7 +158,7 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout title="Dashboard" subtitle="DrainSentry system overview">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-medium">Total Devices</CardTitle>
@@ -175,7 +175,7 @@ export default function Dashboard() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-medium">Critical Water Levels</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative">
             <div className="text-3xl font-bold">{criticalWaterLevels}</div>
             <p className="text-sm text-muted-foreground mt-1">
               {criticalWaterLevels > 0 ? (
@@ -184,6 +184,9 @@ export default function Dashboard() {
                 "All normal"
               )}
             </p>
+            {criticalWaterLevels > 0 && (
+              <div className="absolute top-0 right-0 w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+            )}
           </CardContent>
         </Card>
         
@@ -191,7 +194,7 @@ export default function Dashboard() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-medium">Critical Waste Bins</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative">
             <div className="text-3xl font-bold">{criticalBins}</div>
             <p className="text-sm text-muted-foreground mt-1">
               {criticalBins > 0 ? (
@@ -200,6 +203,40 @@ export default function Dashboard() {
                 "All normal"
               )}
             </p>
+            {criticalBins > 0 && (
+              <div className="absolute top-0 right-0 w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+            )}
+          </CardContent>
+        </Card>
+        
+        <Card className={`${criticalWaterLevels + criticalBins > 0 ? 'border-orange-200 bg-orange-50' : 'border-green-200 bg-green-50'}`}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">System Health</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center">
+              {criticalWaterLevels + criticalBins > 0 ? (
+                <>
+                  <AlertTriangle className="h-6 w-6 text-orange-500 mr-2" />
+                  <div>
+                    <div className="text-lg font-medium">Attention Required</div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {criticalWaterLevels + criticalBins} issues need your attention
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-6 w-6 text-green-500 mr-2" />
+                  <div>
+                    <div className="text-lg font-medium">All Systems Normal</div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Network status: online
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -544,15 +581,10 @@ export default function Dashboard() {
                       <Tooltip formatter={(value) => [`${value}%`, 'Bin Fullness']} />
                       <Bar 
                         dataKey="value" 
-                        fill="#10b981" 
                         radius={[4, 4, 0, 0]}
                         fillOpacity={0.9}
                         barSize={30}
-                        fill={(entry) => {
-                          if (entry.value > 85) return "#ef4444";
-                          if (entry.value > 60) return "#f97316";
-                          return "#10b981";
-                        }}
+                        fill="#10b981"
                       />
                     </BarChart>
                   </ResponsiveContainer>

@@ -260,12 +260,7 @@ export default function WasteBins() {
                       name="Bin Fullness"
                       radius={[4, 4, 0, 0]}
                       barSize={30}
-                      fill={(entry) => {
-                        const value = entry.fullness;
-                        if (value > 85) return "#ef4444";
-                        if (value > 60) return "#f97316";
-                        return "#10b981";
-                      }}
+                      fill="#10b981"
                     />
                     <Legend />
                   </BarChart>
