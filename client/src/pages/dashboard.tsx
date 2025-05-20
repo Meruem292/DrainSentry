@@ -17,7 +17,11 @@ import {
   CalendarClock,
   MapPin,
   ChevronRight,
-  Clock
+  Clock,
+  CheckCircle2,
+  AlertTriangle,
+  Settings,
+  Plus
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { WaterLevel, WasteBin, Device } from "@/types";
@@ -239,6 +243,39 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
+      </div>
+      
+      {/* Quick Actions Section */}
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-medium">Quick Actions</h2>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="cursor-pointer hover:border-primary hover:shadow-md transition-all duration-200" onClick={() => setLocation('/devices')}>
+            <CardContent className="p-4 flex flex-col items-center justify-center">
+              <Plus className="h-8 w-8 text-primary mb-2" />
+              <p className="text-sm font-medium">Add Device</p>
+            </CardContent>
+          </Card>
+          <Card className="cursor-pointer hover:border-primary hover:shadow-md transition-all duration-200" onClick={() => setLocation('/water-levels')}>
+            <CardContent className="p-4 flex flex-col items-center justify-center">
+              <Droplet className="h-8 w-8 text-blue-500 mb-2" />
+              <p className="text-sm font-medium">Water Levels</p>
+            </CardContent>
+          </Card>
+          <Card className="cursor-pointer hover:border-primary hover:shadow-md transition-all duration-200" onClick={() => setLocation('/waste-bins')}>
+            <CardContent className="p-4 flex flex-col items-center justify-center">
+              <Trash2 className="h-8 w-8 text-emerald-500 mb-2" />
+              <p className="text-sm font-medium">Waste Bins</p>
+            </CardContent>
+          </Card>
+          <Card className="cursor-pointer hover:border-primary hover:shadow-md transition-all duration-200" onClick={() => setLocation('/settings')}>
+            <CardContent className="p-4 flex flex-col items-center justify-center">
+              <Settings className="h-8 w-8 text-gray-500 mb-2" />
+              <p className="text-sm font-medium">Settings</p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
       
       {devices.length === 0 && !loading ? (
