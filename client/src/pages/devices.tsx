@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { ref, onValue, push, set, remove } from "firebase/database";
+import { ref, onValue, push, set, remove, get } from "firebase/database";
 import { database } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { 
   Dialog, 
   DialogContent, 
@@ -17,8 +18,22 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, Plus, Trash2, Pencil } from "lucide-react";
-import { Device } from "@/types";
+import { 
+  AlertTriangle, 
+  Plus, 
+  Trash2, 
+  Pencil, 
+  Droplet, 
+  Trash, 
+  Scale, 
+  CheckCircle2, 
+  XCircle,
+  CalendarClock,
+  MapPin,
+  Gauge,
+  ChevronRight
+} from "lucide-react";
+import { Device, WaterLevel, WasteBin } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import {
   Select,
@@ -27,11 +42,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Link } from "wouter";
+import { motion } from "framer-motion";
 
 export default function Devices() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [devices, setDevices] = useState<Device[]>([]);
+  const [waterLevels, setWaterLevels] = useState<Record<string, WaterLevel>>({});
+  const [wasteBins, setWasteBins] = useState<Record<string, WasteBin>>({});
   const [loading, setLoading] = useState(true);
   const [deviceId, setDeviceId] = useState("");
   const [deviceName, setDeviceName] = useState("");
@@ -42,8 +61,11 @@ export default function Devices() {
     if (!user) return;
 
     const devicesRef = ref(database, `users/${user.uid}/devices`);
+    const waterLevelsRef = ref(database, `users/${user.uid}/waterLevels`);
+    const wasteBinsRef = ref(database, `users/${user.uid}/wasteBins`);
     
-    const unsubscribe = onValue(devicesRef, (snapshot) => {
+    // Get all devices
+    const devicesUnsubscribe = onValue(devicesRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
         const deviceList = Object.entries(data).map(([id, value]) => ({
@@ -57,7 +79,31 @@ export default function Devices() {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    // Get all water level data
+    const waterLevelsUnsubscribe = onValue(waterLevelsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setWaterLevels(data);
+      } else {
+        setWaterLevels({});
+      }
+    });
+
+    // Get all waste bin data
+    const wasteBinsUnsubscribe = onValue(wasteBinsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setWasteBins(data);
+      } else {
+        setWasteBins({});
+      }
+    });
+
+    return () => {
+      devicesUnsubscribe();
+      waterLevelsUnsubscribe();
+      wasteBinsUnsubscribe();
+    };
   }, [user]);
 
   const handleAddDevice = async () => {
@@ -106,20 +152,19 @@ export default function Devices() {
       }
       
       toast({
-        title: "Device added",
-        description: "The device has been added successfully",
+        title: "Device Added",
+        description: "Your device has been added successfully",
       });
       
       // Reset form
       setDeviceId("");
       setDeviceName("");
+      setDeviceType("water_level");
       setDeviceLocation("");
-      
     } catch (error) {
-      console.error("Error adding device:", error);
       toast({
-        title: "Failed to add device",
-        description: "There was an error adding the device. Please try again.",
+        title: "Error Adding Device",
+        description: "There was an error adding your device. Please try again.",
         variant: "destructive",
       });
     }
@@ -129,36 +174,64 @@ export default function Devices() {
     if (!user) return;
     
     try {
+      // Remove device from devices
       const deviceRef = ref(database, `users/${user.uid}/devices/${deviceId}`);
       await remove(deviceRef);
       
+      // Check if there's associated water level data
+      const waterRef = ref(database, `users/${user.uid}/waterLevels/${deviceId}`);
+      const waterSnapshot = await get(waterRef);
+      if (waterSnapshot.exists()) {
+        await remove(waterRef);
+      }
+      
+      // Check if there's associated waste bin data
+      const wasteRef = ref(database, `users/${user.uid}/wasteBins/${deviceId}`);
+      const wasteSnapshot = await get(wasteRef);
+      if (wasteSnapshot.exists()) {
+        await remove(wasteRef);
+      }
+      
       toast({
-        title: "Device removed",
-        description: "The device has been removed successfully",
+        title: "Device Removed",
+        description: "Your device has been removed successfully",
       });
     } catch (error) {
-      console.error("Error removing device:", error);
       toast({
-        title: "Failed to remove device",
-        description: "There was an error removing the device. Please try again.",
+        title: "Error Removing Device",
+        description: "There was an error removing your device. Please try again.",
         variant: "destructive",
       });
     }
   };
 
+  // Helper function to get water level status color
+  const getWaterLevelColor = (level: number): string => {
+    if (level > 85) return "bg-destructive";
+    if (level > 65) return "bg-warning";
+    return "bg-success";
+  };
+
+  // Helper function to get bin fullness color
+  const getBinFullnessColor = (fullness: number): string => {
+    if (fullness > 85) return "bg-destructive";
+    if (fullness > 60) return "bg-warning";
+    return "bg-success";
+  };
+
   return (
     <DashboardLayout 
       title="Devices" 
-      subtitle="Manage your connected monitoring devices"
+      subtitle="Manage your connected DrainSentry devices"
     >
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex justify-between items-center">
         <h2 className="text-lg font-medium text-gray-800">Connected Devices</h2>
         
         <Dialog>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-5 w-5 mr-2" />
-              Add Device
+              Add New Device
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -229,161 +302,242 @@ export default function Devices() {
         </Dialog>
       </div>
       
-      <Card>
-        <CardContent className="p-6">
-          {devices.length === 0 && !loading ? (
-            <div className="flex flex-col items-center justify-center py-8">
-              <div className="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center mb-4">
-                <AlertTriangle className="h-6 w-6 text-warning" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-800 mb-2">No devices found</h3>
-              <p className="text-gray-500 text-center mb-6">There are no devices connected to your account.</p>
+      {devices.length === 0 && !loading ? (
+        <div className="bg-white rounded-lg shadow-sm p-8 mb-6 flex flex-col items-center justify-center">
+          <div className="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center mb-4">
+            <AlertTriangle className="h-6 w-6 text-warning" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-800 mb-2">No devices found</h3>
+          <p className="text-gray-500 text-center mb-6">There are no devices connected to your account.</p>
+          
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-5 w-5 mr-2" />
+                Add Your First Device
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Device</DialogTitle>
+                <DialogDescription>
+                  Enter the device details to connect it to your DrainSentry system.
+                </DialogDescription>
+              </DialogHeader>
               
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="h-5 w-5 mr-2" />
-                    Add Your First Device
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add New Device</DialogTitle>
-                    <DialogDescription>
-                      Enter the device details to connect it to your DrainSentry system.
-                    </DialogDescription>
-                  </DialogHeader>
-                  
-                  <div className="grid gap-4 py-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="deviceId">Device ID</Label>
-                      <Input 
-                        id="deviceId" 
-                        value={deviceId} 
-                        onChange={(e) => setDeviceId(e.target.value)}
-                        placeholder="Enter device ID (required)"
-                      />
-                    </div>
-                    
-                    <div className="grid gap-2">
-                      <Label htmlFor="deviceName">Device Name (Optional)</Label>
-                      <Input 
-                        id="deviceName" 
-                        value={deviceName} 
-                        onChange={(e) => setDeviceName(e.target.value)}
-                        placeholder="Enter a friendly name for this device"
-                      />
-                    </div>
-                    
-                    <div className="grid gap-2">
-                      <Label htmlFor="deviceType">Device Type</Label>
-                      <Select 
-                        value={deviceType} 
-                        onValueChange={setDeviceType}
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="deviceId">Device ID</Label>
+                  <Input 
+                    id="deviceId" 
+                    value={deviceId} 
+                    onChange={(e) => setDeviceId(e.target.value)}
+                    placeholder="Enter device ID (required)"
+                  />
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="deviceName">Device Name (Optional)</Label>
+                  <Input 
+                    id="deviceName" 
+                    value={deviceName} 
+                    onChange={(e) => setDeviceName(e.target.value)}
+                    placeholder="Enter a friendly name for this device"
+                  />
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="deviceType">Device Type</Label>
+                  <Select 
+                    value={deviceType} 
+                    onValueChange={setDeviceType}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select device type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="water_level">Water Level Sensor</SelectItem>
+                      <SelectItem value="waste_bin">Waste Bin Monitor</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="deviceLocation">Location</Label>
+                  <Input 
+                    id="deviceLocation" 
+                    value={deviceLocation} 
+                    onChange={(e) => setDeviceLocation(e.target.value)}
+                    placeholder="Enter the device location"
+                  />
+                </div>
+              </div>
+              
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Cancel</Button>
+                </DialogClose>
+                <DialogClose asChild>
+                  <Button onClick={handleAddDevice}>Add Device</Button>
+                </DialogClose>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {devices.map((device, index) => {
+            // Get associated sensor data
+            const waterLevel = device.type === "water_level" ? waterLevels[device.id] : null;
+            const wasteBin = device.type === "waste_bin" ? wasteBins[device.id] : null;
+            
+            return (
+              <motion.div
+                key={device.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.05 * index }}
+                whileHover={{ scale: 1.02 }}
+              >
+                <Card className="h-full border-2 hover:shadow-lg transition-all duration-300 overflow-hidden">
+                  <CardHeader className="pb-3 bg-gradient-to-r from-blue-50 to-transparent">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        {device.type === "water_level" ? (
+                          <Droplet className="h-5 w-5 text-primary" />
+                        ) : (
+                          <Trash className="h-5 w-5 text-emerald-600" />
+                        )}
+                        <CardTitle className="text-base font-medium text-gray-800">
+                          {device.name}
+                        </CardTitle>
+                      </div>
+                      <Badge 
+                        variant="outline" 
+                        className={device.status === "active" 
+                          ? "bg-green-50 text-green-600" 
+                          : "bg-gray-100 text-gray-500"
+                        }
                       >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select device type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="water_level">Water Level Sensor</SelectItem>
-                          <SelectItem value="waste_bin">Waste Bin Monitor</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        {device.status === "active" ? "Active" : "Inactive"}
+                      </Badge>
+                    </div>
+                    <CardDescription className="flex items-center mt-1 text-sm text-gray-500">
+                      <MapPin className="h-3.5 w-3.5 mr-1" />
+                      {device.location}
+                    </CardDescription>
+                  </CardHeader>
+                  
+                  <CardContent className="pt-2">
+                    {/* Show appropriate sensor data based on device type */}
+                    {device.type === "water_level" && waterLevel && (
+                      <div className="mb-4">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm text-gray-500">Water Level</span>
+                          <span className="text-sm font-medium">{waterLevel.level}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                          <div 
+                            className={`h-2.5 rounded-full ${getWaterLevelColor(waterLevel.level)}`} 
+                            style={{ width: `${waterLevel.level}%` }}
+                          ></div>
+                        </div>
+                        <div className="flex justify-between mt-2 items-center text-xs text-gray-500">
+                          <span>Last updated: {waterLevel.lastUpdated}</span>
+                          {waterLevel.level > 85 && (
+                            <Badge variant="destructive" className="text-xs">Alert</Badge>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {device.type === "waste_bin" && wasteBin && (
+                      <div>
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-sm text-gray-500">Fullness</span>
+                              <span className="text-sm font-medium">{wasteBin.fullness}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                              <div 
+                                className={`h-2.5 rounded-full ${getBinFullnessColor(wasteBin.fullness)}`} 
+                                style={{ width: `${wasteBin.fullness}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-sm text-gray-500">Weight</span>
+                              <span className="text-sm font-medium">{wasteBin.weight} kg</span>
+                            </div>
+                            <div className="flex items-center">
+                              <Scale className="h-4 w-4 text-blue-500 mr-1" />
+                              <span className="text-xs text-gray-500">Capacity: 100kg</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Last emptied: {wasteBin.lastEmptied}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                  
+                  <CardFooter className="flex justify-between pt-0">
+                    <div className="flex items-center text-xs text-gray-500">
+                      <CalendarClock className="h-3.5 w-3.5 mr-1" />
+                      Last seen: {device.lastSeen}
                     </div>
                     
-                    <div className="grid gap-2">
-                      <Label htmlFor="deviceLocation">Location</Label>
-                      <Input 
-                        id="deviceLocation" 
-                        value={deviceLocation} 
-                        onChange={(e) => setDeviceLocation(e.target.value)}
-                        placeholder="Enter the device location"
-                      />
+                    <div className="flex items-center gap-2">
+                      {device.type === "water_level" ? (
+                        <Link href={`/water-levels/${device.id}`} className="text-xs text-primary flex items-center">
+                          View Details <ChevronRight className="h-3 w-3 ml-1" />
+                        </Link>
+                      ) : (
+                        <Link href={`/waste-bins/${device.id}`} className="text-xs text-emerald-600 flex items-center">
+                          View Details <ChevronRight className="h-3 w-3 ml-1" />
+                        </Link>
+                      )}
+                      
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Remove Device</DialogTitle>
+                            <DialogDescription>
+                              Are you sure you want to remove {device.name}? This action cannot be undone.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <DialogFooter>
+                            <DialogClose asChild>
+                              <Button variant="outline">Cancel</Button>
+                            </DialogClose>
+                            <DialogClose asChild>
+                              <Button 
+                                variant="destructive" 
+                                onClick={() => handleRemoveDevice(device.id)}
+                              >
+                                Remove
+                              </Button>
+                            </DialogClose>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                     </div>
-                  </div>
-                  
-                  <DialogFooter>
-                    <DialogClose asChild>
-                      <Button variant="outline">Cancel</Button>
-                    </DialogClose>
-                    <DialogClose asChild>
-                      <Button onClick={handleAddDevice}>Add Device</Button>
-                    </DialogClose>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Device ID</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Name</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Type</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Location</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Status</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Last Seen</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {devices.map(device => (
-                    <tr key={device.id} className="border-b border-gray-200">
-                      <td className="py-3 px-4">{device.id}</td>
-                      <td className="py-3 px-4">{device.name}</td>
-                      <td className="py-3 px-4">
-                        {device.type === "water_level" ? "Water Level Sensor" : "Waste Bin Monitor"}
-                      </td>
-                      <td className="py-3 px-4">{device.location}</td>
-                      <td className="py-3 px-4">
-                        <span className={`status-badge ${
-                          device.status === "active" 
-                            ? "status-badge-success" 
-                            : "bg-gray-100 text-gray-500"
-                        }`}>
-                          {device.status === "active" ? "Active" : "Inactive"}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">{device.lastSeen}</td>
-                      <td className="py-3 px-4">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-destructive">
-                              <Trash2 className="h-5 w-5" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Remove Device</DialogTitle>
-                              <DialogDescription>
-                                Are you sure you want to remove this device? This action cannot be undone.
-                              </DialogDescription>
-                            </DialogHeader>
-                            <DialogFooter>
-                              <DialogClose asChild>
-                                <Button variant="outline">Cancel</Button>
-                              </DialogClose>
-                              <DialogClose asChild>
-                                <Button 
-                                  variant="destructive" 
-                                  onClick={() => handleRemoveDevice(device.id)}
-                                >
-                                  Remove
-                                </Button>
-                              </DialogClose>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  </CardFooter>
+                </Card>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
     </DashboardLayout>
   );
 }
