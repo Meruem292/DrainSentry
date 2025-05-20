@@ -360,6 +360,7 @@ export default function WaterLevelDetails() {
           <TabsTrigger value="overview" onClick={() => setActiveTab("overview")}>Overview</TabsTrigger>
           <TabsTrigger value="water-history" onClick={() => setActiveTab("water-history")}>Water Level History</TabsTrigger>
           <TabsTrigger value="waste-history" onClick={() => setActiveTab("waste-history")}>Waste Bin History</TabsTrigger>
+          <TabsTrigger value="predictions" onClick={() => setActiveTab("predictions")}>Predictions</TabsTrigger>
           <TabsTrigger value="analysis" onClick={() => setActiveTab("analysis")}>Analysis</TabsTrigger>
         </TabsList>
         
