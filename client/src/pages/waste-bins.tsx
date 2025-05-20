@@ -346,7 +346,7 @@ export default function WasteBins() {
                 onClick={() => setLocation(`/water-level-details?id=${device.id}`)}
                 className="cursor-pointer"
               >
-                <Card className="h-full border-2 hover:border-emerald-500 hover:shadow-lg transition-all duration-300 overflow-hidden">
+                <Card className="h-full border-2 hover:border-emerald-500 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 overflow-hidden">
                   <CardHeader className="pb-3 bg-gradient-to-r from-green-50 to-transparent border-b">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2">

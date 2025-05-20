@@ -222,12 +222,14 @@ export default function WaterLevels() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className={`animated-card slide-in ${Object.values(waterLevels).filter(water => water.level > 85).length > 0 ? 'danger-card' : 'success-card'}`} style={{animationDelay: '0.1s'}}>
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-medium">Critical Stations</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{Object.values(waterLevels).filter(water => water.level > 85).length}</div>
+          <CardContent className="relative">
+            <div className={`text-3xl font-bold ${Object.values(waterLevels).filter(water => water.level > 85).length > 0 ? 'text-destructive' : 'text-success'}`}>
+              {Object.values(waterLevels).filter(water => water.level > 85).length}
+            </div>
             <p className="text-sm text-muted-foreground mt-1">
               {Object.values(waterLevels).filter(water => water.level > 85).length > 0 ? (
                 <span className="text-destructive">Requires attention</span>
@@ -235,6 +237,9 @@ export default function WaterLevels() {
                 "All normal"
               )}
             </p>
+            {Object.values(waterLevels).filter(water => water.level > 85).length > 0 && (
+              <div className="absolute top-0 right-0 w-2 h-2 rounded-full bg-red-500 pulse-animation"></div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -322,7 +327,7 @@ export default function WaterLevels() {
                 onClick={() => setLocation(`/water-level-details?id=${device.id}`)}
                 className="cursor-pointer"
               >
-                <Card className="h-full border-2 hover:border-primary hover:shadow-lg transition-all duration-300 overflow-hidden">
+                <Card className="h-full border-2 hover:border-primary hover:shadow-lg hover:-translate-y-1 transition-all duration-300 overflow-hidden">
                   <CardHeader className="pb-3 bg-gradient-to-r from-blue-50 to-transparent border-b">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2">
