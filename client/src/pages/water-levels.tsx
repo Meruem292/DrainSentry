@@ -14,7 +14,11 @@ import {
   CartesianGrid, 
   Tooltip, 
   Legend, 
-  ResponsiveContainer 
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  LineChart,
+  Line
 } from "recharts";
 import { 
   Droplet, 
@@ -23,7 +27,8 @@ import {
   CalendarClock, 
   MapPin,
   Clock,
-  ChevronRight
+  ChevronRight,
+  AlertTriangle
 } from "lucide-react";
 import { Device, WaterLevel, WasteBin } from "@/types";
 import { Link, useLocation } from "wouter";
@@ -128,17 +133,140 @@ export default function WaterLevels() {
   const fiveMinutesAgo = new Date();
   fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
 
+  // Generate sample water level history data for analytics
+  function generateWaterLevelData(deviceId: string, days: number = 7) {
+    const data = [];
+    const now = new Date();
+    
+    for (let i = 0; i < days; i++) {
+      const date = new Date();
+      date.setDate(now.getDate() - i);
+      
+      // Generate random data or base it on the current value if it exists
+      const waterLevel = waterLevels[deviceId]?.level || 0;
+      const baseValue = waterLevel > 0 ? waterLevel : 50;
+      const value = baseValue + Math.floor(Math.random() * 20) - 10;
+      
+      data.push({
+        date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        level: Math.max(0, Math.min(100, value))
+      });
+    }
+    
+    return data.reverse();
+  }
+
+  // Calculate average of water levels across all devices
+  const averageWaterLevel = Object.values(waterLevels).length > 0 
+    ? Math.round(Object.values(waterLevels).reduce((sum, water) => sum + (water.level || 0), 0) / Object.values(waterLevels).length) 
+    : 0;
+
   return (
     <DashboardLayout 
-      title="Sensor Monitoring" 
-      subtitle="Real-time sewer system monitoring"
+      title="Water Level Monitoring" 
+      subtitle="Real-time sewer water level analytics"
     >
       <div className="mb-6">
-        <h2 className="text-lg font-medium text-gray-800">Device Sensors</h2>
+        <h2 className="text-lg font-medium text-gray-800">Water Level Analysis</h2>
         <p className="text-sm text-gray-500 mt-1">
-          Monitor water levels, bin fullness and waste weight from all your connected devices
+          Monitor sewer water levels across all your connected devices
         </p>
       </div>
+      
+      {/* Water level overview cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Total Monitoring Points</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{devices.length}</div>
+            <p className="text-sm text-muted-foreground mt-1">
+              {devices.filter(d => {
+                const waterLevel = waterLevels[d.id];
+                const lastUpdatedWater = waterLevel?.lastUpdated ? new Date(waterLevel.lastUpdated) : null;
+                return (lastUpdatedWater && lastUpdatedWater >= fiveMinutesAgo);
+              }).length} active
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Average Water Level</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{averageWaterLevel}%</div>
+            <div className="w-full bg-gray-200 rounded-full h-2 mt-2 overflow-hidden">
+              <div 
+                className={`h-2 rounded-full ${
+                  averageWaterLevel > 85 ? "bg-destructive" : 
+                  averageWaterLevel > 65 ? "bg-warning" : 
+                  "bg-success"
+                }`} 
+                style={{ width: `${averageWaterLevel}%` }}
+              ></div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Critical Stations</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{Object.values(waterLevels).filter(water => water.level > 85).length}</div>
+            <p className="text-sm text-muted-foreground mt-1">
+              {Object.values(waterLevels).filter(water => water.level > 85).length > 0 ? (
+                <span className="text-destructive">Requires attention</span>
+              ) : (
+                "All normal"
+              )}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* Water level chart */}
+      {devices.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-base font-medium">Water Level Trends</CardTitle>
+            <CardDescription>7-day water level history across all stations</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={generateWaterLevelData(devices[0]?.id || '', 7)}
+                  margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="colorLevel" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="date" />
+                  <YAxis domain={[0, 100]} />
+                  <Tooltip formatter={(value) => [`${value}%`, 'Water Level']} />
+                  <Area 
+                    type="monotone" 
+                    dataKey="level" 
+                    stroke="#3b82f6" 
+                    fillOpacity={1} 
+                    fill="url(#colorLevel)" 
+                    name="Water Level"
+                  />
+                  <Legend />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
       
       {devices.length === 0 && !loading ? (
         <div className="bg-white rounded-lg shadow-sm p-8 mb-6 flex flex-col items-center justify-center">

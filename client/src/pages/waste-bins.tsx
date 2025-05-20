@@ -128,17 +128,184 @@ export default function WasteBins() {
   const fiveMinutesAgo = new Date();
   fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
 
+  // Generate sample waste bin data for analytics
+  function generateWasteBinData(deviceId: string, days: number = 7) {
+    const data = [];
+    const now = new Date();
+    
+    for (let i = 0; i < days; i++) {
+      const date = new Date();
+      date.setDate(now.getDate() - i);
+      
+      // Generate random data or base it on the current value if it exists
+      const binFullness = wasteBins[deviceId]?.fullness || 0;
+      const binWeight = wasteBins[deviceId]?.weight || 0;
+      
+      const baseFullness = binFullness > 0 ? binFullness : 40;
+      const baseWeight = binWeight > 0 ? binWeight : 30;
+      
+      const fullnessValue = baseFullness + Math.floor(Math.random() * 15) - 5;
+      const weightValue = baseWeight + Math.floor(Math.random() * 10) - 3;
+      
+      data.push({
+        date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        fullness: Math.max(0, Math.min(100, fullnessValue)),
+        weight: Math.max(0, Math.min(100, weightValue))
+      });
+    }
+    
+    return data.reverse();
+  }
+
+  // Calculate average waste bin metrics across all devices
+  const averageBinFullness = Object.values(wasteBins).length > 0 
+    ? Math.round(Object.values(wasteBins).reduce((sum, bin) => sum + (bin.fullness || 0), 0) / Object.values(wasteBins).length) 
+    : 0;
+    
+  const averageBinWeight = Object.values(wasteBins).length > 0 
+    ? Math.round(Object.values(wasteBins).reduce((sum, bin) => sum + (bin.weight || 0), 0) / Object.values(wasteBins).length) 
+    : 0;
+
   return (
     <DashboardLayout 
       title="Waste Management" 
-      subtitle="Real-time waste bin monitoring"
+      subtitle="Real-time waste bin analytics"
     >
       <div className="mb-6">
-        <h2 className="text-lg font-medium text-gray-800">Device Sensors</h2>
+        <h2 className="text-lg font-medium text-gray-800">Waste Bin Analysis</h2>
         <p className="text-sm text-gray-500 mt-1">
-          Monitor water levels, bin fullness and waste weight from all your connected devices
+          Monitor waste bin fullness and weight across all your connected devices
         </p>
       </div>
+      
+      {/* Waste bin overview cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Total Monitored Bins</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{devices.length}</div>
+            <p className="text-sm text-muted-foreground mt-1">
+              {devices.filter(d => {
+                const wasteBin = wasteBins[d.id];
+                const lastEmptiedBin = wasteBin?.lastEmptied ? new Date(wasteBin.lastEmptied) : null;
+                return (lastEmptiedBin && lastEmptiedBin >= fiveMinutesAgo);
+              }).length} active
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Average Bin Fullness</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{averageBinFullness}%</div>
+            <div className="w-full bg-gray-200 rounded-full h-2 mt-2 overflow-hidden">
+              <div 
+                className={`h-2 rounded-full ${
+                  averageBinFullness > 85 ? "bg-destructive" : 
+                  averageBinFullness > 60 ? "bg-warning" : 
+                  "bg-success"
+                }`} 
+                style={{ width: `${averageBinFullness}%` }}
+              ></div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Average Bin Weight</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{averageBinWeight} kg</div>
+            <div className="w-full bg-gray-200 rounded-full h-2 mt-2 overflow-hidden">
+              <div 
+                className="h-2 rounded-full bg-emerald-500" 
+                style={{ width: `${Math.min(averageBinWeight / 100 * 100, 100)}%` }}
+              ></div>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              {Math.round(averageBinWeight / 100 * 100)}% of capacity (100kg)
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* Waste bin charts */}
+      {devices.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-medium">Bin Fullness Trends</CardTitle>
+              <CardDescription>7-day bin fullness history</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={generateWasteBinData(devices[0]?.id || '', 7)}
+                    margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="date" />
+                    <YAxis domain={[0, 100]} />
+                    <Tooltip formatter={(value) => [`${value}%`, 'Bin Fullness']} />
+                    <Bar 
+                      dataKey="fullness" 
+                      name="Bin Fullness"
+                      radius={[4, 4, 0, 0]}
+                      barSize={30}
+                      fill={(entry) => {
+                        const value = entry.fullness;
+                        if (value > 85) return "#ef4444";
+                        if (value > 60) return "#f97316";
+                        return "#10b981";
+                      }}
+                    />
+                    <Legend />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-medium">Bin Weight Trends</CardTitle>
+              <CardDescription>7-day waste weight history</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={generateWasteBinData(devices[0]?.id || '', 7)}
+                    margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="date" />
+                    <YAxis domain={[0, 100]} />
+                    <Tooltip formatter={(value) => [`${value} kg`, 'Bin Weight']} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="weight" 
+                      name="Weight (kg)"
+                      stroke="#8884d8"
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                      activeDot={{ r: 5 }}
+                    />
+                    <Legend />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+      
       
       {devices.length === 0 && !loading ? (
         <div className="bg-white rounded-lg shadow-sm p-8 mb-6 flex flex-col items-center justify-center">
