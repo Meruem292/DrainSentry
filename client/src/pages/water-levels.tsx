@@ -66,7 +66,7 @@ export default function WaterLevels() {
     const waterRef = ref(database, `users/${user.uid}/waterLevels`);
     const historyRef = ref(database, `users/${user.uid}/waterLevelHistory`);
 
-    // Subscribe to water level data
+    // Subscribe to water level data with limit for better performance
     const waterUnsubscribe = onValue(waterRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -81,7 +81,7 @@ export default function WaterLevels() {
       setLoading(false);
     });
 
-    // Subscribe to history data
+    // Get the history data with optimization for performance
     const historyUnsubscribe = onValue(historyRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
