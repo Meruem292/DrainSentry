@@ -1,251 +1,299 @@
-import { useEffect, useState } from "react";
-import { ref, onValue } from "firebase/database";
+import { useState, useEffect } from "react";
+import { ref, onValue, query, limitToLast, orderByKey } from "firebase/database";
 import { database } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Plus, 
-  Clock, 
-  Trash2, 
-  BarChart3, 
-  AlertTriangle, 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer 
+} from "recharts";
+import { 
+  Droplet, 
+  Trash, 
+  Scale, 
   CalendarClock, 
-  ChevronRight,
-  Scale,
-  PackageOpen
+  MapPin,
+  Clock,
+  ChevronRight
 } from "lucide-react";
-import { WasteBin } from "@/types";
-import { Link } from "wouter";
+import { Device, WaterLevel, WasteBin } from "@/types";
+import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
-
-// Helper functions for bin status
-function getBinFullnessColor(fullness: number): string {
-  if (fullness > 85) return "bg-destructive";
-  if (fullness > 60) return "bg-warning";
-  return "bg-success";
-}
-
-function getBinTextColor(fullness: number): string {
-  if (fullness > 85) return "text-destructive";
-  if (fullness > 60) return "text-warning";
-  return "text-success";
-}
-
-function getBinStatus(fullness: number): string {
-  if (fullness > 85) return "Full";
-  if (fullness > 60) return "Warning";
-  return "Empty";
-}
-
-function getBinColor(index: number): string {
-  const colors = [
-    "bg-emerald-500",
-    "bg-amber-500",
-    "bg-blue-500",
-    "bg-purple-500",
-    "bg-rose-500",
-    "bg-teal-500",
-  ];
-  return colors[index % colors.length];
-}
 
 export default function WasteBins() {
   const { user } = useAuth();
-  const [binsData, setBinsData] = useState<WasteBin[]>([]);
+  const [location, setLocation] = useLocation();
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [waterLevels, setWaterLevels] = useState<Record<string, WaterLevel>>({});
+  const [wasteBins, setWasteBins] = useState<Record<string, WasteBin>>({});
   const [loading, setLoading] = useState(true);
-
+  
   useEffect(() => {
     if (!user) return;
 
-    const binsRef = ref(database, `users/${user.uid}/wasteBins`);
+    const devicesRef = ref(database, `users/${user.uid}/devices`);
+    const waterLevelsRef = ref(database, `users/${user.uid}/waterLevels`);
+    const wasteBinsRef = ref(database, `users/${user.uid}/wasteBins`);
     
-    const unsubscribe = onValue(binsRef, (snapshot) => {
+    // Get all devices
+    const devicesUnsubscribe = onValue(devicesRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const bins = Object.entries(data).map(([id, value]) => ({
+        const deviceList = Object.entries(data).map(([id, value]) => ({
           id,
           ...(value as any),
         }));
-        setBinsData(bins);
+        setDevices(deviceList);
       } else {
-        setBinsData([]);
+        setDevices([]);
       }
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    // Get all water level data
+    const waterLevelsUnsubscribe = onValue(waterLevelsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setWaterLevels(data);
+      } else {
+        setWaterLevels({});
+      }
+    });
+
+    // Get all waste bin data
+    const wasteBinsUnsubscribe = onValue(wasteBinsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setWasteBins(data);
+      } else {
+        setWasteBins({});
+      }
+    });
+
+    return () => {
+      devicesUnsubscribe();
+      waterLevelsUnsubscribe();
+      wasteBinsUnsubscribe();
+    };
   }, [user]);
+
+  // Helper functions for water level
+  function getWaterLevelColor(level: number): string {
+    if (level > 85) return "bg-destructive";
+    if (level > 65) return "bg-warning";
+    return "bg-success";
+  }
+
+  function getWaterLevelTextColor(level: number): string {
+    if (level > 85) return "text-destructive";
+    if (level > 65) return "text-warning";
+    return "text-success";
+  }
+
+  function getWaterLevelStatus(level: number): string {
+    if (level > 85) return "Critical";
+    if (level > 65) return "Warning";
+    return "Normal";
+  }
+
+  // Helper functions for bin fullness
+  function getBinFullnessColor(fullness: number): string {
+    if (fullness > 85) return "bg-destructive";
+    if (fullness > 60) return "bg-warning";
+    return "bg-success";
+  }
+
+  function getBinTextColor(fullness: number): string {
+    if (fullness > 85) return "text-destructive";
+    if (fullness > 60) return "text-warning";
+    return "text-success";
+  }
+
+  function getBinStatus(fullness: number): string {
+    if (fullness > 85) return "Critical";
+    if (fullness > 60) return "Warning";
+    return "Normal";
+  }
+
+  // Calculate active devices based on recent data updates (last 5 minutes)
+  const fiveMinutesAgo = new Date();
+  fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
 
   return (
     <DashboardLayout 
-      title="Waste Bins" 
-      subtitle="Monitor waste bins across your network"
+      title="Waste Management" 
+      subtitle="Real-time waste bin monitoring"
     >
-      {binsData.length === 0 && !loading ? (
+      <div className="mb-6">
+        <h2 className="text-lg font-medium text-gray-800">Device Sensors</h2>
+        <p className="text-sm text-gray-500 mt-1">
+          Monitor water levels, bin fullness and waste weight from all your connected devices
+        </p>
+      </div>
+      
+      {devices.length === 0 && !loading ? (
         <div className="bg-white rounded-lg shadow-sm p-8 mb-6 flex flex-col items-center justify-center">
           <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mb-4">
-            <Trash2 className="h-6 w-6 text-emerald-600" />
+            <Trash className="h-6 w-6 text-emerald-500" />
           </div>
-          <h3 className="text-lg font-medium text-gray-800 mb-2">No Waste Bins</h3>
-          <p className="text-gray-500 text-center mb-6">There are currently no waste bin devices available for monitoring.</p>
+          <h3 className="text-lg font-medium text-gray-800 mb-2">No devices found</h3>
+          <p className="text-gray-500 text-center mb-6">
+            Add devices from the Devices page to start monitoring.
+          </p>
+          
           <Link href="/devices">
             <Button>
-              <Plus className="h-5 w-5 mr-2" />
-              Add New Bin
+              Go to Devices
             </Button>
           </Link>
         </div>
       ) : (
-        <div className="space-y-6">
-          {/* Summary Cards */}
-          {binsData.length > 0 && (
-            <div className="mb-8">
-              <div className="grid gap-4 md:grid-cols-3">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Card className="border-2 hover:border-emerald-500/70 hover:shadow-lg transition-all duration-300">
-                    <CardHeader className="pb-2 bg-gradient-to-r from-green-50 to-transparent">
-                      <div className="flex items-center">
-                        <BarChart3 className="h-5 w-5 text-emerald-600 mr-2" />
-                        <CardTitle className="text-sm font-medium">Average Fullness</CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">
-                        {Math.round(binsData.reduce((sum, bin) => sum + bin.fullness, 0) / binsData.length)}%
-                      </div>
-                      <p className="text-xs text-gray-500">Across all waste bins</p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-                
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: 0.1 }}
-                >
-                  <Card className="border-2 hover:border-red-500/70 hover:shadow-lg transition-all duration-300">
-                    <CardHeader className="pb-2 bg-gradient-to-r from-red-50 to-transparent">
-                      <div className="flex items-center">
-                        <AlertTriangle className="h-5 w-5 text-red-500 mr-2" />
-                        <CardTitle className="text-sm font-medium">Bins Requiring Service</CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">
-                        {binsData.filter(bin => bin.fullness > 85).length}
-                      </div>
-                      <p className="text-xs text-gray-500">Bins that need emptying</p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-                
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: 0.2 }}
-                >
-                  <Card className="border-2 hover:border-blue-500/70 hover:shadow-lg transition-all duration-300">
-                    <CardHeader className="pb-2 bg-gradient-to-r from-blue-50 to-transparent">
-                      <div className="flex items-center">
-                        <Scale className="h-5 w-5 text-blue-600 mr-2" />
-                        <CardTitle className="text-sm font-medium">Total Weight</CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">
-                        {Math.round(binsData.reduce((sum, bin) => sum + bin.weight, 0))} kg
-                      </div>
-                      <p className="text-xs text-gray-500">Total waste collected</p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              </div>
-            </div>
-          )}
-          
-          {/* Waste Bin Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {binsData.map((bin, index) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {devices.map((device, index) => {
+            const waterLevel = waterLevels[device.id];
+            const wasteBin = wasteBins[device.id];
+            
+            // Check if device is active (updated in the last 5 minutes)
+            const lastUpdatedWater = waterLevel?.lastUpdated ? new Date(waterLevel.lastUpdated) : null;
+            const lastEmptiedBin = wasteBin?.lastEmptied ? new Date(wasteBin.lastEmptied) : null;
+            
+            // Device is active if any sensor has been updated in the last 5 minutes
+            const isActive = (
+              (lastUpdatedWater && lastUpdatedWater >= fiveMinutesAgo) ||
+              (lastEmptiedBin && lastEmptiedBin >= fiveMinutesAgo)
+            );
+            
+            return (
               <motion.div
-                key={bin.id}
+                key={device.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.1 + (index * 0.05) }}
+                transition={{ duration: 0.4, delay: 0.05 * index }}
                 whileHover={{ scale: 1.02 }}
+                onClick={() => setLocation(`/water-level-details?id=${device.id}`)}
+                className="cursor-pointer"
               >
-                <Link href={`/waste-bins/${bin.id}`} className="block h-full">
-                  <Card className="h-full border-2 hover:border-emerald-500 hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer">
-                    <CardHeader className="pb-3 bg-gradient-to-r from-green-50 to-transparent">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-3 h-3 rounded-full ${getBinFullnessColor(bin.fullness)}`}></div>
-                          <CardTitle className="text-base font-medium text-gray-800">
-                            {bin.location || bin.id}
-                          </CardTitle>
+                <Card className="h-full border-2 hover:border-emerald-500 hover:shadow-lg transition-all duration-300 overflow-hidden">
+                  <CardHeader className="pb-3 bg-gradient-to-r from-green-50 to-transparent border-b">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <div className="flex -space-x-1">
+                          <div className="w-4 h-4 rounded-full bg-primary flex items-center justify-center">
+                            <Droplet className="h-2.5 w-2.5 text-white" />
+                          </div>
+                          <div className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center">
+                            <Trash className="h-2.5 w-2.5 text-white" />
+                          </div>
                         </div>
-                        <Badge 
-                          variant="outline" 
-                          className={`${
-                            bin.fullness > 85 ? 'bg-red-50 text-red-500' : 
-                            bin.fullness > 60 ? 'bg-amber-50 text-amber-500' : 
-                            'bg-green-50 text-green-500'
-                          }`}
-                        >
-                          {getBinStatus(bin.fullness)}
-                        </Badge>
+                        <CardTitle className="text-base font-medium text-gray-800">
+                          {device.name}
+                        </CardTitle>
                       </div>
-                    </CardHeader>
-                    
-                    <CardContent className="pt-2">
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div>
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-sm text-gray-500">Fullness</span>
-                            <span className="text-sm font-medium">{bin.fullness}%</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                            <div 
-                              className={`h-2.5 rounded-full ${getBinFullnessColor(bin.fullness)}`} 
-                              style={{ width: `${bin.fullness}%` }}
-                            ></div>
-                          </div>
+                      <Badge 
+                        variant={isActive ? "default" : "outline"}
+                        className={isActive ? "" : "bg-gray-100 text-gray-500"}
+                      >
+                        {isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    </div>
+                    <CardDescription className="flex items-center mt-1 text-sm text-gray-500">
+                      <MapPin className="h-3.5 w-3.5 mr-1" />
+                      {device.location}
+                    </CardDescription>
+                  </CardHeader>
+                  
+                  <CardContent className="pt-3">
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm text-gray-500">Bin Fullness</span>
+                          <Badge variant="outline" className={getBinTextColor(wasteBin?.fullness || 0)}>
+                            {getBinStatus(wasteBin?.fullness || 0)}
+                          </Badge>
                         </div>
-                        
-                        <div>
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-sm text-gray-500">Weight</span>
-                            <span className="text-sm font-medium">{bin.weight} kg</span>
-                          </div>
-                          <div className="flex items-center">
-                            <PackageOpen className="h-4 w-4 text-blue-500 mr-1" />
-                            <span className="text-xs text-gray-500">Capacity: 100kg</span>
-                          </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden mb-1">
+                          <div 
+                            className={`h-2.5 rounded-full ${getBinFullnessColor(wasteBin?.fullness || 0)}`} 
+                            style={{ width: `${wasteBin?.fullness || 0}%` }}
+                          ></div>
+                        </div>
+                        <div className="flex justify-between items-center text-xs text-gray-500">
+                          <span>Current: {wasteBin?.fullness || 0}%</span>
+                          <span className="flex items-center">
+                            <Clock className="h-3 w-3 mr-1" />
+                            Last emptied: {wasteBin?.lastEmptied || 'Never'}
+                          </span>
                         </div>
                       </div>
                       
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center text-xs text-gray-500">
-                          <CalendarClock className="h-3 w-3 mr-1" />
-                          <span>Last emptied: {bin.lastEmptied || 'Unknown'}</span>
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm text-gray-500">Weight</span>
+                          <span className="text-sm font-medium">{wasteBin?.weight || 0} kg</span>
                         </div>
-                        <div className="flex items-center text-xs text-emerald-600">
-                          <span>View Details</span>
-                          <ChevronRight className="h-3 w-3 ml-1" />
+                        <div className="flex items-center gap-1 mb-1">
+                          <Scale className="h-4 w-4 text-emerald-500" />
+                          <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                            <div 
+                              className="h-2.5 rounded-full bg-emerald-500" 
+                              style={{ width: `${Math.min((wasteBin?.weight || 0) / 100 * 100, 100)}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                        <div className="flex justify-between text-xs text-gray-500">
+                          <span>Capacity: 100kg</span>
+                          <span>{Math.round((wasteBin?.weight || 0) / 100 * 100)}% full</span>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                    </div>
+                    
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm text-gray-500">Water Level</span>
+                        <span className="text-xs font-medium">{waterLevel?.level || 0}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden mb-1">
+                        <div 
+                          className={`h-2.5 rounded-full ${getWaterLevelColor(waterLevel?.level || 0)}`} 
+                          style={{ width: `${waterLevel?.level || 0}%` }}
+                        ></div>
+                      </div>
+                      <div className="flex items-center text-xs text-gray-500">
+                        <Badge variant="outline" className={getWaterLevelTextColor(waterLevel?.level || 0)}>
+                          {getWaterLevelStatus(waterLevel?.level || 0)}
+                        </Badge>
+                        <span className="ml-auto flex items-center">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {waterLevel?.lastUpdated || 'Never'}
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                  
+                  <CardFooter className="flex justify-between border-t pt-2 pb-2 bg-gray-50">
+                    <div className="flex items-center text-xs text-gray-500">
+                      <CalendarClock className="h-3.5 w-3.5 mr-1" />
+                      Last seen: {device.lastSeen}
+                    </div>
+                    
+                    <div className="flex items-center text-emerald-600 text-sm">
+                      View Details
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </div>
+                  </CardFooter>
+                </Card>
               </motion.div>
-            ))}
-          </div>
+            );
+          })}
         </div>
       )}
     </DashboardLayout>
