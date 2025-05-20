@@ -117,10 +117,11 @@ export default function Login() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
-      // Initialize user settings in Firebase
+      // Get the new user's ID
       const userId = userCredential.user.uid;
-      const settingsRef = ref(database, `users/${userId}/settings`);
       
+      // Initialize user settings in Firebase
+      const settingsRef = ref(database, `users/${userId}/settings`);
       await set(settingsRef, {
         system: {
           name: "DrainSentry",
@@ -141,6 +142,99 @@ export default function Login() {
           emailAddress: email,
         }
       });
+      
+      // Add initial contact
+      const contactsRef = ref(database, `users/${userId}/contacts`);
+      await set(contactsRef, {
+        "contact1": {
+          name: "Default Contact",
+          phone: "+1234567890",
+          status: "active"
+        }
+      });
+      
+      // Add initial water level device
+      const devicesRef = ref(database, `users/${userId}/devices`);
+      await set(devicesRef, {
+        "device1": {
+          id: "WL-001",
+          name: "Main Street Junction Water Sensor",
+          type: "water_level",
+          location: "Main Street Junction",
+          status: "active",
+          lastSeen: new Date().toISOString()
+        },
+        "device2": {
+          id: "BIN-001",
+          name: "Downtown Waste Bin Sensor",
+          type: "waste_bin",
+          location: "Downtown Area",
+          status: "active",
+          lastSeen: new Date().toISOString()
+        }
+      });
+      
+      // Add initial water level data
+      const waterLevelsRef = ref(database, `users/${userId}/waterLevels`);
+      await set(waterLevelsRef, {
+        "device1": {
+          id: "WL-001",
+          location: "Main Street Junction",
+          level: 45,
+          lastUpdated: new Date().toLocaleString()
+        }
+      });
+      
+      // Add initial waste bin data
+      const wasteBinsRef = ref(database, `users/${userId}/wasteBins`);
+      await set(wasteBinsRef, {
+        "device2": {
+          id: "BIN-001",
+          location: "Downtown Area",
+          fullness: 30,
+          weight: 15,
+          lastEmptied: new Date().toLocaleString()
+        }
+      });
+      
+      // Add some history data for water levels
+      const today = new Date();
+      const waterHistoryData = {};
+      
+      for (let i = 30; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(today.getDate() - i);
+        const dateString = date.toISOString().split('T')[0];
+        
+        waterHistoryData[dateString] = {
+          "device1": Math.floor(Math.random() * 30) + 30 // Random level between 30-60%
+        };
+      }
+      
+      const waterHistoryRef = ref(database, `users/${userId}/waterLevelHistory`);
+      await set(waterHistoryRef, waterHistoryData);
+      
+      // Add some history data for waste bins
+      const wasteHistoryData = {};
+      
+      for (let i = 30; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(today.getDate() - i);
+        const dateString = date.toISOString().split('T')[0];
+        
+        const fullness = Math.floor(Math.random() * 30) + (30 - i > 0 ? 30 - i : 5);
+        const weight = Math.floor(fullness / 2) + 5;
+        
+        wasteHistoryData[dateString] = {
+          "device2": {
+            fullness: fullness,
+            weight: weight
+          }
+        };
+      }
+      
+      const wasteHistoryRef = ref(database, `users/${userId}/wasteCollectionHistory`);
+      await set(wasteHistoryRef, wasteHistoryData);
       
       toast({
         title: "Account created successfully",
