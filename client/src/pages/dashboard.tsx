@@ -108,7 +108,23 @@ export default function Dashboard() {
   const criticalStations = waterData.filter(station => station.level > 85).length;
   const criticalBins = wasteData.filter(bin => bin.fullness > 85).length;
   const totalDevices = devices.length;
-  const activeDevices = devices.filter(device => device.status === "active").length;
+  
+  // Calculate active devices based on recent data updates (last 5 minutes)
+  const fiveMinutesAgo = new Date();
+  fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
+  
+  const activeDevices = devices.filter(device => {
+    const waterLevel = waterData.find(w => w.id === device.id);
+    const wasteBin = wasteData.find(b => b.id === device.id);
+    
+    const lastUpdatedWater = waterLevel?.lastUpdated ? new Date(waterLevel.lastUpdated) : null;
+    const lastEmptiedBin = wasteBin?.lastEmptied ? new Date(wasteBin.lastEmptied) : null;
+    
+    return (
+      (lastUpdatedWater && lastUpdatedWater >= fiveMinutesAgo) || 
+      (lastEmptiedBin && lastEmptiedBin >= fiveMinutesAgo)
+    );
+  }).length;
 
   // Helper function to get water level status color
   function getWaterLevelColor(level: number): string {

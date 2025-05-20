@@ -349,6 +349,18 @@ export default function Devices() {
             const waterLevel = waterLevels[device.id];
             const wasteBin = wasteBins[device.id];
             
+            // Check if device is active (updated in the last 5 minutes)
+            const lastUpdatedWater = waterLevel?.lastUpdated ? new Date(waterLevel.lastUpdated) : null;
+            const lastEmptiedBin = wasteBin?.lastEmptied ? new Date(wasteBin.lastEmptied) : null;
+            const fiveMinutesAgo = new Date();
+            fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
+            
+            // Device is active if any sensor has been updated in the last 5 minutes
+            const isActive = (
+              (lastUpdatedWater && lastUpdatedWater >= fiveMinutesAgo) ||
+              (lastEmptiedBin && lastEmptiedBin >= fiveMinutesAgo)
+            );
+            
             return (
               <motion.div
                 key={device.id}
@@ -374,10 +386,10 @@ export default function Devices() {
                         </CardTitle>
                       </div>
                       <Badge 
-                        variant={device.status === "active" ? "default" : "outline"}
-                        className={device.status === "active" ? "" : "bg-gray-100 text-gray-500"}
+                        variant={isActive ? "default" : "outline"}
+                        className={isActive ? "" : "bg-gray-100 text-gray-500"}
                       >
-                        {device.status === "active" ? "Active" : "Inactive"}
+                        {isActive ? "Active" : "Inactive"}
                       </Badge>
                     </div>
                     <CardDescription className="flex items-center mt-1 text-sm text-gray-500">
