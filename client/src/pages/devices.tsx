@@ -18,6 +18,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider"; 
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { 
   AlertTriangle, 
@@ -192,9 +197,7 @@ export default function Devices() {
       });
       
       // Reset form
-      setDeviceId("");
-      setDeviceName("");
-      setDeviceLocation("");
+      resetForm();
     } catch (error) {
       toast({
         title: "Error Adding Device",
@@ -281,10 +284,7 @@ export default function Devices() {
       });
       
       // Reset form and close dialog
-      setSelectedDevice(null);
-      setDeviceName("");
-      setDeviceLocation("");
-      setEditMode(false);
+      resetForm();
     } catch (error) {
       toast({
         title: "Error Updating Device",
@@ -327,6 +327,23 @@ export default function Devices() {
         variant: "destructive",
       });
     }
+  };
+
+  // Helper function to reset form fields
+  const resetForm = () => {
+    setDeviceId("");
+    setDeviceName("");
+    setDeviceLocation("");
+    setSelectedDevice(null);
+    setEditMode(false);
+    setWaterLevelThreshold(80);
+    setBinFullnessThreshold(80);
+    setWasteWeightThreshold(80);
+    setNotificationsEnabled(true);
+    setNotifyOnWaterLevel(true);
+    setNotifyOnBinFullness(true);
+    setNotifyOnWeight(true);
+    setSelectedContacts([]);
   };
 
   // Helper function to get water level status color
