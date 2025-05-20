@@ -126,10 +126,8 @@ export default function WaterLevels() {
                 {waterData.map(station => (
                   <div key={station.id} className="mb-4 last:mb-0">
                     <div className="flex justify-between mb-1">
-                      <Link href={`/water-levels/${station.id}`}>
-                        <a className="text-sm font-medium text-primary hover:underline">
-                          {station.location || station.id}
-                        </a>
+                      <Link href={`/water-levels/${station.id}`} className="text-sm font-medium text-primary hover:underline">
+                        {station.location || station.id}
                       </Link>
                       <span className="text-sm font-medium">{station.level}%</span>
                     </div>
@@ -145,8 +143,8 @@ export default function WaterLevels() {
                         <span className={`text-xs font-medium ${getWaterLevelTextColor(station.level)}`}>
                           {getWaterLevelStatus(station.level)}
                         </span>
-                        <Link href={`/water-levels/${station.id}`}>
-                          <a className="text-xs text-primary hover:underline">View Details</a>
+                        <Link href={`/water-levels/${station.id}`} className="text-xs text-primary hover:underline">
+                          View Details
                         </Link>
                       </div>
                     </div>

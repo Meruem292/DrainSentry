@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, Plus } from "lucide-react";
+import { AlertTriangle, Plus, Trash2, Pencil } from "lucide-react";
 import { Device } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import {

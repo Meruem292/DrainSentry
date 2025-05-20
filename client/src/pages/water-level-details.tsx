@@ -141,7 +141,7 @@ export default function WaterLevelDetails() {
       subtitle="Detailed monitoring data for this water level station"
     >
       <div className="mb-6">
-        <Link href="/water-levels">
+        <Link href="/water-levels" className="inline-block">
           <Button variant="outline" className="gap-2">
             <ArrowLeft className="h-4 w-4" />
             Back to Water Levels
