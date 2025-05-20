@@ -17,7 +17,6 @@ export interface WasteBin {
 export interface Device {
   id: string;
   name: string;
-  type: "water_level" | "waste_bin";
   location: string;
   status: "active" | "inactive";
   lastSeen: string;

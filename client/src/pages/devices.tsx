@@ -35,13 +35,6 @@ import {
 } from "lucide-react";
 import { Device, WaterLevel, WasteBin } from "@/types";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 
@@ -54,7 +47,6 @@ export default function Devices() {
   const [loading, setLoading] = useState(true);
   const [deviceId, setDeviceId] = useState("");
   const [deviceName, setDeviceName] = useState("");
-  const [deviceType, setDeviceType] = useState("water_level");
   const [deviceLocation, setDeviceLocation] = useState("");
   
   useEffect(() => {
@@ -121,7 +113,6 @@ export default function Devices() {
     try {
       const newDevice = {
         name: deviceName.trim() || deviceId.trim(),
-        type: deviceType,
         location: deviceLocation.trim() || "Unknown",
         status: "inactive",
         lastSeen: new Date().toISOString(),
@@ -131,25 +122,25 @@ export default function Devices() {
       const newDeviceRef = push(devicesRef);
       await set(newDeviceRef, newDevice);
       
-      // Create initial entry based on device type
-      if (deviceType === "water_level") {
-        const waterRef = ref(database, `users/${user.uid}/waterLevels/${newDeviceRef.key}`);
-        await set(waterRef, {
-          id: deviceId,
-          location: deviceLocation.trim() || "Unknown",
-          level: 0,
-          lastUpdated: "Never",
-        });
-      } else if (deviceType === "waste_bin") {
-        const wasteRef = ref(database, `users/${user.uid}/wasteBins/${newDeviceRef.key}`);
-        await set(wasteRef, {
-          id: deviceId,
-          location: deviceLocation.trim() || "Unknown",
-          fullness: 0,
-          weight: 0,
-          lastEmptied: "Never",
-        });
-      }
+      // Create entries for all sensor types for the device
+      // Water level sensor data
+      const waterRef = ref(database, `users/${user.uid}/waterLevels/${newDeviceRef.key}`);
+      await set(waterRef, {
+        id: deviceId,
+        location: deviceLocation.trim() || "Unknown",
+        level: 0,
+        lastUpdated: "Never",
+      });
+      
+      // Waste bin sensor data
+      const wasteRef = ref(database, `users/${user.uid}/wasteBins/${newDeviceRef.key}`);
+      await set(wasteRef, {
+        id: deviceId,
+        location: deviceLocation.trim() || "Unknown",
+        fullness: 0,
+        weight: 0,
+        lastEmptied: "Never",
+      });
       
       toast({
         title: "Device Added",
@@ -159,7 +150,6 @@ export default function Devices() {
       // Reset form
       setDeviceId("");
       setDeviceName("");
-      setDeviceType("water_level");
       setDeviceLocation("");
     } catch (error) {
       toast({
@@ -264,22 +254,6 @@ export default function Devices() {
               </div>
               
               <div className="grid gap-2">
-                <Label htmlFor="deviceType">Device Type</Label>
-                <Select 
-                  value={deviceType} 
-                  onValueChange={setDeviceType}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select device type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="water_level">Water Level Sensor</SelectItem>
-                    <SelectItem value="waste_bin">Waste Bin Monitor</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="grid gap-2">
                 <Label htmlFor="deviceLocation">Location</Label>
                 <Input 
                   id="deviceLocation" 
@@ -347,22 +321,6 @@ export default function Devices() {
                 </div>
                 
                 <div className="grid gap-2">
-                  <Label htmlFor="deviceType">Device Type</Label>
-                  <Select 
-                    value={deviceType} 
-                    onValueChange={setDeviceType}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select device type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="water_level">Water Level Sensor</SelectItem>
-                      <SelectItem value="waste_bin">Waste Bin Monitor</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="grid gap-2">
                   <Label htmlFor="deviceLocation">Location</Label>
                   <Input 
                     id="deviceLocation" 
@@ -387,9 +345,9 @@ export default function Devices() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {devices.map((device, index) => {
-            // Get associated sensor data
-            const waterLevel = device.type === "water_level" ? waterLevels[device.id] : null;
-            const wasteBin = device.type === "waste_bin" ? wasteBins[device.id] : null;
+            // Get associated sensor data for this device
+            const waterLevel = waterLevels[device.id];
+            const wasteBin = wasteBins[device.id];
             
             return (
               <motion.div
@@ -399,25 +357,25 @@ export default function Devices() {
                 transition={{ duration: 0.4, delay: 0.05 * index }}
                 whileHover={{ scale: 1.02 }}
               >
-                <Card className="h-full border-2 hover:shadow-lg transition-all duration-300 overflow-hidden">
+                <Card className="h-full border-2 hover:border-primary hover:shadow-lg transition-all duration-300 overflow-hidden">
                   <CardHeader className="pb-3 bg-gradient-to-r from-blue-50 to-transparent">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2">
-                        {device.type === "water_level" ? (
-                          <Droplet className="h-5 w-5 text-primary" />
-                        ) : (
-                          <Trash className="h-5 w-5 text-emerald-600" />
-                        )}
+                        <div className="flex -space-x-1">
+                          <div className="w-4 h-4 rounded-full bg-primary flex items-center justify-center">
+                            <Droplet className="h-2.5 w-2.5 text-white" />
+                          </div>
+                          <div className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center">
+                            <Trash className="h-2.5 w-2.5 text-white" />
+                          </div>
+                        </div>
                         <CardTitle className="text-base font-medium text-gray-800">
                           {device.name}
                         </CardTitle>
                       </div>
                       <Badge 
-                        variant="outline" 
-                        className={device.status === "active" 
-                          ? "bg-green-50 text-green-600" 
-                          : "bg-gray-100 text-gray-500"
-                        }
+                        variant={device.status === "active" ? "default" : "outline"}
+                        className={device.status === "active" ? "" : "bg-gray-100 text-gray-500"}
                       >
                         {device.status === "active" ? "Active" : "Inactive"}
                       </Badge>
@@ -429,60 +387,44 @@ export default function Devices() {
                   </CardHeader>
                   
                   <CardContent className="pt-2">
-                    {/* Show appropriate sensor data based on device type */}
-                    {device.type === "water_level" && waterLevel && (
-                      <div className="mb-4">
+                    <div className="mb-4">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm text-gray-500">Water Level</span>
+                        <span className="text-sm font-medium">{waterLevel?.level || 0}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                        <div 
+                          className={`h-2.5 rounded-full ${getWaterLevelColor(waterLevel?.level || 0)}`} 
+                          style={{ width: `${waterLevel?.level || 0}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 mb-2">
+                      <div>
                         <div className="flex justify-between items-center mb-1">
-                          <span className="text-sm text-gray-500">Water Level</span>
-                          <span className="text-sm font-medium">{waterLevel.level}%</span>
+                          <span className="text-sm text-gray-500">Bin Fullness</span>
+                          <span className="text-sm font-medium">{wasteBin?.fullness || 0}%</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
                           <div 
-                            className={`h-2.5 rounded-full ${getWaterLevelColor(waterLevel.level)}`} 
-                            style={{ width: `${waterLevel.level}%` }}
+                            className={`h-2.5 rounded-full ${getBinFullnessColor(wasteBin?.fullness || 0)}`} 
+                            style={{ width: `${wasteBin?.fullness || 0}%` }}
                           ></div>
                         </div>
-                        <div className="flex justify-between mt-2 items-center text-xs text-gray-500">
-                          <span>Last updated: {waterLevel.lastUpdated}</span>
-                          {waterLevel.level > 85 && (
-                            <Badge variant="destructive" className="text-xs">Alert</Badge>
-                          )}
-                        </div>
                       </div>
-                    )}
-                    
-                    {device.type === "waste_bin" && wasteBin && (
+                      
                       <div>
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                          <div>
-                            <div className="flex justify-between items-center mb-1">
-                              <span className="text-sm text-gray-500">Fullness</span>
-                              <span className="text-sm font-medium">{wasteBin.fullness}%</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                              <div 
-                                className={`h-2.5 rounded-full ${getBinFullnessColor(wasteBin.fullness)}`} 
-                                style={{ width: `${wasteBin.fullness}%` }}
-                              ></div>
-                            </div>
-                          </div>
-                          
-                          <div>
-                            <div className="flex justify-between items-center mb-1">
-                              <span className="text-sm text-gray-500">Weight</span>
-                              <span className="text-sm font-medium">{wasteBin.weight} kg</span>
-                            </div>
-                            <div className="flex items-center">
-                              <Scale className="h-4 w-4 text-blue-500 mr-1" />
-                              <span className="text-xs text-gray-500">Capacity: 100kg</span>
-                            </div>
-                          </div>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm text-gray-500">Weight</span>
+                          <span className="text-sm font-medium">{wasteBin?.weight || 0} kg</span>
                         </div>
-                        <div className="text-xs text-gray-500">
-                          Last emptied: {wasteBin.lastEmptied}
+                        <div className="flex items-center">
+                          <Scale className="h-4 w-4 text-blue-500 mr-1" />
+                          <span className="text-xs text-gray-500">Capacity: 100kg</span>
                         </div>
                       </div>
-                    )}
+                    </div>
                   </CardContent>
                   
                   <CardFooter className="flex justify-between pt-0">
@@ -492,16 +434,6 @@ export default function Devices() {
                     </div>
                     
                     <div className="flex items-center gap-2">
-                      {device.type === "water_level" ? (
-                        <Link href={`/water-levels/${device.id}`} className="text-xs text-primary flex items-center">
-                          View Details <ChevronRight className="h-3 w-3 ml-1" />
-                        </Link>
-                      ) : (
-                        <Link href={`/waste-bins/${device.id}`} className="text-xs text-emerald-600 flex items-center">
-                          View Details <ChevronRight className="h-3 w-3 ml-1" />
-                        </Link>
-                      )}
-                      
                       <Dialog>
                         <DialogTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500">
