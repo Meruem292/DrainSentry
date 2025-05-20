@@ -360,6 +360,13 @@ export default function Devices() {
     return "text-success";
   };
   
+  // Helper function to get bin weight color
+  const getBinWeightColor = (weight: number): string => {
+    if (weight > 85) return "text-destructive";
+    if (weight > 60) return "text-warning";
+    return "text-success";
+  };
+  
   // Calculate active status based on recent data updates (last 5 minutes)
   const fiveMinutesAgo = new Date();
   fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
@@ -369,6 +376,175 @@ export default function Devices() {
       title="Devices" 
       subtitle="Manage your connected DrainSentry devices"
     >
+      {/* Edit Device Settings Dialog */}
+      {editMode && selectedDevice && (
+        <Dialog open={editMode} onOpenChange={(open) => !open && resetForm()}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Configure Device Settings</DialogTitle>
+              <DialogDescription>
+                Customize notification preferences and thresholds for {selectedDevice.name}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <Tabs defaultValue="thresholds" className="mt-4">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="thresholds">Alert Thresholds</TabsTrigger>
+                <TabsTrigger value="notifications">Notifications</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="thresholds" className="mt-4">
+                <div className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex justify-between">
+                      <Label>Water Level Threshold ({waterLevelThreshold}%)</Label>
+                      <span className={getWaterLevelColor(waterLevelThreshold)}>
+                        {waterLevelThreshold > 85 ? "Critical" : waterLevelThreshold > 65 ? "Warning" : "Normal"}
+                      </span>
+                    </div>
+                    <Slider 
+                      defaultValue={[selectedDevice.thresholds?.waterLevel || 80]} 
+                      max={100} 
+                      step={1}
+                      onValueChange={(value) => setWaterLevelThreshold(value[0])}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Alert when water level exceeds this percentage of capacity
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="flex justify-between">
+                      <Label>Bin Fullness Threshold ({binFullnessThreshold}%)</Label>
+                      <span className={getBinFullnessColor(binFullnessThreshold)}>
+                        {binFullnessThreshold > 85 ? "Critical" : binFullnessThreshold > 65 ? "Warning" : "Normal"}
+                      </span>
+                    </div>
+                    <Slider 
+                      defaultValue={[selectedDevice.thresholds?.binFullness || 80]} 
+                      max={100} 
+                      step={1}
+                      onValueChange={(value) => setBinFullnessThreshold(value[0])}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Alert when bin fullness exceeds this percentage
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="flex justify-between">
+                      <Label>Waste Weight Threshold ({wasteWeightThreshold} kg)</Label>
+                      <span className={getBinWeightColor(wasteWeightThreshold)}>
+                        {wasteWeightThreshold > 85 ? "Critical" : wasteWeightThreshold > 65 ? "Warning" : "Normal"}
+                      </span>
+                    </div>
+                    <Slider 
+                      defaultValue={[selectedDevice.thresholds?.wasteWeight || 80]} 
+                      max={100} 
+                      step={1}
+                      onValueChange={(value) => setWasteWeightThreshold(value[0])}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Alert when waste weight exceeds this many kilograms
+                    </p>
+                  </div>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="notifications" className="mt-4">
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="notifications">Enable Notifications</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Receive alerts when thresholds are exceeded
+                      </p>
+                    </div>
+                    <Switch 
+                      id="notifications" 
+                      checked={notificationsEnabled}
+                      onCheckedChange={(checked) => setNotificationsEnabled(checked)}
+                    />
+                  </div>
+                  
+                  <div className="border-t pt-4">
+                    <h3 className="text-base font-medium mb-3">Alert Types</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Checkbox 
+                          id="water-level-alerts" 
+                          checked={notifyOnWaterLevel}
+                          onCheckedChange={(checked) => setNotifyOnWaterLevel(!!checked)}
+                        />
+                        <Label htmlFor="water-level-alerts" className="cursor-pointer">
+                          Water Level Alerts
+                        </Label>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <Checkbox 
+                          id="bin-fullness-alerts" 
+                          checked={notifyOnBinFullness}
+                          onCheckedChange={(checked) => setNotifyOnBinFullness(!!checked)}
+                        />
+                        <Label htmlFor="bin-fullness-alerts" className="cursor-pointer">
+                          Bin Fullness Alerts
+                        </Label>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <Checkbox 
+                          id="weight-alerts" 
+                          checked={notifyOnWeight}
+                          onCheckedChange={(checked) => setNotifyOnWeight(!!checked)}
+                        />
+                        <Label htmlFor="weight-alerts" className="cursor-pointer">
+                          Weight Alerts
+                        </Label>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="border-t pt-4">
+                    <h3 className="text-base font-medium mb-3">Notify Contacts</h3>
+                    <div className="space-y-3">
+                      {contacts.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          No contacts found. Add contacts in the Contacts page.
+                        </p>
+                      ) : (
+                        contacts.map((contact) => (
+                          <div key={contact.id} className="flex items-center gap-2">
+                            <Checkbox 
+                              id={`contact-${contact.id}`} 
+                              checked={selectedContacts.includes(contact.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedContacts([...selectedContacts, contact.id]);
+                                } else {
+                                  setSelectedContacts(selectedContacts.filter(id => id !== contact.id));
+                                }
+                              }}
+                            />
+                            <Label htmlFor={`contact-${contact.id}`} className="cursor-pointer">
+                              {contact.name} ({contact.phone})
+                            </Label>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+            
+            <DialogFooter className="mt-6">
+              <Button variant="outline" onClick={resetForm}>Cancel</Button>
+              <Button onClick={handleUpdateDevice}>Save Settings</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
       <div className="mb-6 flex justify-between items-center">
         <h2 className="text-lg font-medium text-gray-800">Connected Devices</h2>
         
@@ -570,6 +746,15 @@ export default function Devices() {
                             onClick={() => setLocation(`/water-level-details?id=${device.id}`)}
                           >
                             <Eye className="h-4 w-4" />
+                          </Button>
+
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-blue-500"
+                            onClick={() => handleEditDevice(device)}
+                          >
+                            <Pencil className="h-4 w-4" />
                           </Button>
                           
                           <Dialog>
