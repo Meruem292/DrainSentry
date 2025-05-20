@@ -45,11 +45,6 @@ export default function Header({ title }: HeaderProps) {
       <h1 className="text-xl md:text-2xl font-semibold text-gray-800">{title}</h1>
       
       <div className="flex items-center">
-        <Button variant="ghost" size="icon" className="relative mr-4">
-          <Bell size={20} className="text-gray-500" />
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full">1</span>
-        </Button>
-        
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center gap-2 hover:bg-blue-50 transition-colors">
