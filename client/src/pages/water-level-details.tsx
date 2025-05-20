@@ -59,6 +59,24 @@ interface WasteBinHistory {
   weight: number;
 }
 
+interface Prediction {
+  timestamp: string;
+  predictedLevel: number;
+  confidence: number;
+}
+
+interface TrendData {
+  period: string;
+  value: number;
+  trend: 'increasing' | 'decreasing' | 'stable';
+  changePct: number;
+}
+
+interface RainData {
+  date: string;
+  precipitation: number;
+}
+
 export default function WaterLevelDetails() {
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
@@ -67,6 +85,10 @@ export default function WaterLevelDetails() {
   const [wasteBin, setWasteBin] = useState<WasteBin | null>(null);
   const [waterHistory, setWaterHistory] = useState<WaterLevelHistory[]>([]);
   const [binHistory, setBinHistory] = useState<WasteBinHistory[]>([]);
+  const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [waterTrends, setWaterTrends] = useState<TrendData[]>([]);
+  const [wasteTrends, setWasteTrends] = useState<TrendData[]>([]);
+  const [rainData, setRainData] = useState<RainData[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   
@@ -117,6 +139,12 @@ export default function WaterLevelDetails() {
     const binHistoryData = generateSampleBinHistory();
     setWaterHistory(waterHistoryData);
     setBinHistory(binHistoryData);
+    
+    // Generate analytics data for enhanced insights
+    setPredictions(generatePredictions(waterHistoryData));
+    setWaterTrends(generateWaterTrends(waterHistoryData));
+    setWasteTrends(generateWasteTrends(binHistoryData));
+    setRainData(generateRainData());
     
     setLoading(false);
 
