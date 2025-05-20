@@ -191,12 +191,24 @@ export default function WaterLevels() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className={`animated-card slide-in hover-scale ${
+          averageWaterLevel > 85 
+            ? "danger-card" 
+            : averageWaterLevel > 65 
+            ? "warning-card" 
+            : "success-card"
+          }`} style={{animationDelay: '0.05s'}}>
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-medium">Average Water Level</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{averageWaterLevel}%</div>
+            <div className={`text-3xl font-bold ${
+              averageWaterLevel > 85 
+                ? "text-destructive" 
+                : averageWaterLevel > 65 
+                ? "text-warning" 
+                : "text-success"
+            }`}>{averageWaterLevel}%</div>
             <div className="w-full bg-gray-200 rounded-full h-2 mt-2 overflow-hidden">
               <div 
                 className={`h-2 rounded-full ${
@@ -204,7 +216,7 @@ export default function WaterLevels() {
                   averageWaterLevel > 65 ? "bg-warning" : 
                   "bg-success"
                 }`} 
-                style={{ width: `${averageWaterLevel}%` }}
+                style={{ width: `${averageWaterLevel}%`, transition: 'width 0.5s ease-in-out' }}
               ></div>
             </div>
           </CardContent>

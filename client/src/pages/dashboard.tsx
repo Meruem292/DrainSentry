@@ -196,12 +196,14 @@ export default function Dashboard() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className={`animated-card slide-in ${criticalBins > 0 ? 'danger-card' : 'success-card'}`} style={{animationDelay: '0.1s'}}>
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-medium">Critical Waste Bins</CardTitle>
           </CardHeader>
           <CardContent className="relative">
-            <div className="text-3xl font-bold">{criticalBins}</div>
+            <div className={`text-3xl font-bold ${criticalBins > 0 ? 'text-destructive' : 'text-success'}`}>
+              {criticalBins}
+            </div>
             <p className="text-sm text-muted-foreground mt-1">
               {criticalBins > 0 ? (
                 <span className="text-destructive">Need emptying</span>
@@ -210,12 +212,12 @@ export default function Dashboard() {
               )}
             </p>
             {criticalBins > 0 && (
-              <div className="absolute top-0 right-0 w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+              <div className="absolute top-0 right-0 w-2 h-2 rounded-full bg-red-500 pulse-animation"></div>
             )}
           </CardContent>
         </Card>
         
-        <Card className={`${criticalWaterLevels + criticalBins > 0 ? 'border-orange-200 bg-orange-50' : 'border-green-200 bg-green-50'}`}>
+        <Card className={`animated-card slide-in hover-glow ${criticalWaterLevels + criticalBins > 0 ? 'warning-card' : 'success-card'}`} style={{animationDelay: '0.15s'}}>
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-medium">System Health</CardTitle>
           </CardHeader>
@@ -223,7 +225,7 @@ export default function Dashboard() {
             <div className="flex items-center">
               {criticalWaterLevels + criticalBins > 0 ? (
                 <>
-                  <AlertTriangle className="h-6 w-6 text-orange-500 mr-2" />
+                  <AlertTriangle className="h-6 w-6 text-orange-500 mr-2 bounce-animation" style={{animationDuration: '2s'}} />
                   <div>
                     <div className="text-lg font-medium">Attention Required</div>
                     <p className="text-sm text-muted-foreground mt-1">
@@ -233,7 +235,7 @@ export default function Dashboard() {
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className="h-6 w-6 text-green-500 mr-2" />
+                  <CheckCircle2 className="h-6 w-6 text-green-500 mr-2 scale-in" />
                   <div>
                     <div className="text-lg font-medium">All Systems Normal</div>
                     <p className="text-sm text-muted-foreground mt-1">
