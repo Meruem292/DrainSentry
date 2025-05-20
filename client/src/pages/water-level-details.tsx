@@ -496,7 +496,7 @@ export default function WaterLevelDetails() {
                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                               </svg>
                             </div>
-                            <div className="text-gray-700">{recommendation.props.children}</div>
+                            <div className="text-gray-700">{recommendation}</div>
                           </motion.li>
                         ))}
                       </ul>
@@ -565,24 +565,24 @@ function getTrendAnalysis(current: number, history: any[], stationId: string): s
   }
 }
 
-function getRecommendations(current: number, average: number): React.ReactNode[] {
+function getRecommendations(current: number, average: number): string[] {
   const recommendations = [];
   
   if (current > 85) {
-    recommendations.push(<li key="1">Immediately dispatch maintenance crew to inspect for blockages</li>);
-    recommendations.push(<li key="2">Notify downstream stations of potential flooding risk</li>);
-    recommendations.push(<li key="3">Increase monitoring frequency to hourly until levels normalize</li>);
+    recommendations.push("Immediately dispatch maintenance crew to inspect for blockages");
+    recommendations.push("Notify downstream stations of potential flooding risk");
+    recommendations.push("Increase monitoring frequency to hourly until levels normalize");
   } else if (current > 65) {
-    recommendations.push(<li key="1">Schedule inspection within the next 24 hours</li>);
-    recommendations.push(<li key="2">Monitor for further increases in water level</li>);
+    recommendations.push("Schedule inspection within the next 24 hours");
+    recommendations.push("Monitor for further increases in water level");
   } else {
-    recommendations.push(<li key="1">Maintain regular monitoring schedule</li>);
+    recommendations.push("Maintain regular monitoring schedule");
   }
   
   if (current > average + 15) {
-    recommendations.push(<li key="4">Investigate potential causes for abnormal water level increase</li>);
+    recommendations.push("Investigate potential causes for abnormal water level increase");
   } else if (current < average - 15) {
-    recommendations.push(<li key="5">Verify sensor calibration if consistently below average levels</li>);
+    recommendations.push("Verify sensor calibration if consistently below average levels");
   }
   
   return recommendations;
