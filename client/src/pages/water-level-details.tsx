@@ -57,10 +57,11 @@ export default function WaterLevelDetails() {
       if (data) {
         // Convert the history data into a format suitable for charts
         const formattedData = Object.entries(data).map(([date, stations]: [string, any]) => {
-          const entry: any = { 
-            date,
-            value: stations && stations[stationId] !== undefined ? stations[stationId] : 0
-          };
+          const entry: any = { date };
+          
+          if (stations && stations[stationId] !== undefined) {
+            entry[stationId] = stations[stationId];
+          }
           
           return entry;
         });
@@ -130,8 +131,10 @@ export default function WaterLevelDetails() {
     // Get the last 7 data points
     const recentData = [...filteredHistoryData].slice(-7);
     
-    // We've already transformed the data to use "value" directly
-    return recentData;
+    return recentData.map(item => ({
+      date: item.date,
+      value: item[stationId] || 0
+    }));
   };
 
   return (
@@ -379,8 +382,8 @@ export default function WaterLevelDetails() {
                         </defs>
                         <Area 
                           type="monotone" 
-                          dataKey="value"
-                          name={stationData.location || "Water Level"} 
+                          dataKey={stationId} 
+                          name={stationData.location || stationId} 
                           stroke="#3b82f6"
                           strokeWidth={2}
                           fillOpacity={1}
