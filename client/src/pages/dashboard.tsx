@@ -16,11 +16,12 @@ import {
   Scale,
   CalendarClock,
   MapPin,
-  ChevronRight
+  ChevronRight,
+  Clock
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { WaterLevel, WasteBin, Device } from "@/types";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
@@ -36,13 +37,17 @@ import {
   Area,
   BarChart,
   Bar,
-  Cell
+  Cell,
+  PieChart,
+  Pie,
+  Legend
 } from "recharts";
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const [waterData, setWaterData] = useState<WaterLevel[]>([]);
-  const [wasteData, setWasteData] = useState<WasteBin[]>([]);
+  const [location, setLocation] = useLocation();
+  const [waterData, setWaterData] = useState<Record<string, WaterLevel>>({});
+  const [wasteData, setWasteData] = useState<Record<string, WasteBin>>({});
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -57,13 +62,9 @@ export default function Dashboard() {
     const waterUnsubscribe = onValue(waterRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const waterLevels = Object.entries(data).map(([id, value]) => ({
-          id,
-          ...(value as any),
-        }));
-        setWaterData(waterLevels);
+        setWaterData(data);
       } else {
-        setWaterData([]);
+        setWaterData({});
       }
       setLoading(false);
     });
@@ -72,13 +73,9 @@ export default function Dashboard() {
     const wasteUnsubscribe = onValue(wasteRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const wasteBins = Object.entries(data).map(([id, value]) => ({
-          id,
-          ...(value as any),
-        }));
-        setWasteData(wasteBins);
+        setWasteData(data);
       } else {
-        setWasteData([]);
+        setWasteData({});
       }
     });
 
@@ -103,10 +100,6 @@ export default function Dashboard() {
     };
   }, [user]);
 
-  const totalWaterSensors = waterData.length;
-  const totalBins = wasteData.length;
-  const criticalStations = waterData.filter(station => station.level > 85).length;
-  const criticalBins = wasteData.filter(bin => bin.fullness > 85).length;
   const totalDevices = devices.length;
   
   // Calculate active devices based on recent data updates (last 5 minutes)
@@ -114,8 +107,8 @@ export default function Dashboard() {
   fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
   
   const activeDevices = devices.filter(device => {
-    const waterLevel = waterData.find(w => w.id === device.id);
-    const wasteBin = wasteData.find(b => b.id === device.id);
+    const waterLevel = waterData[device.id];
+    const wasteBin = wasteData[device.id];
     
     const lastUpdatedWater = waterLevel?.lastUpdated ? new Date(waterLevel.lastUpdated) : null;
     const lastEmptiedBin = wasteBin?.lastEmptied ? new Date(wasteBin.lastEmptied) : null;
@@ -140,341 +133,434 @@ export default function Dashboard() {
     return "bg-success";
   }
 
-  // Generate sample history data for charts
+  // Count critical devices
+  const criticalWaterLevels = Object.values(waterData).filter(water => water.level > 85).length;
+  const criticalBins = Object.values(wasteData).filter(bin => bin.fullness > 85).length;
+
+  // Generate sample data for charts
   function generateSampleData(type: 'water' | 'waste', startValue: number) {
     const data = [];
-    for (let i = 30; i >= 0; i--) {
+    const now = new Date();
+    
+    for (let i = 6; i >= 0; i--) {
       const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dayStr = date.toISOString().split('T')[0];
+      date.setDate(now.getDate() - i);
       
-      // Create some variations for the chart
-      let value = startValue;
-      if (i % 7 === 0) value = Math.max(0, startValue - 10 - Math.random() * 15);
-      if (i % 5 === 0) value = Math.min(100, startValue + 5 + Math.random() * 10);
-      
+      const value = startValue + Math.floor(Math.random() * 15) - 5;
       data.push({
-        date: dayStr,
-        value: Math.round(value + (Math.random() * 10 - 5)),
+        name: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        value: Math.max(0, Math.min(100, value))
       });
     }
+    
     return data;
   }
 
   return (
-    <DashboardLayout 
-      title="Dashboard" 
-      subtitle="Monitor your DrainSentry network"
-    >
-      {!loading && devices.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-sm p-8 flex flex-col items-center justify-center">
-          <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-4">
-            <InfoIcon className="h-6 w-6 text-primary" />
-          </div>
-          <h3 className="text-lg font-medium text-gray-800 mb-2">No Devices Added</h3>
-          <p className="text-gray-500 text-center mb-6">
-            You haven't added any monitoring devices to your DrainSentry network yet.
-          </p>
-          <Link href="/devices">
-            <Button>
-              Add Your First Device
-            </Button>
-          </Link>
-        </div>
+    <DashboardLayout title="Dashboard" subtitle="DrainSentry system overview">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Total Devices</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{totalDevices}</div>
+            <p className="text-sm text-muted-foreground mt-1">
+              {activeDevices} active
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Critical Water Levels</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{criticalWaterLevels}</div>
+            <p className="text-sm text-muted-foreground mt-1">
+              {criticalWaterLevels > 0 ? (
+                <span className="text-destructive">Requires attention</span>
+              ) : (
+                "All normal"
+              )}
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Critical Waste Bins</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{criticalBins}</div>
+            <p className="text-sm text-muted-foreground mt-1">
+              {criticalBins > 0 ? (
+                <span className="text-destructive">Need emptying</span>
+              ) : (
+                "All normal"
+              )}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {devices.length === 0 && !loading ? (
+        <Card className="mb-6">
+          <CardContent className="pt-6 flex flex-col items-center justify-center">
+            <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-4">
+              <Info className="h-8 w-8 text-blue-600" />
+            </div>
+            <h3 className="text-xl font-medium mb-2">No devices found</h3>
+            <p className="text-center text-gray-500 mb-6 max-w-md">
+              You haven't added any devices to your DrainSentry system yet. Add your first device to start monitoring your infrastructure.
+            </p>
+            
+            <Link href="/devices">
+              <Button>
+                Add Your First Device
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
       ) : (
-        <div className="space-y-8">
-          {/* Summary Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="flex"
-            >
-              <Card className="w-full border-2 hover:border-primary/70 hover:shadow-lg transition-all duration-300">
-                <CardHeader className="pb-2 bg-gradient-to-r from-blue-50 to-transparent">
-                  <div className="flex items-center">
-                    <Droplet className="h-5 w-5 text-primary mr-2" />
-                    <CardTitle className="text-sm font-medium text-gray-700">Water Monitoring</CardTitle>
+        <>
+          <div className="mb-8">
+            <Tabs defaultValue="all">
+              <TabsList className="mb-4">
+                <TabsTrigger value="all">All Devices</TabsTrigger>
+                <TabsTrigger value="alerts">Alerts ({criticalWaterLevels + criticalBins})</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="all" className="mt-0">
+                <h2 className="text-lg font-medium mb-4">Device Overview</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                  {devices.map((device, index) => {
+                    const waterLevel = waterData[device.id];
+                    const wasteBin = wasteData[device.id];
+                    
+                    // Check if device is active (updated in the last 5 minutes)
+                    const lastUpdatedWater = waterLevel?.lastUpdated ? new Date(waterLevel.lastUpdated) : null;
+                    const lastEmptiedBin = wasteBin?.lastEmptied ? new Date(wasteBin.lastEmptied) : null;
+                    
+                    // Device is active if any sensor has been updated in the last 5 minutes
+                    const isActive = (
+                      (lastUpdatedWater && lastUpdatedWater >= fiveMinutesAgo) ||
+                      (lastEmptiedBin && lastEmptiedBin >= fiveMinutesAgo)
+                    );
+                    
+                    return (
+                      <motion.div 
+                        key={device.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4, delay: index * 0.1 }}
+                        className="col-span-1"
+                        onClick={() => setLocation(`/water-level-details?id=${device.id}`)}
+                      >
+                        <Card className="h-full border-2 hover:border-primary hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer">
+                          <CardHeader className="pb-3">
+                            <div className="flex justify-between items-center">
+                              <CardTitle className="text-base font-medium">{device.name}</CardTitle>
+                              <Badge 
+                                variant={isActive ? "default" : "outline"}
+                                className={isActive ? "" : "bg-gray-100 text-gray-500"}
+                              >
+                                {isActive ? "Active" : "Inactive"}
+                              </Badge>
+                            </div>
+                            <CardDescription className="flex items-center mt-1">
+                              <MapPin className="h-3.5 w-3.5 mr-1" />
+                              {device.location}
+                            </CardDescription>
+                          </CardHeader>
+                          
+                          <CardContent className="pb-3">
+                            <div className="space-y-3">
+                              <div>
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className="text-sm text-gray-500 flex items-center">
+                                    <Droplet className="h-3.5 w-3.5 mr-1 text-blue-500" />
+                                    Water Level
+                                  </span>
+                                  <span className="text-sm font-medium">{waterLevel?.level || 0}%</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                                  <div 
+                                    className={`h-2 rounded-full ${getWaterLevelColor(waterLevel?.level || 0)}`} 
+                                    style={{ width: `${waterLevel?.level || 0}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+                              
+                              <div>
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className="text-sm text-gray-500 flex items-center">
+                                    <Trash2 className="h-3.5 w-3.5 mr-1 text-emerald-500" />
+                                    Bin Fullness
+                                  </span>
+                                  <span className="text-sm font-medium">{wasteBin?.fullness || 0}%</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                                  <div 
+                                    className={`h-2 rounded-full ${getBinFullnessColor(wasteBin?.fullness || 0)}`} 
+                                    style={{ width: `${wasteBin?.fullness || 0}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+                              
+                              <div>
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className="text-sm text-gray-500 flex items-center">
+                                    <Scale className="h-3.5 w-3.5 mr-1 text-purple-500" />
+                                    Weight
+                                  </span>
+                                  <span className="text-sm font-medium">{wasteBin?.weight || 0} kg</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                                  <div 
+                                    className="h-2 rounded-full bg-purple-500" 
+                                    style={{ width: `${Math.min((wasteBin?.weight || 0) / 100 * 100, 100)}%` }}
+                                  ></div>
+                                </div>
+                                <div className="flex justify-end">
+                                  <span className="text-xs text-gray-500 mt-0.5">
+                                    {Math.min(Math.round((wasteBin?.weight || 0) / 100 * 100), 100)}% of capacity
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                          
+                          <CardFooter className="pt-0 border-t flex justify-between items-center py-2">
+                            <div className="text-xs text-gray-500 flex items-center">
+                              <Clock className="h-3.5 w-3.5 mr-1" />
+                              Last updated: {
+                                lastUpdatedWater && lastEmptiedBin ? 
+                                  (new Date(Math.max(lastUpdatedWater.getTime(), lastEmptiedBin.getTime())).toLocaleString()) : 
+                                  (lastUpdatedWater ? 
+                                    new Date(lastUpdatedWater).toLocaleString() : 
+                                    (lastEmptiedBin ? 
+                                      new Date(lastEmptiedBin).toLocaleString() : 
+                                      'Never'
+                                    )
+                                  )
+                              }
+                            </div>
+                            <span className="text-sm text-blue-500 flex items-center">
+                              View Details
+                              <ChevronRight className="h-4 w-4 ml-1" />
+                            </span>
+                          </CardFooter>
+                        </Card>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="alerts" className="mt-0">
+                <h2 className="text-lg font-medium mb-4">Critical Devices</h2>
+                {criticalWaterLevels + criticalBins === 0 ? (
+                  <Card>
+                    <CardContent className="py-6 flex flex-col items-center justify-center">
+                      <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mb-3">
+                        <InfoIcon className="h-6 w-6 text-green-600" />
+                      </div>
+                      <h3 className="text-lg font-medium mb-1">All Systems Normal</h3>
+                      <p className="text-center text-gray-500">
+                        There are no critical alerts at this time.
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {devices.map((device, index) => {
+                      const waterLevel = waterData[device.id];
+                      const wasteBin = wasteData[device.id];
+                      
+                      // Only show critical devices
+                      if ((waterLevel && waterLevel.level <= 85) && (wasteBin && wasteBin.fullness <= 85)) {
+                        return null;
+                      }
+                      
+                      // Check if device is active
+                      const lastUpdatedWater = waterLevel?.lastUpdated ? new Date(waterLevel.lastUpdated) : null;
+                      const lastEmptiedBin = wasteBin?.lastEmptied ? new Date(wasteBin.lastEmptied) : null;
+                      
+                      const isActive = (
+                        (lastUpdatedWater && lastUpdatedWater >= fiveMinutesAgo) ||
+                        (lastEmptiedBin && lastEmptiedBin >= fiveMinutesAgo)
+                      );
+                      
+                      return (
+                        <motion.div 
+                          key={device.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.4, delay: index * 0.1 }}
+                          className="col-span-1"
+                          onClick={() => setLocation(`/water-level-details?id=${device.id}`)}
+                        >
+                          <Card className="h-full border-2 border-red-200 hover:border-red-500 hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer">
+                            <CardHeader className="pb-3 bg-red-50">
+                              <div className="flex justify-between items-center">
+                                <CardTitle className="text-base font-medium">{device.name}</CardTitle>
+                                <Badge 
+                                  variant={isActive ? "destructive" : "outline"}
+                                  className={isActive ? "" : "bg-gray-100 text-gray-500"}
+                                >
+                                  {isActive ? "Critical" : "Inactive"}
+                                </Badge>
+                              </div>
+                              <CardDescription className="flex items-center mt-1">
+                                <MapPin className="h-3.5 w-3.5 mr-1" />
+                                {device.location}
+                              </CardDescription>
+                            </CardHeader>
+                            
+                            <CardContent className="pb-3">
+                              <div className="space-y-3">
+                                {waterLevel && waterLevel.level > 85 && (
+                                  <div>
+                                    <div className="flex justify-between items-center mb-1">
+                                      <span className="text-sm text-gray-500 flex items-center">
+                                        <Droplet className="h-3.5 w-3.5 mr-1 text-red-500" />
+                                        Water Level
+                                      </span>
+                                      <Badge variant="destructive">{waterLevel.level}%</Badge>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                                      <div 
+                                        className="h-2 rounded-full bg-red-500" 
+                                        style={{ width: `${waterLevel.level}%` }}
+                                      ></div>
+                                    </div>
+                                    <div className="mt-1 text-xs text-red-500">
+                                      Critical level detected - requires immediate attention
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {wasteBin && wasteBin.fullness > 85 && (
+                                  <div>
+                                    <div className="flex justify-between items-center mb-1">
+                                      <span className="text-sm text-gray-500 flex items-center">
+                                        <Trash2 className="h-3.5 w-3.5 mr-1 text-red-500" />
+                                        Bin Fullness
+                                      </span>
+                                      <Badge variant="destructive">{wasteBin.fullness}%</Badge>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                                      <div 
+                                        className="h-2 rounded-full bg-red-500" 
+                                        style={{ width: `${wasteBin.fullness}%` }}
+                                      ></div>
+                                    </div>
+                                    <div className="mt-1 text-xs text-red-500">
+                                      Bin needs emptying soon
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </CardContent>
+                            
+                            <CardFooter className="pt-0 border-t flex justify-between items-center py-2">
+                              <div className="text-xs text-gray-500 flex items-center">
+                                <BadgeAlert className="h-3.5 w-3.5 mr-1 text-red-500" />
+                                Critical Alert
+                              </div>
+                              <span className="text-sm text-red-500 flex items-center">
+                                View Details
+                                <ChevronRight className="h-4 w-4 ml-1" />
+                              </span>
+                            </CardFooter>
+                          </Card>
+                        </motion.div>
+                      );
+                    })}
                   </div>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-3xl font-bold text-gray-800">{totalWaterSensors}</div>
-                      <div className="text-xs text-gray-500 mt-1">Monitoring points</div>
-                    </div>
-                    <Badge variant={criticalStations > 0 ? "destructive" : "outline"} className={criticalStations > 0 ? "" : "bg-blue-50 text-primary"}>
-                      {criticalStations > 0 ? `${criticalStations} critical` : "All normal"}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-            
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
-              className="flex"
-            >
-              <Card className="w-full border-2 hover:border-green-600/70 hover:shadow-lg transition-all duration-300">
-                <CardHeader className="pb-2 bg-gradient-to-r from-green-50 to-transparent">
-                  <div className="flex items-center">
-                    <Trash2 className="h-5 w-5 text-green-600 mr-2" />
-                    <CardTitle className="text-sm font-medium text-gray-700">Waste Management</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-3xl font-bold text-gray-800">{totalBins}</div>
-                      <div className="text-xs text-gray-500 mt-1">Monitored bins</div>
-                    </div>
-                    <Badge variant={criticalBins > 0 ? "destructive" : "outline"} className={criticalBins > 0 ? "" : "bg-green-50 text-green-600"}>
-                      {criticalBins > 0 ? `${criticalBins} critical` : "All normal"}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-            
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.2 }}
-              className="flex"
-            >
-              <Card className="w-full border-2 hover:border-amber-500/70 hover:shadow-lg transition-all duration-300">
-                <CardHeader className="pb-2 bg-gradient-to-r from-amber-50 to-transparent">
-                  <div className="flex items-center">
-                    <Activity className="h-5 w-5 text-amber-500 mr-2" />
-                    <CardTitle className="text-sm font-medium text-gray-700">Device Status</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-3xl font-bold text-gray-800">{totalDevices}</div>
-                      <div className="text-xs text-gray-500 mt-1">Total devices</div>
-                    </div>
-                    <Badge variant="outline" className="bg-amber-50 text-amber-500">
-                      {activeDevices} active
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+                )}
+              </TabsContent>
+            </Tabs>
           </div>
           
-          {/* Device Cards */}
-          <div>
-            <h2 className="text-lg font-medium text-gray-800 mb-4">Device Status & Readings</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {/* Water Level Sensor Cards */}
-              {waterData.map((station, index) => {
-                // Find matching device
-                const matchingDevice = devices.find(device => device.id === station.id);
-                const chartData = generateSampleData('water', station.level);
-                
-                return (
-                  <motion.div
-                    key={station.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, delay: 0.1 + (index * 0.03) }}
-                    whileHover={{ scale: 1.02 }}
-                  >
-                    <Card className="border-2 hover:border-primary hover:shadow-lg transition-all duration-300 overflow-hidden">
-                      <CardHeader className="pb-3 bg-gradient-to-r from-blue-50 to-transparent">
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-3 h-3 rounded-full ${getWaterLevelColor(station.level)}`}></div>
-                            <CardTitle className="text-base font-medium text-gray-800">
-                              {station.location || station.id}
-                            </CardTitle>
-                          </div>
-                          <Badge 
-                            variant="outline" 
-                            className={`${
-                              station.level > 85 ? 'bg-red-50 text-red-500' : 
-                              station.level > 65 ? 'bg-amber-50 text-amber-500' : 
-                              'bg-green-50 text-green-500'
-                            }`}
-                          >
-                            {station.level > 85 ? "Critical" : station.level > 65 ? "Warning" : "Normal"}
-                          </Badge>
-                        </div>
-                        <CardDescription className="flex items-center mt-1 text-sm text-gray-500">
-                          <MapPin className="h-3.5 w-3.5 mr-1" />
-                          Water Level Sensor
-                        </CardDescription>
-                      </CardHeader>
-                      
-                      <CardContent className="pt-2">
-                        <div className="mb-4">
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-sm text-gray-500">Current Water Level</span>
-                            <span className="text-sm font-medium">{station.level}%</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                            <div 
-                              className={`h-2.5 rounded-full ${getWaterLevelColor(station.level)}`} 
-                              style={{ width: `${station.level}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                        
-                        <div className="h-24 w-full mb-2">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={chartData}>
-                              <defs>
-                                <linearGradient id={`colorWater${index}`} x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                                </linearGradient>
-                              </defs>
-                              <Area 
-                                type="monotone" 
-                                dataKey="value" 
-                                stroke="#3b82f6" 
-                                fillOpacity={1} 
-                                fill={`url(#colorWater${index})`} 
-                              />
-                              <XAxis dataKey="date" hide={true} />
-                              <YAxis hide={true} domain={[0, 100]} />
-                              <Tooltip 
-                                labelFormatter={value => `Date: ${value}`}
-                                formatter={value => [`${value}%`, "Water Level"]}
-                                contentStyle={{ fontSize: '12px' }}
-                              />
-                            </AreaChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </CardContent>
-                      
-                      <CardFooter className="flex justify-between pt-0">
-                        <div className="flex items-center text-xs text-gray-500">
-                          <CalendarClock className="h-3.5 w-3.5 mr-1" />
-                          Last updated: {station.lastUpdated || 'Unknown'}
-                        </div>
-                        
-                        <Link href={`/water-levels/${station.id}`} className="text-xs text-primary flex items-center">
-                          View Details <ChevronRight className="h-3 w-3 ml-1" />
-                        </Link>
-                      </CardFooter>
-                    </Card>
-                  </motion.div>
-                );
-              })}
-              
-              {/* Waste Bin Sensor Cards */}
-              {wasteData.map((bin, index) => {
-                // Find matching device
-                const matchingDevice = devices.find(device => device.id === bin.id);
-                const chartData = generateSampleData('waste', bin.fullness);
-                
-                return (
-                  <motion.div
-                    key={bin.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, delay: 0.1 + ((index + waterData.length) * 0.03) }}
-                    whileHover={{ scale: 1.02 }}
-                  >
-                    <Card className="border-2 hover:border-emerald-500 hover:shadow-lg transition-all duration-300 overflow-hidden">
-                      <CardHeader className="pb-3 bg-gradient-to-r from-green-50 to-transparent">
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-3 h-3 rounded-full ${getBinFullnessColor(bin.fullness)}`}></div>
-                            <CardTitle className="text-base font-medium text-gray-800">
-                              {bin.location || bin.id}
-                            </CardTitle>
-                          </div>
-                          <Badge 
-                            variant="outline" 
-                            className={`${
-                              bin.fullness > 85 ? 'bg-red-50 text-red-500' : 
-                              bin.fullness > 60 ? 'bg-amber-50 text-amber-500' : 
-                              'bg-green-50 text-green-500'
-                            }`}
-                          >
-                            {bin.fullness > 85 ? "Full" : bin.fullness > 60 ? "Warning" : "Empty"}
-                          </Badge>
-                        </div>
-                        <CardDescription className="flex items-center mt-1 text-sm text-gray-500">
-                          <MapPin className="h-3.5 w-3.5 mr-1" />
-                          Waste Bin Monitor
-                        </CardDescription>
-                      </CardHeader>
-                      
-                      <CardContent className="pt-2">
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                          <div>
-                            <div className="flex justify-between items-center mb-1">
-                              <span className="text-sm text-gray-500">Fullness</span>
-                              <span className="text-sm font-medium">{bin.fullness}%</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                              <div 
-                                className={`h-2.5 rounded-full ${getBinFullnessColor(bin.fullness)}`} 
-                                style={{ width: `${bin.fullness}%` }}
-                              ></div>
-                            </div>
-                          </div>
-                          
-                          <div>
-                            <div className="flex justify-between items-center mb-1">
-                              <span className="text-sm text-gray-500">Weight</span>
-                              <span className="text-sm font-medium">{bin.weight} kg</span>
-                            </div>
-                            <div className="flex items-center">
-                              <Scale className="h-4 w-4 text-blue-500 mr-1" />
-                              <span className="text-xs text-gray-500">Capacity: 100kg</span>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="h-24 w-full mb-2">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={chartData.slice(-14)} barSize={10}>
-                              <XAxis dataKey="date" hide={true} />
-                              <YAxis hide={true} domain={[0, 100]} />
-                              <Tooltip 
-                                labelFormatter={value => `Date: ${value}`}
-                                formatter={value => [`${value}%`, "Bin Fullness"]}
-                                contentStyle={{ fontSize: '12px' }}
-                              />
-                              <Bar 
-                                dataKey="value" 
-                                radius={[10, 10, 0, 0]}
-                                fill={(entry, index) => {
-                                  const value = entry.value;
-                                  return value > 85 ? '#ef4444' : value > 60 ? '#f97316' : '#10b981';
-                                }}
-                              />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </CardContent>
-                      
-                      <CardFooter className="flex justify-between pt-0">
-                        <div className="flex items-center text-xs text-gray-500">
-                          <CalendarClock className="h-3.5 w-3.5 mr-1" />
-                          Last emptied: {bin.lastEmptied || 'Unknown'}
-                        </div>
-                        
-                        <Link href={`/waste-bins/${bin.id}`} className="text-xs text-emerald-600 flex items-center">
-                          View Details <ChevronRight className="h-3 w-3 ml-1" />
-                        </Link>
-                      </CardFooter>
-                    </Card>
-                  </motion.div>
-                );
-              })}
-            </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base font-medium">Water Level Trends</CardTitle>
+                <CardDescription>Average water levels over the past week</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={generateSampleData('water', 50)}
+                      margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id="colorWater" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                      <XAxis dataKey="name" />
+                      <YAxis 
+                        tickFormatter={(value) => `${value}%`}
+                        domain={[0, 100]}
+                      />
+                      <Tooltip formatter={(value) => [`${value}%`, 'Water Level']} />
+                      <Area 
+                        type="monotone" 
+                        dataKey="value" 
+                        stroke="#3b82f6" 
+                        fillOpacity={1} 
+                        fill="url(#colorWater)" 
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base font-medium">Waste Bin Status</CardTitle>
+                <CardDescription>Average bin fullness over the past week</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={generateSampleData('waste', 35)}
+                      margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                      <XAxis dataKey="name" />
+                      <YAxis 
+                        tickFormatter={(value) => `${value}%`}
+                        domain={[0, 100]}
+                      />
+                      <Tooltip formatter={(value) => [`${value}%`, 'Bin Fullness']} />
+                      <Bar 
+                        dataKey="value" 
+                        fill="#10b981" 
+                        radius={[4, 4, 0, 0]}
+                        fillOpacity={0.9}
+                        barSize={30}
+                        fill={(entry) => {
+                          if (entry.value > 85) return "#ef4444";
+                          if (entry.value > 60) return "#f97316";
+                          return "#10b981";
+                        }}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </div>
+        </>
       )}
     </DashboardLayout>
   );
