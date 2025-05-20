@@ -118,4 +118,120 @@
   .text-warning {
     @apply text-yellow-600;
   }
+  
+  /* Card animation and hover effects */
+  .animated-card {
+    @apply transition-all duration-300 transform hover:shadow-lg hover:-translate-y-1 hover:border-primary/50;
+  }
+  
+  .pulse-animation {
+    @apply animate-pulse;
+  }
+  
+  .bounce-animation {
+    animation: bounce 1s infinite;
+  }
+  
+  .fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+  
+  .slide-in {
+    animation: slideIn 0.5s ease-in-out;
+  }
+  
+  .scale-in {
+    animation: scaleIn 0.3s ease-in-out;
+  }
+  
+  .rotate-in {
+    animation: rotateIn 0.5s ease-in-out;
+  }
+  
+  .hover-glow {
+    @apply hover:shadow-[0_0_15px_rgba(33,150,243,0.3)] transition-shadow duration-300;
+  }
+  
+  .hover-scale {
+    @apply hover:scale-105 transition-transform duration-300;
+  }
+  
+  .hover-bright {
+    @apply hover:brightness-105 transition-all duration-300;
+  }
+  
+  .hover-border {
+    @apply hover:border-primary transition-colors duration-300;
+  }
+  
+  .content-card {
+    @apply rounded-lg bg-white border border-gray-200 overflow-hidden transition-all duration-300 hover:shadow-md hover:border-gray-300;
+  }
+  
+  .metric-card {
+    @apply rounded-lg bg-white border border-gray-200 overflow-hidden transition-all duration-300 hover:shadow-md hover:border-blue-200 hover:bg-blue-50/30;
+  }
+  
+  .success-card {
+    @apply rounded-lg bg-white border border-gray-200 overflow-hidden transition-all duration-300 hover:shadow-md hover:border-green-200 hover:bg-green-50/30;
+  }
+  
+  .warning-card {
+    @apply rounded-lg bg-white border border-gray-200 overflow-hidden transition-all duration-300 hover:shadow-md hover:border-yellow-200 hover:bg-yellow-50/30;
+  }
+  
+  .danger-card {
+    @apply rounded-lg bg-white border border-gray-200 overflow-hidden transition-all duration-300 hover:shadow-md hover:border-red-200 hover:bg-red-50/30;
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes rotateIn {
+  from {
+    transform: rotate(-5deg);
+    opacity: 0;
+  }
+  to {
+    transform: rotate(0);
+    opacity: 1;
+  }
 }

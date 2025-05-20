@@ -163,7 +163,7 @@ export default function Dashboard() {
   return (
     <DashboardLayout title="Dashboard" subtitle="DrainSentry system overview">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card>
+        <Card className="animated-card hover-scale fade-in">
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-medium">Total Devices</CardTitle>
           </CardHeader>
@@ -175,12 +175,14 @@ export default function Dashboard() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className={`animated-card slide-in ${criticalWaterLevels > 0 ? 'danger-card' : 'success-card'}`} style={{animationDelay: '0.05s'}}>
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-medium">Critical Water Levels</CardTitle>
           </CardHeader>
           <CardContent className="relative">
-            <div className="text-3xl font-bold">{criticalWaterLevels}</div>
+            <div className={`text-3xl font-bold ${criticalWaterLevels > 0 ? 'text-destructive' : 'text-success'}`}>
+              {criticalWaterLevels}
+            </div>
             <p className="text-sm text-muted-foreground mt-1">
               {criticalWaterLevels > 0 ? (
                 <span className="text-destructive">Requires attention</span>
@@ -189,7 +191,7 @@ export default function Dashboard() {
               )}
             </p>
             {criticalWaterLevels > 0 && (
-              <div className="absolute top-0 right-0 w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+              <div className="absolute top-0 right-0 w-2 h-2 rounded-full bg-red-500 pulse-animation"></div>
             )}
           </CardContent>
         </Card>
