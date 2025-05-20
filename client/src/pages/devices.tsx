@@ -716,8 +716,16 @@ export default function Devices() {
                     );
 
                   return (
-                    <TableRow key={device.id}>
-                      <TableCell className="font-medium">{device.name}</TableCell>
+                    <TableRow 
+                      key={device.id} 
+                      className="transition-colors duration-200 hover:bg-gray-50 hover:shadow-sm"
+                    >
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${isActive ? "bg-green-500 pulse-animation" : "bg-gray-300"}`}></div>
+                          <span className="hover:text-primary transition-colors duration-200">{device.name}</span>
+                        </div>
+                      </TableCell>
                       <TableCell>{device.location}</TableCell>
                       <TableCell>
                         <Badge variant={isActive ? "default" : "outline"} className={isActive ? "" : "bg-gray-100 text-gray-500"}>

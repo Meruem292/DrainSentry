@@ -413,7 +413,7 @@ export default function WaterLevelDetails() {
                     
                     <div>
                       <h3 className="text-sm font-medium mb-2">Trend Analysis</h3>
-                      <div className="rounded-lg p-3 bg-blue-50">
+                      <div className="rounded-lg p-3 bg-blue-50 hover:bg-blue-100 hover:shadow-md transition-all duration-300 fade-in">
                         <p className="text-sm text-gray-700">
                           {getTrendAnalysis()}
                         </p>
@@ -425,7 +425,7 @@ export default function WaterLevelDetails() {
                     <div>
                       <h3 className="text-sm font-medium mb-2">Waste Bin Status</h3>
                       <div className="grid grid-cols-2 gap-3">
-                        <div className={`rounded-lg p-3 ${wasteBin?.fullness && wasteBin.fullness > 60 ? "bg-orange-50" : "bg-green-50"}`}>
+                        <div className={`rounded-lg p-3 hover:shadow-md transition-all duration-300 slide-in ${wasteBin?.fullness && wasteBin.fullness > 60 ? "bg-orange-50 hover:bg-orange-100" : "bg-green-50 hover:bg-green-100"}`}>
                           <div className="flex justify-between items-center mb-1">
                             <div className="flex items-center">
                               <Trash className="h-4 w-4 mr-1 text-gray-500" />
