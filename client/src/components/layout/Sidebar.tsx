@@ -74,11 +74,9 @@ export default function Sidebar({ mobile = false }: SidebarProps) {
       
       <div className="flex-1 p-2">
         {navItems.map((item) => (
-          <Link key={item.path} href={item.path}>
-            <a className={`sidebar-link ${isActive(item.path)}`}>
-              <span className="mr-3 text-gray-500">{item.icon}</span>
-              <span>{item.label}</span>
-            </a>
+          <Link key={item.path} href={item.path} className={`sidebar-link ${isActive(item.path)}`}>
+            <span className="mr-3 text-gray-500">{item.icon}</span>
+            <span>{item.label}</span>
           </Link>
         ))}
       </div>

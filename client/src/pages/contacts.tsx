@@ -296,7 +296,18 @@ export default function Contacts() {
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex space-x-3">
-                          <Dialog>
+                          <Dialog onOpenChange={(open) => {
+                            if (open) {
+                              // Initialize the form with the contact data when opening
+                              handleEditContact(contact);
+                            } else {
+                              // Reset form when closing without saving
+                              setEditMode(false);
+                              setCurrentContact(null);
+                              setContactName("");
+                              setContactPhone("");
+                            }
+                          }}>
                             <DialogTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8">
                                 <Pencil className="h-4 w-4 text-gray-500 hover:text-primary" />
