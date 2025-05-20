@@ -750,25 +750,30 @@ export default function Devices() {
                         <div className="flex justify-end space-x-2">
                           <Button 
                             variant="ghost" 
-                            size="sm" 
+                            size="sm"
+                            className="hover:bg-blue-50 transition-colors duration-200"
                             onClick={() => setLocation(`/water-level-details?id=${device.id}`)}
                           >
-                            <Eye className="h-4 w-4" />
+                            <Eye className="h-4 w-4 hover:scale-110 transition-transform duration-200" />
                           </Button>
 
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-blue-500"
+                            className="text-blue-500 hover:bg-blue-50 transition-colors duration-200"
                             onClick={() => handleEditDevice(device)}
                           >
-                            <Pencil className="h-4 w-4" />
+                            <Pencil className="h-4 w-4 hover:scale-110 transition-transform duration-200" />
                           </Button>
                           
                           <Dialog>
                             <DialogTrigger asChild>
-                              <Button variant="ghost" size="sm" className="text-red-500">
-                                <Trash2 className="h-4 w-4" />
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-red-500 hover:bg-red-50 transition-colors duration-200"
+                              >
+                                <Trash2 className="h-4 w-4 hover:scale-110 transition-transform duration-200" />
                               </Button>
                             </DialogTrigger>
                             <DialogContent>
