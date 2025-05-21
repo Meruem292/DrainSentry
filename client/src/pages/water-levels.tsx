@@ -324,7 +324,7 @@ export default function WaterLevels() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.05 * index }}
                 whileHover={{ scale: 1.02 }}
-                onClick={() => setLocation(`/water-level-details?id=${device.id}`)}
+                onClick={() => setLocation(`/water-levels/${device.id}`)}
                 className="cursor-pointer"
               >
                 <Card className="h-full border-2 hover:border-primary hover:shadow-lg hover:-translate-y-1 transition-all duration-300 overflow-hidden">
