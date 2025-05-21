@@ -92,9 +92,8 @@ export default function WaterLevelDetails() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   
-  // Get device ID from URL query parameter
-  const params = new URLSearchParams(location.split("?")[1]);
-  const deviceId = params.get("id");
+  // Get device ID from URL path parameter
+  const [, deviceId] = location.split("/water-levels/");
   
   useEffect(() => {
     if (!user || !deviceId) return;

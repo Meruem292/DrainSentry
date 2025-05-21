@@ -303,7 +303,8 @@ export default function WaterLevels() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {devices.map((device, index) => {
+          {/* Only display devices that have water level data - prevents redundant cards */}
+          {devices.filter(device => waterLevels[device.id]).map((device, index) => {
             const waterLevel = waterLevels[device.id];
             const wasteBin = wasteBins[device.id];
             
