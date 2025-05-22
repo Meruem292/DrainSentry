@@ -118,8 +118,8 @@ export default function DeviceHistory() {
         }
       });
       
-      // Generate history data (in a real app, this would come from Firebase)
-      generateHistoryData(historyRange);
+      // Fetch real history data from Firebase
+      fetchHistoryData(containerKey, historyRange);
       
       setLoading(false);
     });
