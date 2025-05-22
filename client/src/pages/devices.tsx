@@ -103,6 +103,8 @@ export default function Devices() {
         Object.entries(data).forEach(([key, value]) => {
           const waterLevel = value as WaterLevel;
           if (waterLevel.id) {
+            // Make sure level is a number
+            waterLevel.level = typeof waterLevel.level === 'number' ? waterLevel.level : Number(waterLevel.level) || 0;
             processedData[waterLevel.id] = waterLevel;
           } else {
             processedData[key] = waterLevel;
@@ -124,6 +126,9 @@ export default function Devices() {
         Object.entries(data).forEach(([key, value]) => {
           const wasteBin = value as WasteBin;
           if (wasteBin.id) {
+            // Make sure fullness and weight are numbers
+            wasteBin.fullness = typeof wasteBin.fullness === 'number' ? wasteBin.fullness : Number(wasteBin.fullness) || 0;
+            wasteBin.weight = typeof wasteBin.weight === 'number' ? wasteBin.weight : Number(wasteBin.weight) || 0;
             processedData[wasteBin.id] = wasteBin;
           } else {
             processedData[key] = wasteBin;
