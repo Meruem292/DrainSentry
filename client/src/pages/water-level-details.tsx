@@ -722,44 +722,140 @@ export default function WaterLevelDetails() {
         
         {/* Waste Bin History Tab */}
         <TabsContent value="waste-history">
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-base font-medium">Waste Bin History</CardTitle>
-              <CardDescription>24-hour bin fullness and weight</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={binHistory.map(item => ({
-                      name: formatDate(item.timestamp),
-                      fullness: item.fullness,
-                      weight: item.weight,
-                    }))}
-                    margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar 
-                      dataKey="fullness" 
-                      fill="#10b981" 
-                      name="Bin Fullness (%)" 
-                      radius={[4, 4, 0, 0]}
-                    />
-                    <Bar 
-                      dataKey="weight" 
-                      fill="#8884d8" 
-                      name="Weight (kg)" 
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="mb-6">
+            <h2 className="text-xl font-bold mb-4">Bin Trend Analysis</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Bin Fullness Trend Card */}
+              <Card className="animated-card hover-scale fade-in">
+                <CardHeader className="bg-gradient-to-r from-green-50 to-transparent">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                      <Trash className="h-4 w-4 text-green-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base font-medium">Bin Fullness Trend</CardTitle>
+                      <CardDescription>24-hour fullness analysis</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-60">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart
+                        data={binHistory.map(item => ({
+                          time: formatDate(item.timestamp),
+                          fullness: item.fullness
+                        }))}
+                        margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="time" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Line 
+                          type="monotone" 
+                          dataKey="fullness" 
+                          stroke="#10b981" 
+                          name="Bin Fullness (%)" 
+                          strokeWidth={2}
+                          dot={{ r: 4 }}
+                          activeDot={{ r: 6 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4 mt-4">
+                    <div className="bg-gray-50 p-3 rounded-md hover:bg-gray-100 transition-colors">
+                      <div className="text-sm text-gray-500 mb-1">Avg Fullness</div>
+                      <div className="text-2xl font-bold">
+                        {binHistory.length > 0 ? Math.round(binHistory.reduce((acc, item) => acc + item.fullness, 0) / binHistory.length) : 0}%
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-50 p-3 rounded-md hover:bg-gray-100 transition-colors">
+                      <div className="text-sm text-gray-500 mb-1">Max Fullness</div>
+                      <div className="text-2xl font-bold">
+                        {binHistory.length > 0 ? Math.max(...binHistory.map(item => item.fullness)) : 0}%
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-50 p-3 rounded-md hover:bg-gray-100 transition-colors">
+                      <div className="text-sm text-gray-500 mb-1">Critical Events</div>
+                      <div className="text-2xl font-bold">
+                        {binHistory.filter(item => item.fullness > 85).length}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* Bin Weight Trend Card */}
+              <Card className="animated-card hover-scale fade-in" style={{animationDelay: "0.1s"}}>
+                <CardHeader className="bg-gradient-to-r from-blue-50 to-transparent">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                      <Scale className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base font-medium">Bin Weight Trend</CardTitle>
+                      <CardDescription>24-hour weight analysis</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-60">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart
+                        data={binHistory.map(item => ({
+                          time: formatDate(item.timestamp),
+                          weight: item.weight
+                        }))}
+                        margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="time" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Line 
+                          type="monotone" 
+                          dataKey="weight" 
+                          stroke="#3b82f6" 
+                          name="Weight (kg)" 
+                          strokeWidth={2}
+                          dot={{ r: 4 }}
+                          activeDot={{ r: 6 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4 mt-4">
+                    <div className="bg-gray-50 p-3 rounded-md hover:bg-gray-100 transition-colors">
+                      <div className="text-sm text-gray-500 mb-1">Avg Weight</div>
+                      <div className="text-2xl font-bold">
+                        {binHistory.length > 0 ? Math.round(binHistory.reduce((acc, item) => acc + item.weight, 0) / binHistory.length) : 0} kg
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-50 p-3 rounded-md hover:bg-gray-100 transition-colors">
+                      <div className="text-sm text-gray-500 mb-1">Max Weight</div>
+                      <div className="text-2xl font-bold">
+                        {binHistory.length > 0 ? Math.max(...binHistory.map(item => item.weight)) : 0} kg
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-50 p-3 rounded-md hover:bg-gray-100 transition-colors">
+                      <div className="text-sm text-gray-500 mb-1">Current</div>
+                      <div className="text-2xl font-bold">
+                        {wasteBin?.weight || 0} kg
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <Card>
