@@ -405,22 +405,6 @@ export default function Devices() {
                   }
                 }
               }
-              
-              // Check for waste collection history
-              const wasteHistoryRef = ref(database, `users/${user.uid}/wasteCollectionHistory`);
-              const wasteHistorySnapshot = await get(wasteHistoryRef);
-              if (wasteHistorySnapshot.exists()) {
-                const wasteHistoryData = wasteHistorySnapshot.val();
-                
-                // Look through each date entry
-                for (const [date, dateData] of Object.entries(wasteHistoryData)) {
-                  if (dateData && typeof dateData === 'object' && dateData.hasOwnProperty(key)) {
-                    // Remove just this device's history for this date
-                    const specificHistoryRef = ref(database, `users/${user.uid}/wasteCollectionHistory/${date}/${key}`);
-                    await remove(specificHistoryRef);
-                  }
-                }
-              }
             }
           }
         }
@@ -502,25 +486,6 @@ export default function Devices() {
             // Remove history for both container key and device ID to be thorough
             const specificHistoryRef1 = ref(database, `users/${user.uid}/waterLevelHistory/${date}/${containerKey}`);
             const specificHistoryRef2 = ref(database, `users/${user.uid}/waterLevelHistory/${date}/${deviceId}`);
-            await remove(specificHistoryRef1);
-            await remove(specificHistoryRef2);
-          }
-        }
-      }
-      
-      // Clean up waste collection history for this device
-      const wasteHistoryRef = ref(database, `users/${user.uid}/wasteCollectionHistory`);
-      const wasteHistorySnapshot = await get(wasteHistoryRef);
-      if (wasteHistorySnapshot.exists()) {
-        const wasteHistoryData = wasteHistorySnapshot.val();
-        
-        // Look through each date entry
-        for (const [date, dateData] of Object.entries(wasteHistoryData)) {
-          if (dateData && typeof dateData === 'object' && 
-             (dateData.hasOwnProperty(containerKey) || dateData.hasOwnProperty(deviceId))) {
-            // Remove history for both container key and device ID to be thorough
-            const specificHistoryRef1 = ref(database, `users/${user.uid}/wasteCollectionHistory/${date}/${containerKey}`);
-            const specificHistoryRef2 = ref(database, `users/${user.uid}/wasteCollectionHistory/${date}/${deviceId}`);
             await remove(specificHistoryRef1);
             await remove(specificHistoryRef2);
           }
