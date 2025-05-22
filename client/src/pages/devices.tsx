@@ -68,7 +68,7 @@ export default function Devices() {
   const [notifyOnBinFullness, setNotifyOnBinFullness] = useState(true);
   const [notifyOnWeight, setNotifyOnWeight] = useState(true);
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
-  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [contacts, setContacts] = useState<any[]>([]);
   
   useEffect(() => {
     if (!user) return;
@@ -251,30 +251,56 @@ export default function Devices() {
         }
       };
       
-      const deviceRef = ref(database, `users/${user.uid}/devices/${selectedDevice.id}`);
-      await set(deviceRef, updatedDevice);
+      // Fix the path for updating device data
+      // We need to use the correct location in the Firebase database
+      // Looking at the screenshot, it seems the path should be "users/{uid}/devices/device1"
+      // where device1 is the actual container for the device data
       
-      // Update associated water level location
-      if (deviceLocation !== selectedDevice.location) {
-        const waterRef = ref(database, `users/${user.uid}/waterLevels/${selectedDevice.id}`);
-        const waterSnapshot = await get(waterRef);
-        if (waterSnapshot.exists()) {
-          const waterData = waterSnapshot.val();
-          await set(waterRef, {
-            ...waterData,
-            location: deviceLocation.trim() || selectedDevice.location
-          });
-        }
+      // First, get the correct path by finding the container key
+      const devicesRef = ref(database, `users/${user.uid}/devices`);
+      const devicesSnapshot = await get(devicesRef);
+      
+      if (devicesSnapshot.exists()) {
+        const devicesData = devicesSnapshot.val();
+        // Find the container key (like "device1") that contains our device
+        let containerKey = null;
         
-        // Update associated waste bin location
-        const wasteRef = ref(database, `users/${user.uid}/wasteBins/${selectedDevice.id}`);
-        const wasteSnapshot = await get(wasteRef);
-        if (wasteSnapshot.exists()) {
-          const wasteData = wasteSnapshot.val();
-          await set(wasteRef, {
-            ...wasteData,
-            location: deviceLocation.trim() || selectedDevice.location
-          });
+        Object.entries(devicesData).forEach(([key, value]: [string, any]) => {
+          if (value.id === selectedDevice.id) {
+            containerKey = key;
+          }
+        });
+        
+        if (containerKey) {
+          // Update the device with the correct path
+          const deviceRef = ref(database, `users/${user.uid}/devices/${containerKey}`);
+          await set(deviceRef, updatedDevice);
+          
+          // Update associated water level location if changed
+          if (deviceLocation !== selectedDevice.location) {
+            const waterRef = ref(database, `users/${user.uid}/waterLevels/${containerKey}`);
+            const waterSnapshot = await get(waterRef);
+            if (waterSnapshot.exists()) {
+              const waterData = waterSnapshot.val();
+              await set(waterRef, {
+                ...waterData,
+                location: deviceLocation.trim() || selectedDevice.location
+              });
+            }
+            
+            // Update associated waste bin location
+            const wasteRef = ref(database, `users/${user.uid}/wasteBins/${containerKey}`);
+            const wasteSnapshot = await get(wasteRef);
+            if (wasteSnapshot.exists()) {
+              const wasteData = wasteSnapshot.val();
+              await set(wasteRef, {
+                ...wasteData,
+                location: deviceLocation.trim() || selectedDevice.location
+              });
+            }
+          }
+        } else {
+          throw new Error("Device container not found");
         }
       }
       

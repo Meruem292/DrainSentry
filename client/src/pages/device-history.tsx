@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { database } from "@/lib/firebase";
-import { ref, onValue } from "firebase/database";
+import { ref, onValue, get } from "firebase/database";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +18,6 @@ import { Badge } from "@/components/ui/badge";
 import { WaterLevel, WasteBin, Device } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar } from "@/components/ui/calendar";
-import { Line } from "recharts";
 
 // Define the history entry interfaces
 interface HistoryEntry {
@@ -54,55 +53,81 @@ export default function DeviceHistory() {
   useEffect(() => {
     if (!user || !deviceId) return;
 
-    // Get device data
-    const deviceRef = ref(database, `users/${user.uid}/devices/${deviceId}`);
-    const deviceUnsubscribe = onValue(deviceRef, (snapshot) => {
-      if (snapshot.exists()) {
-        setDevice({
-          id: deviceId,
-          ...snapshot.val()
+    // First, find the correct container key for the device ID
+    const devicesRef = ref(database, `users/${user.uid}/devices`);
+    
+    // Get all devices to find the matching container
+    const devicesUnsubscribe = onValue(devicesRef, (devicesSnapshot) => {
+      if (!devicesSnapshot.exists()) {
+        setDevice(null);
+        toast({
+          title: "Device not found",
+          description: "No devices found in your account.",
+          variant: "destructive",
         });
-      } else {
+        return;
+      }
+      
+      // Find the container key for this device ID
+      const devicesData = devicesSnapshot.val();
+      let containerKey = null;
+      let deviceData = null;
+      
+      // Loop through devices to find the one with matching ID
+      Object.entries(devicesData).forEach(([key, value]: [string, any]) => {
+        // Check if this device has the ID we're looking for
+        if (value.id === deviceId) {
+          containerKey = key;
+          deviceData = value;
+        }
+      });
+      
+      if (!containerKey || !deviceData) {
         setDevice(null);
         toast({
           title: "Device not found",
           description: "The requested device could not be found in your account.",
           variant: "destructive",
         });
+        return;
       }
-    });
-
-    // Get current water level data
-    const waterLevelRef = ref(database, `users/${user.uid}/waterLevels/${deviceId}`);
-    const waterLevelUnsubscribe = onValue(waterLevelRef, (snapshot) => {
-      if (snapshot.exists()) {
-        setWaterLevel(snapshot.val());
-      } else {
-        setWaterLevel(null);
-      }
-    });
-
-    // Get current waste bin data
-    const wasteBinRef = ref(database, `users/${user.uid}/wasteBins/${deviceId}`);
-    const wasteBinUnsubscribe = onValue(wasteBinRef, (snapshot) => {
-      if (snapshot.exists()) {
-        setWasteBin(snapshot.val());
-      } else {
-        setWasteBin(null);
-      }
+      
+      // Set the device data
+      setDevice({
+        id: deviceId,
+        ...deviceData
+      });
+      
+      // Now get the water level data using the container key
+      const waterLevelRef = ref(database, `users/${user.uid}/waterLevels/${containerKey}`);
+      onValue(waterLevelRef, (snapshot) => {
+        if (snapshot.exists()) {
+          setWaterLevel(snapshot.val());
+        } else {
+          setWaterLevel(null);
+        }
+      });
+      
+      // Get waste bin data using the container key
+      const wasteBinRef = ref(database, `users/${user.uid}/wasteBins/${containerKey}`);
+      onValue(wasteBinRef, (snapshot) => {
+        if (snapshot.exists()) {
+          setWasteBin(snapshot.val());
+        } else {
+          setWasteBin(null);
+        }
+      });
+      
+      // Generate history data (in a real app, this would come from Firebase)
+      generateHistoryData(historyRange);
+      
+      setLoading(false);
     });
     
-    // Generate history data (in a real app, this would come from Firebase)
-    generateHistoryData(historyRange);
-    
-    setLoading(false);
-
     return () => {
-      deviceUnsubscribe();
-      waterLevelUnsubscribe();
-      wasteBinUnsubscribe();
+      devicesUnsubscribe();
     };
-  }, [user, deviceId, historyRange, toast]);
+  }, [user, deviceId, historyRange]);
 
   // Generate sample history data based on the selected range
   const generateHistoryData = (range: "24h" | "7d" | "30d") => {
@@ -327,7 +352,7 @@ export default function DeviceHistory() {
                 </TableHeader>
                 <TableBody>
                   {readingHistory.waterLevels.slice(0, getDisplayedRows()).map((entry, index) => (
-                    <TableRow key={index}>
+                    <TableRow key={`reading-${index}`}>
                       <TableCell className="font-medium">{formatDate(entry.timestamp)}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className={getStatusBadgeClass(readingHistory.waterLevels[index].type)}>
@@ -443,15 +468,13 @@ export default function DeviceHistory() {
                 <div className="mt-4">
                   <h4 className="font-medium mb-2">Insights</h4>
                   <p className="text-gray-600 text-sm">
-                    Bin fullness typically accumulates during weekdays and
-                    {readingHistory.binFullness.some(e => e.value > 80) 
-                      ? " has reached critical levels requiring attention." 
-                      : " has remained at manageable levels."} 
-                    The correlation between bin weight and fullness shows
-                    {Math.abs(
-                      readingHistory.binFullness.reduce((sum, entry) => sum + entry.value, 0) / readingHistory.binFullness.length -
-                      readingHistory.binWeight.reduce((sum, entry) => sum + entry.value, 0) / readingHistory.binWeight.length
-                    ) < 10 ? " a consistent waste density." : " varying waste density, suggesting mixed waste types."}
+                    The waste bin data indicates a
+                    {readingHistory.binFullness[0].value > readingHistory.binFullness[readingHistory.binFullness.length - 1].value
+                      ? " decreasing trend in fullness levels"
+                      : " increasing trend in fullness levels"}, with
+                    {readingHistory.binFullness.filter(e => e.type === 'critical').length > 0
+                      ? ` ${readingHistory.binFullness.filter(e => e.type === 'critical').length} critical fullness alerts`
+                      : " no critical fullness alerts"} during this period.
                   </p>
                 </div>
               </CardContent>
@@ -463,81 +486,28 @@ export default function DeviceHistory() {
         <TabsContent value="alerts">
           <Card>
             <CardHeader>
-              <CardTitle>Critical Events Log</CardTitle>
+              <CardTitle>Critical Events</CardTitle>
             </CardHeader>
             <CardContent>
-              {findCriticalEvents().length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Timestamp</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Value</TableHead>
-                      <TableHead>Impact</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {findCriticalEvents().map((event, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{formatDate(event.timestamp)}</TableCell>
-                        <TableCell>{event.category}</TableCell>
-                        <TableCell>
-                          <Badge className="bg-destructive text-destructive-foreground">
-                            {event.value}%
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {event.category === 'Water Level' 
-                            ? 'Risk of overflow or flooding' 
-                            : event.category === 'Bin Fullness'
-                              ? 'Bin requires immediate emptying'
-                              : 'Waste weight exceeded threshold'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-lg font-medium text-gray-500">No critical events recorded</p>
-                  <p className="text-sm text-gray-400 mt-2">All sensor readings have been within acceptable ranges</p>
-                </div>
-              )}
-              
-              <div className="mt-6">
-                <h4 className="font-medium mb-2">Recommendations</h4>
-                <ul className="space-y-2 text-sm text-gray-600">
-                  {readingHistory.waterLevels.some(e => e.type === 'critical') && (
-                    <li className="flex items-start">
-                      <span className="text-destructive mr-2">•</span>
-                      <span>Schedule immediate inspection of water drainage systems</span>
-                    </li>
-                  )}
-                  {readingHistory.binFullness.some(e => e.type === 'critical') && (
-                    <li className="flex items-start">
-                      <span className="text-destructive mr-2">•</span>
-                      <span>Increase frequency of waste collection schedule</span>
-                    </li>
-                  )}
-                  {readingHistory.waterLevels.filter(e => e.type === 'warning').length > 
-                   readingHistory.waterLevels.length / 3 && (
-                    <li className="flex items-start">
-                      <span className="text-warning mr-2">•</span>
-                      <span>Consider adjusting water level threshold values</span>
-                    </li>
-                  )}
-                  {readingHistory.binFullness.filter(e => e.value > 
-                  (readingHistory.binFullness.reduce((sum, entry) => sum + entry.value, 0) / 
-                  readingHistory.binFullness.length) + 20).length > 5 && (
-                    <li className="flex items-start">
-                      <span className="text-warning mr-2">•</span>
-                      <span>Consider installing larger capacity waste bins</span>
-                    </li>
-                  )}
-                  {findCriticalEvents().length === 0 && (
-                    <li className="flex items-start">
-                      <span className="text-success mr-2">•</span>
-                      <span>Current maintenance schedule is effective, continue monitoring</span>
+              <div className="space-y-4">
+                <p className="text-sm text-gray-500">
+                  The following events exceeded critical thresholds during the selected time period:
+                </p>
+                
+                <ul className="space-y-3">
+                  {findCriticalEvents().length > 0 ? (
+                    findCriticalEvents().map((event: any, index) => (
+                      <li key={`event-${index}`} className="border p-3 rounded-lg flex justify-between items-center">
+                        <div>
+                          <span className="font-medium">{event.category}</span>
+                          <span className="ml-2 text-sm text-gray-500">{formatDate(event.timestamp)}</span>
+                        </div>
+                        <Badge variant="destructive">{event.value}%</Badge>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="text-center p-6 text-gray-500">
+                      No critical events recorded during this period
                     </li>
                   )}
                 </ul>
