@@ -88,7 +88,17 @@ export default function Dashboard() {
     const wasteUnsubscribe = onValue(wasteRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        setWasteData(data);
+        // Convert Firebase key references to device IDs for easier lookup
+        const processedData: Record<string, WasteBin> = {};
+        Object.entries(data).forEach(([key, value]) => {
+          const wasteBin = value as WasteBin;
+          if (wasteBin.id) {
+            processedData[wasteBin.id] = wasteBin;
+          } else {
+            processedData[key] = wasteBin;
+          }
+        });
+        setWasteData(processedData);
       } else {
         setWasteData({});
       }

@@ -98,7 +98,18 @@ export default function Devices() {
     const waterLevelsUnsubscribe = onValue(waterLevelsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        setWaterLevels(data);
+        // Convert Firebase key references to device IDs for easier lookup
+        const processedData: Record<string, WaterLevel> = {};
+        Object.entries(data).forEach(([key, value]) => {
+          const waterLevel = value as WaterLevel;
+          if (waterLevel.id) {
+            processedData[waterLevel.id] = waterLevel;
+          } else {
+            processedData[key] = waterLevel;
+          }
+        });
+        console.log("Water levels:", processedData);
+        setWaterLevels(processedData);
       } else {
         setWaterLevels({});
       }
@@ -108,7 +119,18 @@ export default function Devices() {
     const wasteBinsUnsubscribe = onValue(wasteBinsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        setWasteBins(data);
+        // Convert Firebase key references to device IDs for easier lookup
+        const processedData: Record<string, WasteBin> = {};
+        Object.entries(data).forEach(([key, value]) => {
+          const wasteBin = value as WasteBin;
+          if (wasteBin.id) {
+            processedData[wasteBin.id] = wasteBin;
+          } else {
+            processedData[key] = wasteBin;
+          }
+        });
+        console.log("Waste bins:", processedData);
+        setWasteBins(processedData);
       } else {
         setWasteBins({});
       }
