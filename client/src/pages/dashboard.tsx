@@ -21,7 +21,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   Settings,
-  Plus
+  Plus,
+  BarChart as History
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { WaterLevel, WasteBin, Device } from "@/types";
