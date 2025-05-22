@@ -270,126 +270,185 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout title="Dashboard" subtitle="DrainSentry system overview">
-      {/* Time Period Filter Controls */}
-      <div className="flex justify-end mb-4">
-        <div className="flex items-center space-x-1 p-1 bg-gray-100 rounded-lg">
-          <Button 
-            variant={timeFilter === "hour" ? "default" : "ghost"} 
-            size="sm" 
-            onClick={() => setTimeFilter("hour")}
-            className="text-xs"
-          >
-            Hourly
-          </Button>
-          <Button 
-            variant={timeFilter === "day" ? "default" : "ghost"} 
-            size="sm" 
-            onClick={() => setTimeFilter("day")}
-            className="text-xs"
-          >
-            Daily
-          </Button>
-          <Button 
-            variant={timeFilter === "week" ? "default" : "ghost"} 
-            size="sm" 
-            onClick={() => setTimeFilter("week")}
-            className="text-xs"
-          >
-            Weekly
-          </Button>
-          <Button 
-            variant={timeFilter === "month" ? "default" : "ghost"} 
-            size="sm" 
-            onClick={() => setTimeFilter("month")}
-            className="text-xs"
-          >
-            Monthly
-          </Button>
+      {/* Dashboard Header with Stats and Time Period Filter Controls */}
+      <div className="mb-6 bg-white p-4 rounded-lg shadow-sm border">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-800">System Overview</h2>
+            <p className="text-sm text-gray-500">Real-time monitoring and analytics</p>
+          </div>
+          
+          <div className="flex items-center mt-3 sm:mt-0">
+            <span className="text-sm font-medium text-gray-700 mr-2">Time Period:</span>
+            <div className="flex items-center space-x-1 p-1 bg-gray-100 rounded-lg shadow-inner">
+              <Button 
+                variant={timeFilter === "hour" ? "default" : "ghost"} 
+                size="sm" 
+                onClick={() => setTimeFilter("hour")}
+                className={`text-xs ${timeFilter === "hour" ? "shadow-sm" : ""}`}
+              >
+                Hourly
+              </Button>
+              <Button 
+                variant={timeFilter === "day" ? "default" : "ghost"} 
+                size="sm" 
+                onClick={() => setTimeFilter("day")}
+                className={`text-xs ${timeFilter === "day" ? "shadow-sm" : ""}`}
+              >
+                Daily
+              </Button>
+              <Button 
+                variant={timeFilter === "week" ? "default" : "ghost"} 
+                size="sm" 
+                onClick={() => setTimeFilter("week")}
+                className={`text-xs ${timeFilter === "week" ? "shadow-sm" : ""}`}
+              >
+                Weekly
+              </Button>
+              <Button 
+                variant={timeFilter === "month" ? "default" : "ghost"} 
+                size="sm" 
+                onClick={() => setTimeFilter("month")}
+                className={`text-xs ${timeFilter === "month" ? "shadow-sm" : ""}`}
+              >
+                Monthly
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card className="animated-card hover-scale fade-in">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Total Devices</CardTitle>
+      {/* Status Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <Card className="animated-card hover-scale fade-in border-l-4 border-l-blue-500 overflow-hidden">
+          <CardHeader className="pb-2 bg-gradient-to-r from-blue-50 to-transparent">
+            <CardTitle className="text-base font-medium flex items-center">
+              <div className="bg-blue-100 p-1.5 rounded-md mr-2">
+                <Activity className="h-4 w-4 text-blue-600" />
+              </div>
+              Total Devices
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{totalDevices}</div>
-            <p className="text-sm text-muted-foreground mt-1">
-              {activeDevices} active
-            </p>
+            <div className="flex justify-between items-center">
+              <div>
+                <div className="text-3xl font-bold">{totalDevices}</div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  <span className="text-green-600 font-medium">{activeDevices}</span> active
+                </p>
+              </div>
+              <div className="bg-blue-100 h-12 w-12 rounded-full flex items-center justify-center opacity-80">
+                <Activity className="h-6 w-6 text-blue-600" />
+              </div>
+            </div>
           </CardContent>
         </Card>
         
-        <Card className={`animated-card slide-in ${criticalWaterLevels > 0 ? 'danger-card' : 'success-card'}`} style={{animationDelay: '0.05s'}}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Critical Water Levels</CardTitle>
+        <Card className={`animated-card slide-in border-l-4 ${criticalWaterLevels > 0 ? 'border-l-red-500' : 'border-l-green-500'} overflow-hidden`} style={{animationDelay: '0.05s'}}>
+          <CardHeader className="pb-2 bg-gradient-to-r from-blue-50 to-transparent">
+            <CardTitle className="text-base font-medium flex items-center">
+              <div className={`${criticalWaterLevels > 0 ? 'bg-red-100' : 'bg-green-100'} p-1.5 rounded-md mr-2`}>
+                <Droplet className={`h-4 w-4 ${criticalWaterLevels > 0 ? 'text-red-600' : 'text-green-600'}`} />
+              </div>
+              Critical Water Levels
+            </CardTitle>
           </CardHeader>
           <CardContent className="relative">
-            <div className={`text-3xl font-bold ${criticalWaterLevels > 0 ? 'text-destructive' : 'text-success'}`}>
-              {criticalWaterLevels}
+            <div className="flex justify-between items-center">
+              <div>
+                <div className={`text-3xl font-bold ${criticalWaterLevels > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  {criticalWaterLevels}
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {criticalWaterLevels > 0 ? (
+                    <span className="text-red-500 font-medium">Requires attention</span>
+                  ) : (
+                    <span className="text-green-600">All normal</span>
+                  )}
+                </p>
+              </div>
+              <div className={`${criticalWaterLevels > 0 ? 'bg-red-100' : 'bg-green-100'} h-12 w-12 rounded-full flex items-center justify-center opacity-80`}>
+                <Droplet className={`h-6 w-6 ${criticalWaterLevels > 0 ? 'text-red-600' : 'text-green-600'}`} />
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground mt-1">
-              {criticalWaterLevels > 0 ? (
-                <span className="text-destructive">Requires attention</span>
-              ) : (
-                "All normal"
-              )}
-            </p>
             {criticalWaterLevels > 0 && (
-              <div className="absolute top-0 right-0 w-2 h-2 rounded-full bg-red-500 pulse-animation"></div>
+              <div className="absolute top-3 right-3 w-2.5 h-2.5 rounded-full bg-red-500 pulse-animation"></div>
             )}
           </CardContent>
         </Card>
         
-        <Card className={`animated-card slide-in ${criticalBins > 0 ? 'danger-card' : 'success-card'}`} style={{animationDelay: '0.1s'}}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Critical Waste Bins</CardTitle>
+        <Card className={`animated-card slide-in border-l-4 ${criticalBins > 0 ? 'border-l-red-500' : 'border-l-green-500'} overflow-hidden`} style={{animationDelay: '0.1s'}}>
+          <CardHeader className="pb-2 bg-gradient-to-r from-orange-50 to-transparent">
+            <CardTitle className="text-base font-medium flex items-center">
+              <div className={`${criticalBins > 0 ? 'bg-red-100' : 'bg-green-100'} p-1.5 rounded-md mr-2`}>
+                <Trash2 className={`h-4 w-4 ${criticalBins > 0 ? 'text-red-600' : 'text-green-600'}`} />
+              </div>
+              Critical Waste Bins
+            </CardTitle>
           </CardHeader>
           <CardContent className="relative">
-            <div className={`text-3xl font-bold ${criticalBins > 0 ? 'text-destructive' : 'text-success'}`}>
-              {criticalBins}
+            <div className="flex justify-between items-center">
+              <div>
+                <div className={`text-3xl font-bold ${criticalBins > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  {criticalBins}
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {criticalBins > 0 ? (
+                    <span className="text-red-500 font-medium">Need emptying</span>
+                  ) : (
+                    <span className="text-green-600">All normal</span>
+                  )}
+                </p>
+              </div>
+              <div className={`${criticalBins > 0 ? 'bg-red-100' : 'bg-green-100'} h-12 w-12 rounded-full flex items-center justify-center opacity-80`}>
+                <Trash2 className={`h-6 w-6 ${criticalBins > 0 ? 'text-red-600' : 'text-green-600'}`} />
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground mt-1">
-              {criticalBins > 0 ? (
-                <span className="text-destructive">Need emptying</span>
-              ) : (
-                "All normal"
-              )}
-            </p>
             {criticalBins > 0 && (
-              <div className="absolute top-0 right-0 w-2 h-2 rounded-full bg-red-500 pulse-animation"></div>
+              <div className="absolute top-3 right-3 w-2.5 h-2.5 rounded-full bg-red-500 pulse-animation"></div>
             )}
           </CardContent>
         </Card>
         
-        <Card className={`animated-card slide-in hover-glow ${criticalWaterLevels + criticalBins > 0 ? 'warning-card' : 'success-card'}`} style={{animationDelay: '0.15s'}}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">System Health</CardTitle>
+        <Card className={`animated-card slide-in border-l-4 ${criticalWaterLevels + criticalBins > 0 ? 'border-l-orange-500' : 'border-l-green-500'} overflow-hidden`} style={{animationDelay: '0.15s'}}>
+          <CardHeader className="pb-2 bg-gradient-to-r from-gray-50 to-transparent">
+            <CardTitle className="text-base font-medium flex items-center">
+              <div className={`${criticalWaterLevels + criticalBins > 0 ? 'bg-orange-100' : 'bg-green-100'} p-1.5 rounded-md mr-2`}>
+                {criticalWaterLevels + criticalBins > 0 ? (
+                  <AlertTriangle className="h-4 w-4 text-orange-600" />
+                ) : (
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                )}
+              </div>
+              System Health
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center">
-              {criticalWaterLevels + criticalBins > 0 ? (
-                <>
-                  <AlertTriangle className="h-6 w-6 text-orange-500 mr-2 bounce-animation" style={{animationDuration: '2s'}} />
-                  <div>
-                    <div className="text-lg font-medium">Attention Required</div>
+            <div className="flex items-center justify-between">
+              <div>
+                {criticalWaterLevels + criticalBins > 0 ? (
+                  <>
+                    <div className="text-lg font-medium text-orange-600">Attention Required</div>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {criticalWaterLevels + criticalBins} issues need your attention
+                      {criticalWaterLevels + criticalBins} issues need attention
                     </p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="h-6 w-6 text-green-500 mr-2 scale-in" />
-                  <div>
-                    <div className="text-lg font-medium">All Systems Normal</div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-lg font-medium text-green-600">All Systems Normal</div>
                     <p className="text-sm text-muted-foreground mt-1">
                       Network status: online
                     </p>
-                  </div>
-                </>
-              )}
+                  </>
+                )}
+              </div>
+              <div className={`${criticalWaterLevels + criticalBins > 0 ? 'bg-orange-100' : 'bg-green-100'} h-12 w-12 rounded-full flex items-center justify-center opacity-80`}>
+                {criticalWaterLevels + criticalBins > 0 ? (
+                  <AlertTriangle className="h-6 w-6 text-orange-600" />
+                ) : (
+                  <CheckCircle2 className="h-6 w-6 text-green-600" />
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -714,84 +773,161 @@ export default function Dashboard() {
             </Tabs>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base font-medium">Water Level Trends</CardTitle>
-                <CardDescription>
-                  {timeFilter === "hour" ? "Hourly" : 
-                   timeFilter === "day" ? "Daily" : 
-                   timeFilter === "week" ? "Weekly" : "Monthly"} water level readings
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart
-                      data={getFormattedData('water', Object.keys(waterData)[0] || '')}
-                      margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                    >
-                      <defs>
-                        <linearGradient id="colorWater" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-                      <XAxis dataKey="name" />
-                      <YAxis 
-                        tickFormatter={(value) => `${value}%`}
-                        domain={[0, 100]}
-                      />
-                      <Tooltip formatter={(value) => [`${value}%`, 'Water Level']} />
-                      <Area 
-                        type="monotone" 
-                        dataKey="value" 
-                        stroke="#3b82f6" 
-                        fillOpacity={1} 
-                        fill="url(#colorWater)" 
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base font-medium">Waste Bin Status</CardTitle>
-                <CardDescription>
-                  {timeFilter === "hour" ? "Hourly" : 
-                   timeFilter === "day" ? "Daily" : 
-                   timeFilter === "week" ? "Weekly" : "Monthly"} bin fullness readings
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={getFormattedData('waste', Object.keys(wasteData)[0] || '')}
-                      margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-                      <XAxis dataKey="name" />
-                      <YAxis 
-                        tickFormatter={(value) => `${value}%`}
-                        domain={[0, 100]}
-                      />
-                      <Tooltip formatter={(value) => [`${value}%`, 'Bin Fullness']} />
-                      <Bar 
-                        dataKey="value" 
-                        radius={[4, 4, 0, 0]}
-                        fillOpacity={0.9}
-                        barSize={30}
-                        fill="#10b981"
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4 text-gray-800">Trend Analysis</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              <Card className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
+                <CardHeader className="bg-gradient-to-r from-blue-50 to-transparent border-b pb-3">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <CardTitle className="text-base font-medium flex items-center gap-2">
+                        <Droplet className="h-5 w-5 text-blue-500" />
+                        Water Level Trends
+                      </CardTitle>
+                      <CardDescription>
+                        {timeFilter === "hour" ? "Hourly" : 
+                         timeFilter === "day" ? "Daily" : 
+                         timeFilter === "week" ? "Weekly" : "Monthly"} water level readings
+                      </CardDescription>
+                    </div>
+                    <div className="bg-blue-100 p-2 rounded-md">
+                      <Activity className="h-5 w-5 text-blue-600" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <div className="h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart
+                        data={getFormattedData('water', Object.keys(waterData)[0] || '')}
+                        margin={{ top: 10, right: 10, left: 10, bottom: 10 }}
+                      >
+                        <defs>
+                          <linearGradient id="colorWater" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                        <XAxis 
+                          dataKey="name" 
+                          tick={{ fontSize: 12 }}
+                          axisLine={{ stroke: '#e5e7eb' }}
+                          tickLine={{ stroke: '#e5e7eb' }}
+                        />
+                        <YAxis 
+                          tickFormatter={(value) => `${value}%`}
+                          domain={[0, 100]}
+                          tick={{ fontSize: 12 }}
+                          axisLine={{ stroke: '#e5e7eb' }}
+                          tickLine={{ stroke: '#e5e7eb' }}
+                        />
+                        <Tooltip 
+                          formatter={(value) => [`${value}%`, 'Water Level']}
+                          contentStyle={{
+                            backgroundColor: 'white',
+                            borderRadius: '6px',
+                            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
+                            border: '1px solid #e5e7eb'
+                          }}
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="value" 
+                          stroke="#3b82f6" 
+                          strokeWidth={2}
+                          fillOpacity={1} 
+                          fill="url(#colorWater)" 
+                          activeDot={{ r: 6, stroke: 'white', strokeWidth: 2 }}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                  
+                  <div className="flex justify-between items-center mt-4 px-2">
+                    <div className="flex items-center">
+                      <div className="h-3 w-3 rounded-full bg-blue-500 mr-2"></div>
+                      <span className="text-sm text-gray-500">Water Level</span>
+                    </div>
+                    <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                      Last update: {new Date().toLocaleTimeString()}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
+                <CardHeader className="bg-gradient-to-r from-emerald-50 to-transparent border-b pb-3">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <CardTitle className="text-base font-medium flex items-center gap-2">
+                        <Trash2 className="h-5 w-5 text-emerald-500" />
+                        Waste Bin Status
+                      </CardTitle>
+                      <CardDescription>
+                        {timeFilter === "hour" ? "Hourly" : 
+                         timeFilter === "day" ? "Daily" : 
+                         timeFilter === "week" ? "Weekly" : "Monthly"} bin fullness readings
+                      </CardDescription>
+                    </div>
+                    <div className="bg-emerald-100 p-2 rounded-md">
+                      <Activity className="h-5 w-5 text-emerald-600" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <div className="h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={getFormattedData('waste', Object.keys(wasteData)[0] || '')}
+                        margin={{ top: 10, right: 10, left: 10, bottom: 10 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                        <XAxis 
+                          dataKey="name" 
+                          tick={{ fontSize: 12 }}
+                          axisLine={{ stroke: '#e5e7eb' }}
+                          tickLine={{ stroke: '#e5e7eb' }}
+                        />
+                        <YAxis 
+                          tickFormatter={(value) => `${value}%`}
+                          domain={[0, 100]}
+                          tick={{ fontSize: 12 }}
+                          axisLine={{ stroke: '#e5e7eb' }}
+                          tickLine={{ stroke: '#e5e7eb' }}
+                        />
+                        <Tooltip 
+                          formatter={(value) => [`${value}%`, 'Bin Fullness']}
+                          contentStyle={{
+                            backgroundColor: 'white',
+                            borderRadius: '6px',
+                            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
+                            border: '1px solid #e5e7eb'
+                          }}
+                        />
+                        <Bar 
+                          dataKey="value" 
+                          radius={[4, 4, 0, 0]}
+                          fillOpacity={0.9}
+                          barSize={30}
+                          fill="#10b981"
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  
+                  <div className="flex justify-between items-center mt-4 px-2">
+                    <div className="flex items-center">
+                      <div className="h-3 w-3 rounded-full bg-emerald-500 mr-2"></div>
+                      <span className="text-sm text-gray-500">Bin Fullness</span>
+                    </div>
+                    <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                      Last update: {new Date().toLocaleTimeString()}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </>
       )}
