@@ -67,7 +67,17 @@ export default function Dashboard() {
     const waterUnsubscribe = onValue(waterRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        setWaterData(data);
+        // Convert Firebase key references to device IDs for easier lookup
+        const processedData: Record<string, WaterLevel> = {};
+        Object.entries(data).forEach(([key, value]) => {
+          const waterLevel = value as WaterLevel;
+          if (waterLevel.id) {
+            processedData[waterLevel.id] = waterLevel;
+          } else {
+            processedData[key] = waterLevel;
+          }
+        });
+        setWaterData(processedData);
       } else {
         setWaterData({});
       }
