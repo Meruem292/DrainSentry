@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { ref, onValue } from "firebase/database";
+import { ref, onValue, query, limitToLast, orderByKey } from "firebase/database";
 import { database } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
+import { useWaterLevelHistory, useWasteBinHistory } from "@/hooks/useHistoryData";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { 
@@ -24,10 +25,17 @@ import {
   CartesianGrid, 
   Tooltip, 
   Legend, 
-  ResponsiveContainer
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell
 } from "recharts";
-import { AlertTriangleIcon, InfoIcon, TrendingUpIcon, TrendingDownIcon, CloudRainIcon } from "lucide-react";
-import { useLocation } from "wouter";
+import { CalendarIcon, InfoIcon, AlertTriangleIcon, TrendingUpIcon, TrendingDownIcon, CloudRainIcon } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { WaterLevel, WasteBin, Device } from "@/types";
 
 // Define the interface for water level history
@@ -81,6 +89,10 @@ export default function WaterLevelDetails() {
   
   // Get device ID from URL path parameter
   const [, deviceId] = location.split("/water-levels/");
+  
+  // Use the history hooks to get real data
+  const { history: waterHistoryData } = useWaterLevelHistory(deviceId);
+  const { history: wasteBinHistoryData } = useWasteBinHistory(deviceId);
 
   useEffect(() => {
     if (!user || !deviceId) return;
@@ -132,9 +144,6 @@ export default function WaterLevelDetails() {
           setWasteBin(null);
         }
       });
-      
-      // Fetch historical data for this device
-      fetchHistoricalData(user.uid, deviceKey);
     });
     
     setLoading(false);
@@ -144,108 +153,38 @@ export default function WaterLevelDetails() {
     };
   }, [user, deviceId]);
   
-  // Function to fetch historical data from Firebase
-  const fetchHistoricalData = async (userId: string, deviceKey: string) => {
-    // Get water level history data
-    const waterHistoryRef = ref(database, `users/${userId}/waterLevelHistory`);
-    onValue(waterHistoryRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const historyData = snapshot.val();
-        const formattedData: WaterLevelHistory[] = [];
-        
-        // Process each date in the history
-        Object.entries(historyData).forEach(([date, dateData]: [string, any]) => {
-          if (dateData && typeof dateData === 'object' && dateData[deviceKey] !== undefined) {
-            const deviceData = dateData[deviceKey];
-            
-            // Handle different data formats
-            if (typeof deviceData === 'number') {
-              // Old format: just a value
-              formattedData.push({
-                timestamp: `${date}T12:00:00Z`, // Use noon as default time
-                level: deviceData
-              });
-            } else if (typeof deviceData === 'object') {
-              // If data has timestamps (new format)
-              Object.entries(deviceData).forEach(([timeKey, data]: [string, any]) => {
-                if (typeof data === 'object' && data.value !== undefined) {
-                  formattedData.push({
-                    timestamp: `${date}T${timeKey.replace(/_/g, ':')}Z`,
-                    level: data.value
-                  });
-                }
-              });
-            }
-          }
-        });
-        
-        // Sort by timestamp
-        formattedData.sort((a, b) => 
-          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-        );
-        
-        setWaterHistory(formattedData);
-        
-        // Only generate predictions and trends if we have real data
-        if (formattedData.length > 0) {
-          setPredictions(generateSamplePredictions(formattedData));
-          setWaterTrends(generateSampleWaterTrends(formattedData));
-          setRainData(generateSampleRainData());
-        }
-      }
-    });
-    
-    // Get waste bin history data
-    const wasteBinHistoryRef = ref(database, `users/${userId}/wasteBinHistory`);
-    onValue(wasteBinHistoryRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const historyData = snapshot.val();
-        const formattedData: WasteBinHistory[] = [];
-        
-        // Process each date in the history
-        Object.entries(historyData).forEach(([date, dateData]: [string, any]) => {
-          if (dateData && typeof dateData === 'object' && dateData[deviceKey] !== undefined) {
-            const deviceData = dateData[deviceKey];
-            
-            // Handle different data formats
-            if (typeof deviceData === 'object') {
-              if (deviceData.fullness !== undefined) {
-                // Old format
-                formattedData.push({
-                  timestamp: `${date}T12:00:00Z`,
-                  fullness: deviceData.fullness || 0,
-                  weight: deviceData.weight || 0
-                });
-              } else {
-                // New format with timestamps
-                Object.entries(deviceData).forEach(([timeKey, data]: [string, any]) => {
-                  if (typeof data === 'object') {
-                    formattedData.push({
-                      timestamp: `${date}T${timeKey.replace(/_/g, ':')}Z`,
-                      fullness: data.fullness || 0,
-                      weight: data.weight || 0
-                    });
-                  }
-                });
-              }
-            }
-          }
-        });
-        
-        // Sort by timestamp
-        formattedData.sort((a, b) => 
-          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-        );
-        
-        setBinHistory(formattedData);
-        
-        // Only generate trends if we have real data
-        if (formattedData.length > 0) {
-          setWasteTrends(generateSampleWasteTrends(formattedData));
-        }
-      }
-    });
-  };
+  // Update water history data when it changes
+  useEffect(() => {
+    if (waterHistoryData && waterHistoryData.length > 0) {
+      const formattedData = waterHistoryData.map(item => ({
+        timestamp: item.timestamp,
+        level: item.level
+      }));
+      setWaterHistory(formattedData);
+      
+      // Only generate predictions and trends if we have real data
+      setPredictions(generateSamplePredictions(formattedData));
+      setWaterTrends(generateSampleWaterTrends(formattedData));
+      
+      // Generate rain data for context (can be replaced with real data in the future)
+      setRainData(generateSampleRainData());
+    }
+  }, [waterHistoryData]);
+  
+  // Update waste bin history data when it changes
+  useEffect(() => {
+    if (wasteBinHistoryData && wasteBinHistoryData.length > 0) {
+      const formattedData = wasteBinHistoryData.map(item => ({
+        timestamp: item.timestamp,
+        fullness: item.fullness,
+        weight: item.weight
+      }));
+      setBinHistory(formattedData);
+      
+      // Only generate trends if we have real data
+      setWasteTrends(generateSampleWasteTrends(formattedData));
+    }
+  }, [wasteBinHistoryData]);
 
   function generateSamplePredictions(history: WaterLevelHistory[]): Prediction[] {
     if (!history.length) return [];
@@ -721,51 +660,42 @@ export default function WaterLevelDetails() {
             </CardHeader>
             <CardContent>
               <div className="h-80">
-                {waterHistory.length > 0 || binHistory.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={waterHistory.map((item, index) => ({
-                        date: new Date(item.timestamp).toLocaleDateString(),
-                        waterLevel: item.level,
-                        binFullness: binHistory[index]?.fullness || 0,
-                        binWeight: binHistory[index]?.weight || 0,
-                      }))}
-                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Line 
-                        type="monotone" 
-                        dataKey="waterLevel" 
-                        name="Water Level (%)"
-                        stroke="#2563eb" 
-                        activeDot={{ r: 8 }} 
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="binFullness" 
-                        name="Bin Fullness (%)"
-                        stroke="#16a34a" 
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="binWeight" 
-                        name="Bin Weight (kg)"
-                        stroke="#7c3aed" 
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="text-center text-gray-500">
-                      <p className="mb-2">No historical data available</p>
-                      <p className="text-sm">Data will appear here once readings are received</p>
-                    </div>
-                  </div>
-                )}
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={waterHistory.map((item, index) => ({
+                      date: new Date(item.timestamp).toLocaleDateString(),
+                      waterLevel: item.level,
+                      binFullness: binHistory[index]?.fullness || 0,
+                      binWeight: binHistory[index]?.weight || 0,
+                    }))}
+                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Line 
+                      type="monotone" 
+                      dataKey="waterLevel" 
+                      name="Water Level (%)"
+                      stroke="#2563eb" 
+                      activeDot={{ r: 8 }} 
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="binFullness" 
+                      name="Bin Fullness (%)"
+                      stroke="#16a34a" 
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="binWeight" 
+                      name="Bin Weight (kg)"
+                      stroke="#7c3aed" 
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
@@ -780,9 +710,6 @@ export default function WaterLevelDetails() {
               <CardContent>
                 <div className="flex flex-col items-center justify-center h-28">
                   <div className="text-lg font-bold">{waterHistory.length > 0 ? Math.round(waterHistory.reduce((acc, item) => acc + item.level, 0) / waterHistory.length) : 0}%</div>
-                  {waterHistory.length === 0 && (
-                    <div className="text-xs text-gray-500 mt-2">No data available</div>
-                  )}
                 </div>
               </CardContent>
             </Card>
@@ -795,9 +722,6 @@ export default function WaterLevelDetails() {
               <CardContent>
                 <div className="flex flex-col items-center justify-center h-28">
                   <div className="text-lg font-bold">{binHistory.length > 0 ? Math.round(binHistory.reduce((acc, item) => acc + item.fullness, 0) / binHistory.length) : 0}%</div>
-                  {binHistory.length === 0 && (
-                    <div className="text-xs text-gray-500 mt-2">No data available</div>
-                  )}
                 </div>
               </CardContent>
             </Card>
@@ -821,30 +745,371 @@ export default function WaterLevelDetails() {
           </div>
         </TabsContent>
         
-        {/* Action Button Group */}
-        <div className="flex flex-wrap gap-2 mt-6">
-          <Button 
-            variant="outline"
-            className="flex items-center"
-            onClick={() => setLocation("/devices")}
-          >
-            Manage Device
-          </Button>
-          <Button 
-            variant="outline"
-            className="flex items-center"
-            onClick={() => setLocation("/device-history/" + deviceId)}
-          >
-            View Device History
-          </Button>
-          <Button
-            className="flex items-center ml-auto"
-            onClick={() => setLocation("/water-levels")}
-          >
-            Back to Water Levels
-          </Button>
-        </div>
+        {/* Water Level History Tab */}
+        <TabsContent value="water-history">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-medium">Water Level History</CardTitle>
+              <CardDescription>Detailed history of water level readings</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-80 mb-6">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={waterHistory.map(item => ({
+                      date: new Date(item.timestamp).toLocaleDateString(),
+                      level: item.level
+                    }))}
+                    margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Area 
+                      type="monotone" 
+                      dataKey="level" 
+                      name="Water Level (%)"
+                      stroke="#2563eb" 
+                      fill="#93c5fd" 
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+              
+              <div className="space-y-4">
+                <h3 className="font-medium text-base">Critical Events</h3>
+                {waterHistory.filter(item => item.level > 85).length > 0 ? (
+                  waterHistory
+                    .filter(item => item.level > 85)
+                    .map((item, index) => (
+                      <div key={index} className="p-3 bg-red-50 border border-red-200 rounded-md">
+                        <div className="flex items-center">
+                          <AlertTriangleIcon className="w-5 h-5 text-red-500 mr-2" />
+                          <div>
+                            <div className="font-medium">Critical Water Level</div>
+                            <div className="text-sm text-gray-500">
+                              {new Date(item.timestamp).toLocaleString()}: {item.level}%
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                ) : (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+                    <div className="flex items-center">
+                      <div className="w-5 h-5 bg-green-500 rounded-full mr-2"></div>
+                      <div>
+                        <div className="font-medium">No Critical Events</div>
+                        <div className="text-sm text-gray-500">
+                          Water levels have remained below critical thresholds
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <h3 className="font-medium text-base mt-6">Water Level Statistics</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="p-4 bg-gray-50 rounded-md">
+                    <div className="text-sm text-gray-500">Average</div>
+                    <div className="text-xl font-semibold">
+                      {waterHistory.length > 0 ? Math.round(waterHistory.reduce((acc, item) => acc + item.level, 0) / waterHistory.length) : 0}%
+                    </div>
+                  </div>
+                  <div className="p-4 bg-gray-50 rounded-md">
+                    <div className="text-sm text-gray-500">Maximum</div>
+                    <div className="text-xl font-semibold">
+                      {waterHistory.length > 0 ? Math.max(...waterHistory.map(item => item.level)) : 0}%
+                    </div>
+                  </div>
+                  <div className="p-4 bg-gray-50 rounded-md">
+                    <div className="text-sm text-gray-500">Minimum</div>
+                    <div className="text-xl font-semibold">
+                      {waterHistory.length > 0 ? Math.min(...waterHistory.map(item => item.level)) : 0}%
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* Waste Bin History Tab */}
+        <TabsContent value="waste-history">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-medium">Waste Bin History</CardTitle>
+              <CardDescription>Detailed history of waste bin measurements</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-80 mb-6">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={binHistory.map(item => ({
+                      date: new Date(item.timestamp).toLocaleDateString(),
+                      fullness: item.fullness,
+                      weight: item.weight
+                    }))}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis yAxisId="left" orientation="left" stroke="#16a34a" />
+                    <YAxis yAxisId="right" orientation="right" stroke="#7c3aed" />
+                    <Tooltip />
+                    <Legend />
+                    <Bar 
+                      yAxisId="left" 
+                      dataKey="fullness" 
+                      name="Bin Fullness (%)" 
+                      fill="#16a34a" 
+                    />
+                    <Bar 
+                      yAxisId="right" 
+                      dataKey="weight" 
+                      name="Weight (kg)" 
+                      fill="#7c3aed" 
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              
+              <div className="space-y-4">
+                <h3 className="font-medium text-base">Bin Emptying History</h3>
+                <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
+                  <div className="text-sm text-gray-700">
+                    Last emptied: {wasteBin ? wasteBin.lastEmptied : "Never"}
+                  </div>
+                </div>
+                
+                <h3 className="font-medium text-base mt-6">Bin Statistics</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="p-4 bg-gray-50 rounded-md">
+                    <div className="text-sm text-gray-500">Average Fullness</div>
+                    <div className="text-xl font-semibold">
+                      {binHistory.length > 0 ? Math.round(binHistory.reduce((acc, item) => acc + item.fullness, 0) / binHistory.length) : 0}%
+                    </div>
+                  </div>
+                  <div className="p-4 bg-gray-50 rounded-md">
+                    <div className="text-sm text-gray-500">Average Weight</div>
+                    <div className="text-xl font-semibold">
+                      {binHistory.length > 0 ? (binHistory.reduce((acc, item) => acc + item.weight, 0) / binHistory.length).toFixed(1) : 0} kg
+                    </div>
+                  </div>
+                  <div className="p-4 bg-gray-50 rounded-md">
+                    <div className="text-sm text-gray-500">Current Status</div>
+                    <div className="text-xl font-semibold">
+                      {wasteBin ? getBinStatus(wasteBin.fullness) : "Unknown"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* Analytics Tab */}
+        <TabsContent value="analytics">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Predictions Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base font-medium">Water Level Predictions</CardTitle>
+                <CardDescription>5-day forecast based on historical patterns</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64 mb-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={predictions.map(item => ({
+                        date: new Date(item.timestamp).toLocaleDateString(),
+                        level: item.predictedLevel,
+                        confidence: item.confidence
+                      }))}
+                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Line 
+                        type="monotone" 
+                        dataKey="level" 
+                        name="Predicted Level (%)"
+                        stroke="#0ea5e9" 
+                        strokeWidth={2}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                
+                <div className="text-sm text-gray-500 mb-4">
+                  <InfoIcon className="w-4 h-4 inline-block mr-1" />
+                  Predictions are based on historical patterns and may not account for unexpected events.
+                </div>
+                
+                <div className="space-y-2">
+                  {predictions.map((pred, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 bg-blue-50 rounded">
+                      <div>{new Date(pred.timestamp).toLocaleDateString()}</div>
+                      <div className="font-medium">{pred.predictedLevel.toFixed(1)}%</div>
+                      <div className="text-sm text-gray-500">{pred.confidence}% confidence</div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* Trend Analysis Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base font-medium">Trend Analysis</CardTitle>
+                <CardDescription>Water level and waste bin trends</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {/* Water Level Trends */}
+                  <h3 className="font-medium">Water Level Trends</h3>
+                  <div className="space-y-2">
+                    {waterTrends.map((trend, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-blue-50 rounded-md">
+                        <div className="font-medium">{trend.period}</div>
+                        <div className="flex items-center">
+                          {trend.trend === 'increasing' ? (
+                            <TrendingUpIcon className="w-5 h-5 text-red-500 mr-1" />
+                          ) : trend.trend === 'decreasing' ? (
+                            <TrendingDownIcon className="w-5 h-5 text-green-500 mr-1" />
+                          ) : (
+                            <div className="w-5 h-5 flex items-center justify-center mr-1">—</div>
+                          )}
+                          <span className={
+                            trend.trend === 'increasing' 
+                              ? 'text-red-500' 
+                              : trend.trend === 'decreasing' 
+                                ? 'text-green-500' 
+                                : 'text-gray-500'
+                          }>
+                            {trend.changePct > 0 ? '+' : ''}{trend.changePct.toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Waste Bin Trends */}
+                  <h3 className="font-medium mt-6">Waste Bin Trends</h3>
+                  <div className="space-y-2">
+                    {wasteTrends.map((trend, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-green-50 rounded-md">
+                        <div className="font-medium">{trend.period}</div>
+                        <div className="flex items-center">
+                          {trend.trend === 'increasing' ? (
+                            <TrendingUpIcon className="w-5 h-5 text-red-500 mr-1" />
+                          ) : trend.trend === 'decreasing' ? (
+                            <TrendingDownIcon className="w-5 h-5 text-green-500 mr-1" />
+                          ) : (
+                            <div className="w-5 h-5 flex items-center justify-center mr-1">—</div>
+                          )}
+                          <span className={
+                            trend.trend === 'increasing' 
+                              ? 'text-red-500' 
+                              : trend.trend === 'decreasing' 
+                                ? 'text-green-500' 
+                                : 'text-gray-500'
+                          }>
+                            {trend.changePct > 0 ? '+' : ''}{trend.changePct.toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Rainfall Data */}
+                  <h3 className="font-medium mt-6">Recent & Forecasted Rainfall</h3>
+                  <div className="h-32">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={rainData}
+                        margin={{ top: 5, right: 0, left: 0, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar 
+                          dataKey="precipitation" 
+                          name="Rainfall (mm)" 
+                          fill="#60a5fa" 
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex items-center text-sm text-gray-500">
+                    <CloudRainIcon className="w-4 h-4 mr-1" />
+                    Precipitation data can help explain water level changes
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          
+          {/* Analysis and Recommendations Card */}
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="text-base font-medium">Insights & Recommendations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Trend Analysis */}
+                <div>
+                  <h3 className="font-medium mb-2">Trend Analysis</h3>
+                  <div className="p-4 bg-blue-50 rounded-md text-gray-700">
+                    {getTrendAnalysis()}
+                  </div>
+                </div>
+                
+                {/* Recommendations */}
+                <div>
+                  <h3 className="font-medium mb-2">Recommendations</h3>
+                  <div className="space-y-2">
+                    {getRecommendations().map((rec, index) => (
+                      <div key={index} className="p-3 bg-gray-50 border border-gray-200 rounded-md">
+                        {rec}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+      
+      {/* Action Button Group */}
+      <div className="flex flex-wrap gap-2 mt-6">
+        <Button 
+          variant="outline"
+          className="flex items-center"
+          onClick={() => setLocation("/devices")}
+        >
+          Manage Device
+        </Button>
+        <Button 
+          variant="outline"
+          className="flex items-center"
+          onClick={() => setLocation("/device-history/" + deviceId)}
+        >
+          View Device History
+        </Button>
+        <Button
+          className="flex items-center ml-auto"
+          onClick={() => setLocation("/water-levels")}
+        >
+          Back to Water Levels
+        </Button>
+      </div>
     </DashboardLayout>
   );
 }
