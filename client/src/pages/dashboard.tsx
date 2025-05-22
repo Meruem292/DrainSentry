@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ref, onValue } from "firebase/database";
 import { database } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
+import { useLatestDeviceData } from "@/hooks/useLatestDeviceData";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -51,63 +52,15 @@ import {
 export default function Dashboard() {
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
-  const [waterData, setWaterData] = useState<Record<string, WaterLevel>>({});
-  const [wasteData, setWasteData] = useState<Record<string, WasteBin>>({});
   const [devices, setDevices] = useState<Device[]>([]);
-  const [loading, setLoading] = useState(true);
+  
+  // Use our custom hook to get real-time sensor data
+  const { waterLevels: waterData, wasteBins: wasteData, loading } = useLatestDeviceData();
 
   useEffect(() => {
     if (!user) return;
 
-    const waterRef = ref(database, `users/${user.uid}/waterLevels`);
-    const wasteRef = ref(database, `users/${user.uid}/wasteBins`);
     const devicesRef = ref(database, `users/${user.uid}/devices`);
-
-    // Subscribe to water data
-    const waterUnsubscribe = onValue(waterRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        // Convert Firebase key references to device IDs for easier lookup
-        const processedData: Record<string, WaterLevel> = {};
-        Object.entries(data).forEach(([key, value]) => {
-          const waterLevel = value as WaterLevel;
-          if (waterLevel.id) {
-            // Make sure level is a number
-            waterLevel.level = typeof waterLevel.level === 'number' ? waterLevel.level : Number(waterLevel.level) || 0;
-            processedData[waterLevel.id] = waterLevel;
-          } else {
-            processedData[key] = waterLevel;
-          }
-        });
-        setWaterData(processedData);
-      } else {
-        setWaterData({});
-      }
-      setLoading(false);
-    });
-
-    // Subscribe to waste data
-    const wasteUnsubscribe = onValue(wasteRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        // Convert Firebase key references to device IDs for easier lookup
-        const processedData: Record<string, WasteBin> = {};
-        Object.entries(data).forEach(([key, value]) => {
-          const wasteBin = value as WasteBin;
-          if (wasteBin.id) {
-            // Make sure fullness and weight are numbers
-            wasteBin.fullness = typeof wasteBin.fullness === 'number' ? wasteBin.fullness : Number(wasteBin.fullness) || 0;
-            wasteBin.weight = typeof wasteBin.weight === 'number' ? wasteBin.weight : Number(wasteBin.weight) || 0;
-            processedData[wasteBin.id] = wasteBin;
-          } else {
-            processedData[key] = wasteBin;
-          }
-        });
-        setWasteData(processedData);
-      } else {
-        setWasteData({});
-      }
-    });
 
     // Subscribe to devices data
     const devicesUnsubscribe = onValue(devicesRef, (snapshot) => {
@@ -124,8 +77,6 @@ export default function Dashboard() {
     });
 
     return () => {
-      waterUnsubscribe();
-      wasteUnsubscribe();
       devicesUnsubscribe();
     };
   }, [user]);
