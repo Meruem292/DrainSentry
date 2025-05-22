@@ -71,7 +71,7 @@ export default function DeviceHistory() {
       // Find the container key for this device ID
       const devicesData = devicesSnapshot.val();
       let containerKey = null;
-      let deviceData = null;
+      let deviceData: any = null;
       
       // Loop through devices to find the one with matching ID
       Object.entries(devicesData).forEach(([key, value]: [string, any]) => {
@@ -92,10 +92,15 @@ export default function DeviceHistory() {
         return;
       }
       
-      // Set the device data
+      // Set the device data with proper type casting
       setDevice({
         id: deviceId,
-        ...deviceData
+        name: deviceData.name || "",
+        location: deviceData.location || "",
+        status: deviceData.status || "inactive",
+        lastSeen: deviceData.lastSeen || new Date().toISOString(),
+        thresholds: deviceData.thresholds || {},
+        notifications: deviceData.notifications || {}
       });
       
       // Now get the water level data using the container key
@@ -129,71 +134,119 @@ export default function DeviceHistory() {
     };
   }, [user, deviceId, historyRange]);
 
-  // Generate sample history data based on the selected range
-  const generateHistoryData = (range: "24h" | "7d" | "30d") => {
+  // Fetch real history data from Firebase based on the selected range
+  const fetchHistoryData = async (deviceContainerId: string, range: "24h" | "7d" | "30d") => {
+    if (!user || !deviceContainerId) return;
+    
+    // Calculate date range based on selected range
+    const now = new Date();
+    let daysToFetch = 0;
+    
+    switch (range) {
+      case "24h":
+        daysToFetch = 1;
+        break;
+      case "7d":
+        daysToFetch = 7;
+        break;
+      case "30d":
+        daysToFetch = 30;
+        break;
+    }
+    
+    // Get dates for the range
+    const dates: string[] = [];
+    for (let i = 0; i < daysToFetch; i++) {
+      const date = new Date(now);
+      date.setDate(now.getDate() - i);
+      dates.push(date.toISOString().split('T')[0]); // YYYY-MM-DD format
+    }
+    
+    // Arrays to hold the history data
     const waterLevels: HistoryEntry[] = [];
     const binFullness: HistoryEntry[] = [];
     const binWeight: HistoryEntry[] = [];
     
-    const now = new Date();
-    let points = 0;
-    let intervalHours = 0;
-    
-    // Set the appropriate number of data points and interval based on range
-    switch (range) {
-      case "24h":
-        points = 24;
-        intervalHours = 1;
-        break;
-      case "7d":
-        points = 28; // 4 readings per day for 7 days
-        intervalHours = 6;
-        break;
-      case "30d":
-        points = 30; // 1 reading per day for 30 days
-        intervalHours = 24;
-        break;
+    // Fetch water level history for each date
+    for (const date of dates) {
+      const waterLevelRef = ref(database, `users/${user.uid}/waterLevelHistory/${date}/${deviceContainerId}`);
+      const wasteBinRef = ref(database, `users/${user.uid}/wasteBinHistory/${date}/${deviceContainerId}`);
+      
+      try {
+        // Get water level data
+        const waterSnapshot = await get(waterLevelRef);
+        if (waterSnapshot.exists()) {
+          const waterValue = waterSnapshot.val();
+          if (typeof waterValue === 'number') {
+            waterLevels.push({
+              timestamp: `${date}T12:00:00.000Z`, // Use noon as default time
+              value: waterValue,
+              type: getStatusType(waterValue)
+            });
+          }
+        }
+        
+        // Get waste bin data
+        const wasteSnapshot = await get(wasteBinRef);
+        if (wasteSnapshot.exists()) {
+          const wasteData = wasteSnapshot.val();
+          if (wasteData && typeof wasteData === 'object') {
+            if ('fullness' in wasteData && typeof wasteData.fullness === 'number') {
+              binFullness.push({
+                timestamp: `${date}T12:00:00.000Z`, // Use noon as default time
+                value: wasteData.fullness,
+                type: getStatusType(wasteData.fullness)
+              });
+            }
+            
+            if ('weight' in wasteData && typeof wasteData.weight === 'number') {
+              const weightPercentage = Math.min(100, (wasteData.weight / 10) * 100); // Convert to percentage (max 10kg = 100%)
+              binWeight.push({
+                timestamp: `${date}T12:00:00.000Z`, // Use noon as default time
+                value: Math.round(weightPercentage),
+                type: getStatusType(weightPercentage)
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`Error fetching history data for ${date}:`, error);
+      }
     }
     
-    // Generate the historical data points
-    for (let i = points - 1; i >= 0; i--) {
-      const timestamp = new Date(now);
-      timestamp.setHours(now.getHours() - (i * intervalHours));
-      
-      // Create fluctuating but somewhat consistent data patterns
-      const hourOfDay = timestamp.getHours();
-      const dayModifier = Math.sin(timestamp.getDate() / 5) * 10; // Fluctuation based on day
-      
-      // Water levels tend to be higher in the morning and evening
-      const timeModifier = Math.sin((hourOfDay / 24) * Math.PI * 2) * 15;
-      const waterLevelBase = 50 + dayModifier; // Baseline around 50%
-      const waterLevelValue = Math.min(100, Math.max(0, waterLevelBase + timeModifier + (Math.random() * 10 - 5)));
-      
-      // Bin fullness increases throughout the day
-      const fullnessBase = 30 + (hourOfDay / 24) * 30 + dayModifier; // Starts lower, increases during day
-      const fullnessValue = Math.min(100, Math.max(0, fullnessBase + (Math.random() * 15 - 5)));
-      
-      // Bin weight correlates somewhat with fullness
-      const weightValue = Math.min(100, Math.max(0, (fullnessValue * 0.8) + (Math.random() * 20 - 10)));
-      
+    // Sort by timestamp
+    waterLevels.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    binFullness.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    binWeight.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    
+    // If no data found, add placeholder for better UI
+    if (waterLevels.length === 0) {
+      const currentLevel = waterLevel ? waterLevel.level : 0;
       waterLevels.push({
-        timestamp: timestamp.toISOString(),
-        value: Math.round(waterLevelValue),
-        type: getStatusType(waterLevelValue)
+        timestamp: new Date().toISOString(),
+        value: currentLevel,
+        type: getStatusType(currentLevel)
       });
-      
+    }
+    
+    if (binFullness.length === 0 && wasteBin) {
       binFullness.push({
-        timestamp: timestamp.toISOString(),
-        value: Math.round(fullnessValue),
-        type: getStatusType(fullnessValue)
+        timestamp: new Date().toISOString(),
+        value: wasteBin.fullness,
+        type: getStatusType(wasteBin.fullness)
       });
       
       binWeight.push({
-        timestamp: timestamp.toISOString(),
-        value: Math.round(weightValue),
-        type: getStatusType(weightValue)
+        timestamp: new Date().toISOString(),
+        value: Math.min(100, (wasteBin.weight / 10) * 100),
+        type: getStatusType(Math.min(100, (wasteBin.weight / 10) * 100))
       });
     }
+    
+    // Add console logging for debugging
+    console.log("Water Level History Data:", waterLevels);
+    console.log("Bin Fullness History Data:", binFullness);
+    console.log("Bin Weight History Data:", binWeight);
     
     setReadingHistory({
       waterLevels,
