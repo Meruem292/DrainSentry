@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ref, onValue } from "firebase/database";
+import { ref, onValue, query, limitToLast, orderByChild } from "firebase/database";
 import { database } from "@/lib/firebase";
 import { useAuth } from "./useAuth";
 import { WaterLevel, WasteBin } from "@/types";
@@ -20,7 +20,7 @@ export function useLatestDeviceData() {
       return;
     }
 
-    // References to Firebase database nodes
+    // References to Firebase database nodes - setup to retrieve latest data
     const waterLevelsRef = ref(database, `users/${user.uid}/waterLevels`);
     const wasteBinsRef = ref(database, `users/${user.uid}/wasteBins`);
 

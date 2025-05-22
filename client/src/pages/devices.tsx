@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { ref, onValue, push, set, remove, get } from "firebase/database";
+import { useLatestDeviceData } from "@/hooks/useLatestDeviceData";
 import { database } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -49,8 +50,8 @@ export default function Devices() {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const [devices, setDevices] = useState<Device[]>([]);
-  const [waterLevels, setWaterLevels] = useState<Record<string, WaterLevel>>({});
-  const [wasteBins, setWasteBins] = useState<Record<string, WasteBin>>({});
+  // Use the realtime data hook for latest sensor readings
+  const { waterLevels, wasteBins } = useLatestDeviceData();
   const [loading, setLoading] = useState(true);
   const [deviceId, setDeviceId] = useState("");
   const [deviceName, setDeviceName] = useState("");
@@ -94,52 +95,8 @@ export default function Devices() {
       setLoading(false);
     });
 
-    // Get all water level data
-    const waterLevelsUnsubscribe = onValue(waterLevelsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        // Convert Firebase key references to device IDs for easier lookup
-        const processedData: Record<string, WaterLevel> = {};
-        Object.entries(data).forEach(([key, value]) => {
-          const waterLevel = value as WaterLevel;
-          if (waterLevel.id) {
-            // Make sure level is a number
-            waterLevel.level = typeof waterLevel.level === 'number' ? waterLevel.level : Number(waterLevel.level) || 0;
-            processedData[waterLevel.id] = waterLevel;
-          } else {
-            processedData[key] = waterLevel;
-          }
-        });
-        console.log("Water levels:", processedData);
-        setWaterLevels(processedData);
-      } else {
-        setWaterLevels({});
-      }
-    });
-
-    // Get all waste bin data
-    const wasteBinsUnsubscribe = onValue(wasteBinsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        // Convert Firebase key references to device IDs for easier lookup
-        const processedData: Record<string, WasteBin> = {};
-        Object.entries(data).forEach(([key, value]) => {
-          const wasteBin = value as WasteBin;
-          if (wasteBin.id) {
-            // Make sure fullness and weight are numbers
-            wasteBin.fullness = typeof wasteBin.fullness === 'number' ? wasteBin.fullness : Number(wasteBin.fullness) || 0;
-            wasteBin.weight = typeof wasteBin.weight === 'number' ? wasteBin.weight : Number(wasteBin.weight) || 0;
-            processedData[wasteBin.id] = wasteBin;
-          } else {
-            processedData[key] = wasteBin;
-          }
-        });
-        console.log("Waste bins:", processedData);
-        setWasteBins(processedData);
-      } else {
-        setWasteBins({});
-      }
-    });
+    // We're now getting the real-time water level and waste bin data 
+    // from the useLatestDeviceData hook - no need to duplicate the listeners here
 
     // Get all contacts
     const contactsUnsubscribe = onValue(contactsRef, (snapshot) => {
