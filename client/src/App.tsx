@@ -21,6 +21,7 @@ function Router() {
       <Route path="/" exact component={Dashboard} />
       <Route path="/water-levels" exact component={WaterLevels} />
       <Route path="/water-levels/:id" component={WaterLevelDetails} />
+      <Route path="/water-level-details" component={WaterLevelDetails} />
       <Route path="/waste-bins" exact component={WasteBins} />
       <Route path="/devices" exact component={Devices} />
       <Route path="/device-history/:id" component={DeviceHistory} />

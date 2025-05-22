@@ -347,7 +347,7 @@ export default function DeviceHistory() {
                   <span className={`text-2xl font-bold ${getWaterLevelColor(currentWaterLevel)}`}>
                     {currentWaterLevel}%
                   </span>
-                  <Badge variant={currentWaterLevel > 70 ? "destructive" : (currentWaterLevel > 30 ? "warning" : "success")}>
+                  <Badge variant={currentWaterLevel > 70 ? "destructive" : (currentWaterLevel > 30 ? "outline" : "default")}>
                     {currentWaterLevel > 70 ? "High" : (currentWaterLevel > 30 ? "Medium" : "Low")}
                   </Badge>
                 </div>
@@ -370,7 +370,7 @@ export default function DeviceHistory() {
                   <span className={`text-2xl font-bold ${getBinFullnessColor(currentBinFullness)}`}>
                     {currentBinFullness}%
                   </span>
-                  <Badge variant={currentBinFullness > 70 ? "destructive" : (currentBinFullness > 30 ? "warning" : "success")}>
+                  <Badge variant={currentBinFullness > 70 ? "destructive" : (currentBinFullness > 30 ? "outline" : "default")}>
                     {currentBinFullness > 70 ? "Full" : (currentBinFullness > 30 ? "Medium" : "Empty")}
                   </Badge>
                 </div>
@@ -393,7 +393,7 @@ export default function DeviceHistory() {
                   <span className="text-2xl font-bold">
                     {currentBinWeight} kg
                   </span>
-                  <Badge variant={currentBinWeight > 10 ? "destructive" : (currentBinWeight > 5 ? "warning" : "success")}>
+                  <Badge variant={currentBinWeight > 10 ? "destructive" : (currentBinWeight > 5 ? "outline" : "default")}>
                     {currentBinWeight > 10 ? "Heavy" : (currentBinWeight > 5 ? "Medium" : "Light")}
                   </Badge>
                 </div>
@@ -503,7 +503,7 @@ export default function DeviceHistory() {
                                 <TableCell className="font-medium">{formatTimestamp(entry.timestamp)}</TableCell>
                                 <TableCell className={getWaterLevelColor(entry.value)}>{entry.value}%</TableCell>
                                 <TableCell>
-                                  <Badge variant={entry.value > 70 ? "destructive" : (entry.value > 30 ? "warning" : "success")}>
+                                  <Badge variant={entry.value > 70 ? "destructive" : (entry.value > 30 ? "outline" : "default")}>
                                     {entry.value > 70 ? "High" : (entry.value > 30 ? "Medium" : "Low")}
                                   </Badge>
                                 </TableCell>
@@ -537,7 +537,7 @@ export default function DeviceHistory() {
                                 <TableCell className="font-medium">{formatTimestamp(entry.timestamp)}</TableCell>
                                 <TableCell className={getBinFullnessColor(entry.value)}>{entry.value}%</TableCell>
                                 <TableCell>
-                                  <Badge variant={entry.value > 70 ? "destructive" : (entry.value > 30 ? "warning" : "success")}>
+                                  <Badge variant={entry.value > 70 ? "destructive" : (entry.value > 30 ? "outline" : "default")}>
                                     {entry.value > 70 ? "Full" : (entry.value > 30 ? "Medium" : "Empty")}
                                   </Badge>
                                 </TableCell>
@@ -571,7 +571,7 @@ export default function DeviceHistory() {
                                 <TableCell className="font-medium">{formatTimestamp(entry.timestamp)}</TableCell>
                                 <TableCell>{entry.value} kg</TableCell>
                                 <TableCell>
-                                  <Badge variant={entry.value > 10 ? "destructive" : (entry.value > 5 ? "warning" : "success")}>
+                                  <Badge variant={entry.value > 10 ? "destructive" : (entry.value > 5 ? "outline" : "default")}>
                                     {entry.value > 10 ? "Heavy" : (entry.value > 5 ? "Medium" : "Light")}
                                   </Badge>
                                 </TableCell>
