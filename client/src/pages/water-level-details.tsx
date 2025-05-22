@@ -140,10 +140,10 @@ export default function WaterLevelDetails() {
     setBinHistory(binHistoryData);
     
     // Generate analytics data for enhanced insights
-    setPredictions(generatePredictions(waterHistoryData));
-    setWaterTrends(generateWaterTrends(waterHistoryData));
-    setWasteTrends(generateWasteTrends(binHistoryData));
-    setRainData(generateRainData());
+    setPredictions(generatePredictionsData(waterHistoryData));
+    setWaterTrends(generateWaterTrendsData(waterHistoryData));
+    setWasteTrends(generateWasteTrendsData(binHistoryData));
+    setRainData(generateRainDataSample());
     
     setLoading(false);
 
