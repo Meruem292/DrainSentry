@@ -13,7 +13,7 @@ import {
   XAxis, 
   YAxis, 
   CartesianGrid, 
-  Tooltip, 
+  Tooltip as RechartsTooltip, 
   Legend, 
   ResponsiveContainer,
   BarChart as RechartsBarChart
@@ -26,7 +26,7 @@ import {
   MapPin,
   Clock,
   ChevronRight,
-  PieChart as BarChart
+  BarChart2
 } from "lucide-react";
 import { Device, WaterLevel, WasteBin } from "@/types";
 import { Link, useLocation } from "wouter";
@@ -248,14 +248,14 @@ export default function WasteBins() {
             <CardContent>
               <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
+                  <RechartsBarChart
                     data={generateWasteBinData(devices[0]?.id || '', 7)}
                     margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="date" />
                     <YAxis domain={[0, 100]} />
-                    <Tooltip formatter={(value) => [`${value}%`, 'Bin Fullness']} />
+                    <RechartsTooltip formatter={(value: any) => [`${value}%`, 'Bin Fullness']} />
                     <Bar 
                       dataKey="fullness" 
                       name="Bin Fullness"
@@ -264,7 +264,7 @@ export default function WasteBins() {
                       fill="#10b981"
                     />
                     <Legend />
-                  </BarChart>
+                  </RechartsBarChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
@@ -460,7 +460,7 @@ export default function WasteBins() {
                       </div>
                       <Link to={`/device-history/${device.id}`} className="flex items-center text-emerald-600 text-sm">
                         History
-                        <BarChart className="h-4 w-4 ml-1" />
+                        <BarChart2 className="h-4 w-4 ml-1" />
                       </Link>
                     </div>
                   </CardFooter>
