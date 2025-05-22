@@ -132,19 +132,9 @@ export default function WaterLevelDetails() {
     });
 
     // Get historical data
-    // This would usually come from another Firebase collection of historical data
-    // For now, let's generate sample data for the demo
-    const waterHistoryData = generateSampleWaterHistory();
-    const binHistoryData = generateSampleBinHistory();
-    setWaterHistory(waterHistoryData);
-    setBinHistory(binHistoryData);
-    
-    // Generate analytics data for enhanced insights
-    // Use the utility functions defined below in the component
-    setPredictions(generateSamplePredictions(waterHistoryData));
-    setWaterTrends(generateSampleWaterTrends(waterHistoryData));
-    setWasteTrends(generateSampleWasteTrends(binHistoryData));
-    setRainData(generateSampleRainData());
+    // Fetch actual historical data from Firebase
+    fetchWaterLevelHistory(deviceId);
+    fetchWasteBinHistory(deviceId);
     
     setLoading(false);
 

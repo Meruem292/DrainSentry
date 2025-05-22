@@ -219,29 +219,8 @@ export default function DeviceHistory() {
     binFullness.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     binWeight.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     
-    // If no data found, add placeholder for better UI
-    if (waterLevels.length === 0) {
-      const currentLevel = waterLevel ? waterLevel.level : 0;
-      waterLevels.push({
-        timestamp: new Date().toISOString(),
-        value: currentLevel,
-        type: getStatusType(currentLevel)
-      });
-    }
-    
-    if (binFullness.length === 0 && wasteBin) {
-      binFullness.push({
-        timestamp: new Date().toISOString(),
-        value: wasteBin.fullness,
-        type: getStatusType(wasteBin.fullness)
-      });
-      
-      binWeight.push({
-        timestamp: new Date().toISOString(),
-        value: Math.min(100, (wasteBin.weight / 10) * 100),
-        type: getStatusType(Math.min(100, (wasteBin.weight / 10) * 100))
-      });
-    }
+    // Don't add any dummy data - only show real history data
+    // Leave the arrays empty if no data is found
     
     // Add console logging for debugging
     console.log("Water Level History Data:", waterLevels);
