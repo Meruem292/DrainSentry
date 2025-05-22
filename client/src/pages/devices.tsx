@@ -148,7 +148,34 @@ export default function Devices() {
     }
 
     try {
+      // First, check if this device ID already exists in any container
+      const devicesRef = ref(database, `users/${user.uid}/devices`);
+      const devicesSnapshot = await get(devicesRef);
+      
+      if (devicesSnapshot.exists()) {
+        const devicesData = devicesSnapshot.val();
+        
+        // Check if this device ID already exists
+        let deviceExists = false;
+        Object.entries(devicesData).forEach(([_, value]: [string, any]) => {
+          if (value.id === deviceId.trim()) {
+            deviceExists = true;
+          }
+        });
+        
+        if (deviceExists) {
+          toast({
+            title: "Device ID already exists",
+            description: "A device with this ID already exists in your account.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+      
+      // Create a new device with complete information
       const newDevice = {
+        id: deviceId.trim(), // Add explicit ID field 
         name: deviceName.trim() || deviceId.trim(),
         location: deviceLocation.trim() || "Unknown",
         status: "inactive",
@@ -167,24 +194,24 @@ export default function Devices() {
         }
       };
       
-      const devicesRef = ref(database, `users/${user.uid}/devices`);
+      // Create the device entry
       const newDeviceRef = push(devicesRef);
+      const containerKey = newDeviceRef.key;
       await set(newDeviceRef, newDevice);
       
-      // Create entries for all sensor types for the device
-      // Water level sensor data
-      const waterRef = ref(database, `users/${user.uid}/waterLevels/${newDeviceRef.key}`);
+      // Create water level sensor data entry
+      const waterRef = ref(database, `users/${user.uid}/waterLevels/${containerKey}`);
       await set(waterRef, {
-        id: deviceId,
+        id: deviceId.trim(),
         location: deviceLocation.trim() || "Unknown",
         level: 0,
         lastUpdated: "Never",
       });
       
-      // Waste bin sensor data
-      const wasteRef = ref(database, `users/${user.uid}/wasteBins/${newDeviceRef.key}`);
+      // Create waste bin sensor data entry
+      const wasteRef = ref(database, `users/${user.uid}/wasteBins/${containerKey}`);
       await set(wasteRef, {
-        id: deviceId,
+        id: deviceId.trim(),
         location: deviceLocation.trim() || "Unknown",
         fullness: 0,
         weight: 0,
@@ -199,6 +226,7 @@ export default function Devices() {
       // Reset form
       resetForm();
     } catch (error) {
+      console.error("Error adding device:", error);
       toast({
         title: "Error Adding Device",
         description: "There was an error adding your device. Please try again.",
