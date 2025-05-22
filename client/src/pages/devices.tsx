@@ -920,6 +920,9 @@ export default function Devices() {
                           <span className="hover:text-primary transition-colors duration-200">{device.name}</span>
                         </div>
                       </TableCell>
+                      <TableCell>
+                        <div className="text-xs px-2 py-1 bg-gray-100 rounded inline-block font-mono">{device.id}</div>
+                      </TableCell>
                       <TableCell>{device.location}</TableCell>
                       <TableCell>
                         <Badge variant={isActive ? "default" : "outline"} className={isActive ? "" : "bg-gray-100 text-gray-500"}>
