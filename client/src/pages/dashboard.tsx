@@ -390,15 +390,7 @@ export default function Dashboard() {
                             <div className="text-xs text-gray-500 flex items-center">
                               <Clock className="h-3.5 w-3.5 mr-1" />
                               Last updated: {
-                                lastUpdatedWater && lastEmptiedBin ? 
-                                  (new Date(Math.max(lastUpdatedWater.getTime(), lastEmptiedBin.getTime())).toLocaleString()) : 
-                                  (lastUpdatedWater ? 
-                                    new Date(lastUpdatedWater).toLocaleString() : 
-                                    (lastEmptiedBin ? 
-                                      new Date(lastEmptiedBin).toLocaleString() : 
-                                      'Never'
-                                    )
-                                  )
+                                waterLevel?.lastUpdated || wasteBin?.lastUpdated || 'Never'
                               }
                             </div>
                             <div className="flex gap-2">
