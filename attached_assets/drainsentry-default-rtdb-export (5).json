@@ -1,0 +1,300 @@
+{
+  "users": {
+    "8ZfCe8lt87Q1ueT4m7XkUgw9tOQ2": {
+      "contacts": {
+        "-OQqof3Qyzrw1cpvwx1m": {
+          "name": "gerry tagalinis",
+          "phone": "09776240983",
+          "status": "active"
+        },
+        "-OQr1OdOQNs-SPN3WiB5": {
+          "name": "Kian T.",
+          "phone": "09815409364",
+          "status": "active"
+        }
+      },
+      "devices": {
+        "-OQrMOaFn7B3_EstDMY6": {
+          "id": "DS-001",
+          "lastSeen": "05/22/2025, 17:43:41",
+          "location": "Gerry House",
+          "name": "Prototype 1",
+          "notifications": {
+            "enabled": true,
+            "notifyOnBinFullness": true,
+            "notifyOnWaterLevel": true,
+            "notifyOnWeight": true
+          },
+          "status": "active",
+          "thresholds": {
+            "binFullness": 80,
+            "wasteWeight": 80,
+            "waterLevel": 80
+          }
+        }
+      },
+      "settings": {
+        "notifications": {
+          "emailAddress": "newroskoto@gmail.com",
+          "emailEnabled": false,
+          "smsEnabled": true
+        },
+        "regional": {
+          "timeZone": "UTC-8"
+        },
+        "system": {
+          "dataRefreshInterval": "30",
+          "dataRetentionPeriod": "6",
+          "name": "DrainSentry"
+        },
+        "thresholds": {
+          "binFullness": 80,
+          "wasteWeight": 50,
+          "waterLevel": 75
+        }
+      },
+      "wasteBinHistory": {
+        "2025-05-22": {
+          "-OQrMOaFn7B3_EstDMY6": {
+            "17_41_14": {
+              "fullness": 0,
+              "weight": 0.224758
+            },
+            "17_41_18": {
+              "fullness": 0,
+              "weight": 0.29096
+            },
+            "17_41_23": {
+              "fullness": 0,
+              "weight": 0.286663
+            },
+            "17_41_28": {
+              "fullness": 0,
+              "weight": 0.124758
+            },
+            "17_41_33": {
+              "fullness": 0,
+              "weight": 0.297135
+            },
+            "17_41_38": {
+              "fullness": 0,
+              "weight": 0.293806
+            },
+            "17_41_43": {
+              "fullness": 0,
+              "weight": 0.22048
+            },
+            "17_41_48": {
+              "fullness": 0,
+              "weight": 0.17619
+            },
+            "17_41_53": {
+              "fullness": 0,
+              "weight": 0.227139
+            },
+            "17_41_58": {
+              "fullness": 6,
+              "weight": 0.302381
+            },
+            "17_42_03": {
+              "fullness": 0,
+              "weight": 0.193341
+            },
+            "17_42_08": {
+              "fullness": 0,
+              "weight": 0.34667
+            },
+            "17_42_13": {
+              "fullness": 0,
+              "weight": 0.397619
+            },
+            "17_42_18": {
+              "fullness": 0,
+              "weight": 0.301897
+            },
+            "17_42_23": {
+              "fullness": 32,
+              "weight": 0.435714
+            },
+            "17_42_28": {
+              "fullness": 0,
+              "weight": 0.197135
+            },
+            "17_42_33": {
+              "fullness": 0,
+              "weight": 0.366183
+            },
+            "17_42_38": {
+              "fullness": 0,
+              "weight": 0.200949
+            },
+            "17_42_43": {
+              "fullness": 0,
+              "weight": 0.295722
+            },
+            "17_42_48": {
+              "fullness": 0,
+              "weight": 0.363802
+            },
+            "17_42_54": {
+              "fullness": 0,
+              "weight": 0.438095
+            },
+            "17_42_58": {
+              "fullness": 14,
+              "weight": 0.437147
+            },
+            "17_43_03": {
+              "fullness": 0,
+              "weight": 0.472861
+            },
+            "17_43_08": {
+              "fullness": 14,
+              "weight": 0.428571
+            },
+            "17_43_13": {
+              "fullness": 28,
+              "weight": 0.466183
+            },
+            "17_43_19": {
+              "fullness": 18,
+              "weight": 0.457143
+            },
+            "17_43_23": {
+              "fullness": 0,
+              "weight": 0.301432
+            },
+            "17_43_28": {
+              "fullness": 2,
+              "weight": 0.574758
+            },
+            "17_43_33": {
+              "fullness": 0,
+              "weight": 0.564769
+            },
+            "17_43_38": {
+              "fullness": 0,
+              "weight": 0.207143
+            }
+          }
+        }
+      },
+      "wasteBins": {
+        "-OQrMOaFn7B3_EstDMY6": {
+          "fullness": 0,
+          "id": "DS-001",
+          "lastEmptied": "Never",
+          "location": "Main Street Junction",
+          "weight": 0.583333
+        }
+      },
+      "waterLevelHistory": {
+        "2025-05-22": {
+          "-OQrMOaFn7B3_EstDMY6": {
+            "17_41_13": {
+              "value": 50
+            },
+            "17_41_17": {
+              "value": 0
+            },
+            "17_41_22": {
+              "value": 0
+            },
+            "17_41_27": {
+              "value": 0
+            },
+            "17_41_32": {
+              "value": 0
+            },
+            "17_41_37": {
+              "value": 0
+            },
+            "17_41_42": {
+              "value": 0
+            },
+            "17_41_47": {
+              "value": 0
+            },
+            "17_41_52": {
+              "value": 74
+            },
+            "17_41_57": {
+              "value": 29
+            },
+            "17_42_02": {
+              "value": 38
+            },
+            "17_42_07": {
+              "value": 0
+            },
+            "17_42_12": {
+              "value": 0
+            },
+            "17_42_17": {
+              "value": 0
+            },
+            "17_42_22": {
+              "value": 0
+            },
+            "17_42_27": {
+              "value": 0
+            },
+            "17_42_32": {
+              "value": 0
+            },
+            "17_42_37": {
+              "value": 0
+            },
+            "17_42_42": {
+              "value": 0
+            },
+            "17_42_47": {
+              "value": 88
+            },
+            "17_42_53": {
+              "value": 0
+            },
+            "17_42_57": {
+              "value": 96
+            },
+            "17_43_02": {
+              "value": 48
+            },
+            "17_43_07": {
+              "value": 0
+            },
+            "17_43_12": {
+              "value": 50
+            },
+            "17_43_18": {
+              "value": 0
+            },
+            "17_43_22": {
+              "value": 0
+            },
+            "17_43_27": {
+              "value": 0
+            },
+            "17_43_32": {
+              "value": 96
+            },
+            "17_43_37": {
+              "value": 0
+            },
+            "17_43_42": {
+              "value": 52
+            }
+          }
+        }
+      },
+      "waterLevels": {
+        "-OQrMOaFn7B3_EstDMY6": {
+          "id": "DS-001",
+          "lastUpdated": "05/22/2025, 17:43:41",
+          "level": 52,
+          "location": "Main Street Junction"
+        }
+      }
+    }
+  }
+}
