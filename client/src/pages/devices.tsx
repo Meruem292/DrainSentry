@@ -389,6 +389,38 @@ export default function Devices() {
               if (wasteSnapshot.exists()) {
                 await remove(wasteRef);
               }
+              
+              // Check for water level history
+              const waterHistoryRef = ref(database, `users/${user.uid}/waterLevelHistory`);
+              const waterHistorySnapshot = await get(waterHistoryRef);
+              if (waterHistorySnapshot.exists()) {
+                const waterHistoryData = waterHistorySnapshot.val();
+                
+                // Look through each date entry
+                for (const [date, dateData] of Object.entries(waterHistoryData)) {
+                  if (dateData && typeof dateData === 'object' && dateData.hasOwnProperty(key)) {
+                    // Remove just this device's history for this date
+                    const specificHistoryRef = ref(database, `users/${user.uid}/waterLevelHistory/${date}/${key}`);
+                    await remove(specificHistoryRef);
+                  }
+                }
+              }
+              
+              // Check for waste collection history
+              const wasteHistoryRef = ref(database, `users/${user.uid}/wasteCollectionHistory`);
+              const wasteHistorySnapshot = await get(wasteHistoryRef);
+              if (wasteHistorySnapshot.exists()) {
+                const wasteHistoryData = wasteHistorySnapshot.val();
+                
+                // Look through each date entry
+                for (const [date, dateData] of Object.entries(wasteHistoryData)) {
+                  if (dateData && typeof dateData === 'object' && dateData.hasOwnProperty(key)) {
+                    // Remove just this device's history for this date
+                    const specificHistoryRef = ref(database, `users/${user.uid}/wasteCollectionHistory/${date}/${key}`);
+                    await remove(specificHistoryRef);
+                  }
+                }
+              }
             }
           }
         }
@@ -420,7 +452,7 @@ export default function Devices() {
       
       // Loop through devices to find the one with matching ID
       Object.entries(devicesData).forEach(([key, value]: [string, any]) => {
-        if (value.id === deviceId) {
+        if (value && value.id === deviceId) {
           containerKey = key;
         }
       });
@@ -457,11 +489,50 @@ export default function Devices() {
         await remove(wasteRef);
       }
       
+      // Clean up water level history for this device
+      const waterHistoryRef = ref(database, `users/${user.uid}/waterLevelHistory`);
+      const waterHistorySnapshot = await get(waterHistoryRef);
+      if (waterHistorySnapshot.exists()) {
+        const waterHistoryData = waterHistorySnapshot.val();
+        
+        // Look through each date entry
+        for (const [date, dateData] of Object.entries(waterHistoryData)) {
+          if (dateData && typeof dateData === 'object' && 
+             (dateData.hasOwnProperty(containerKey) || dateData.hasOwnProperty(deviceId))) {
+            // Remove history for both container key and device ID to be thorough
+            const specificHistoryRef1 = ref(database, `users/${user.uid}/waterLevelHistory/${date}/${containerKey}`);
+            const specificHistoryRef2 = ref(database, `users/${user.uid}/waterLevelHistory/${date}/${deviceId}`);
+            await remove(specificHistoryRef1);
+            await remove(specificHistoryRef2);
+          }
+        }
+      }
+      
+      // Clean up waste collection history for this device
+      const wasteHistoryRef = ref(database, `users/${user.uid}/wasteCollectionHistory`);
+      const wasteHistorySnapshot = await get(wasteHistoryRef);
+      if (wasteHistorySnapshot.exists()) {
+        const wasteHistoryData = wasteHistorySnapshot.val();
+        
+        // Look through each date entry
+        for (const [date, dateData] of Object.entries(wasteHistoryData)) {
+          if (dateData && typeof dateData === 'object' && 
+             (dateData.hasOwnProperty(containerKey) || dateData.hasOwnProperty(deviceId))) {
+            // Remove history for both container key and device ID to be thorough
+            const specificHistoryRef1 = ref(database, `users/${user.uid}/wasteCollectionHistory/${date}/${containerKey}`);
+            const specificHistoryRef2 = ref(database, `users/${user.uid}/wasteCollectionHistory/${date}/${deviceId}`);
+            await remove(specificHistoryRef1);
+            await remove(specificHistoryRef2);
+          }
+        }
+      }
+      
       toast({
         title: "Device Removed",
-        description: "Your device has been removed successfully",
+        description: "Your device has been removed successfully and all associated data cleaned up",
       });
     } catch (error) {
+      console.error("Error removing device:", error);
       toast({
         title: "Error Removing Device",
         description: "There was an error removing your device. Please try again.",
