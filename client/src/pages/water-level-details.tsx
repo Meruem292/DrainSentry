@@ -168,22 +168,18 @@ export default function WaterLevelDetails() {
           if (dateData && typeof dateData === 'object' && dateData[deviceKey] !== undefined) {
             const deviceData = dateData[deviceKey];
             
-            // Handle different data formats
-            if (typeof deviceData === 'number') {
-              // Old format: just a value
-              formattedData.push({
-                timestamp: `${date}T12:00:00Z`, // Use noon as default time
-                level: deviceData
-              });
-            } else if (typeof deviceData === 'object') {
-              // If data has timestamps (new format)
+            // If data has timestamps
+            if (typeof deviceData === 'object') {
               Object.entries(deviceData).forEach(([timeKey, data]: [string, any]) => {
-                if (typeof data === 'object' && data.value !== undefined) {
-                  formattedData.push({
-                    timestamp: `${date}T${timeKey.replace(/_/g, ':')}Z`,
-                    level: data.value
-                  });
-                }
+                // Extract water level value based on the database structure
+                const waterLevel = data && typeof data === 'object' && 'value' in data
+                  ? data.value 
+                  : (typeof data === 'number' ? data : 0);
+                
+                formattedData.push({
+                  timestamp: `${date}T${timeKey.replace(/_/g, ':')}`,
+                  level: waterLevel
+                });
               });
             }
           }
@@ -217,27 +213,18 @@ export default function WaterLevelDetails() {
           if (dateData && typeof dateData === 'object' && dateData[deviceKey] !== undefined) {
             const deviceData = dateData[deviceKey];
             
-            // Handle different data formats
+            // If data has timestamps
             if (typeof deviceData === 'object') {
-              if (deviceData.fullness !== undefined) {
-                // Old format
-                formattedData.push({
-                  timestamp: `${date}T12:00:00Z`,
-                  fullness: deviceData.fullness || 0,
-                  weight: deviceData.weight || 0
-                });
-              } else {
-                // New format with timestamps
-                Object.entries(deviceData).forEach(([timeKey, data]: [string, any]) => {
-                  if (typeof data === 'object') {
-                    formattedData.push({
-                      timestamp: `${date}T${timeKey.replace(/_/g, ':')}Z`,
-                      fullness: data.fullness || 0,
-                      weight: data.weight || 0
-                    });
-                  }
-                });
-              }
+              // Process timestamps from the actual database format
+              Object.entries(deviceData).forEach(([timeKey, data]: [string, any]) => {
+                if (typeof data === 'object') {
+                  formattedData.push({
+                    timestamp: `${date}T${timeKey.replace(/_/g, ':')}`,
+                    fullness: data.fullness !== undefined ? data.fullness : 0,
+                    weight: data.weight !== undefined ? data.weight : 0
+                  });
+                }
+              });
             }
           }
         });

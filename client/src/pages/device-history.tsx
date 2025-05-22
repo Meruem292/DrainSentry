@@ -173,54 +173,55 @@ export default function DeviceHistory() {
         const waterLevelData = waterLevelSnapshot.val();
         
         // Convert object to array of entries
-        Object.entries(waterLevelData).forEach(([timestamp, level]) => {
+        Object.entries(waterLevelData).forEach(([timestamp, data]) => {
+          // Check if data has value property as per the JSON structure
+          const levelValue = data && typeof data === 'object' && 'value' in data 
+            ? (data as {value: number}).value
+            : (typeof data === 'number' ? data : 0);
+            
           newHistory.waterLevels.push({
             timestamp,
-            value: typeof level === 'number' ? level : 0,
+            value: levelValue,
             type: 'water'
           });
         });
       }
       
-      // Load waste bin fullness history
-      const binFullnessHistoryRef = ref(
+      // Load waste bin history (both fullness and weight in one place)
+      const wasteBinHistoryRef = ref(
         database, 
-        `users/${userId}/wasteBinHistory/${formattedDate}/${deviceContainerKey}/fullness`
+        `users/${userId}/wasteBinHistory/${formattedDate}/${deviceContainerKey}`
       );
       
-      const binFullnessSnapshot = await get(binFullnessHistoryRef);
+      const wasteBinSnapshot = await get(wasteBinHistoryRef);
       
-      if (binFullnessSnapshot.exists()) {
-        const binFullnessData = binFullnessSnapshot.val();
+      if (wasteBinSnapshot.exists()) {
+        const wasteBinData = wasteBinSnapshot.val();
         
         // Convert object to array of entries
-        Object.entries(binFullnessData).forEach(([timestamp, fullness]) => {
-          newHistory.binFullness.push({
-            timestamp,
-            value: typeof fullness === 'number' ? fullness : 0,
-            type: 'fullness'
-          });
-        });
-      }
-      
-      // Load waste bin weight history
-      const binWeightHistoryRef = ref(
-        database, 
-        `users/${userId}/wasteBinHistory/${formattedDate}/${deviceContainerKey}/weight`
-      );
-      
-      const binWeightSnapshot = await get(binWeightHistoryRef);
-      
-      if (binWeightSnapshot.exists()) {
-        const binWeightData = binWeightSnapshot.val();
-        
-        // Convert object to array of entries
-        Object.entries(binWeightData).forEach(([timestamp, weight]) => {
-          newHistory.binWeight.push({
-            timestamp,
-            value: typeof weight === 'number' ? weight : 0,
-            type: 'weight'
-          });
+        Object.entries(wasteBinData).forEach(([timestamp, data]) => {
+          // Extract fullness and weight from the data object
+          if (data && typeof data === 'object') {
+            const binData = data as {fullness?: number, weight?: number};
+            
+            // Add fullness entry if it exists
+            if ('fullness' in binData && binData.fullness !== undefined) {
+              newHistory.binFullness.push({
+                timestamp,
+                value: binData.fullness,
+                type: 'fullness'
+              });
+            }
+            
+            // Add weight entry if it exists
+            if ('weight' in binData && binData.weight !== undefined) {
+              newHistory.binWeight.push({
+                timestamp,
+                value: binData.weight,
+                type: 'weight'
+              });
+            }
+          }
         });
       }
       
