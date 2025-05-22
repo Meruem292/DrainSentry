@@ -352,9 +352,14 @@ export default function DeviceHistory() {
                     {currentWaterLevel > 70 ? "High" : (currentWaterLevel > 30 ? "Medium" : "Low")}
                   </Badge>
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  Last updated: {waterLevel?.lastUpdated ? new Date(waterLevel.lastUpdated).toLocaleString() : "Never"}
-                </p>
+                <div className="flex justify-between items-center mt-2">
+                  <p className="text-xs text-gray-500">
+                    Last updated: {waterLevel?.lastUpdated ? new Date(waterLevel.lastUpdated).toLocaleString() : "Never"}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Threshold: {device?.thresholds?.waterLevel || 80}%
+                  </p>
+                </div>
               </CardContent>
             </Card>
             
@@ -375,9 +380,14 @@ export default function DeviceHistory() {
                     {currentBinFullness > 70 ? "Full" : (currentBinFullness > 30 ? "Medium" : "Empty")}
                   </Badge>
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  Last updated: {wasteBin?.lastEmptied ? new Date(wasteBin.lastEmptied).toLocaleString() : "Never"}
-                </p>
+                <div className="flex justify-between items-center mt-2">
+                  <p className="text-xs text-gray-500">
+                    Last updated: {wasteBin?.lastEmptied ? new Date(wasteBin.lastEmptied).toLocaleString() : "Never"}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Threshold: {device?.thresholds?.binFullness || 80}%
+                  </p>
+                </div>
               </CardContent>
             </Card>
             
@@ -398,9 +408,14 @@ export default function DeviceHistory() {
                     {currentBinWeight > 10 ? "Heavy" : (currentBinWeight > 5 ? "Medium" : "Light")}
                   </Badge>
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  Last updated: {wasteBin?.lastEmptied ? new Date(wasteBin.lastEmptied).toLocaleString() : "Never"}
-                </p>
+                <div className="flex justify-between items-center mt-2">
+                  <p className="text-xs text-gray-500">
+                    Last updated: {wasteBin?.lastEmptied ? new Date(wasteBin.lastEmptied).toLocaleString() : "Never"}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Threshold: {device?.thresholds?.wasteWeight || 80} kg
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </div>
