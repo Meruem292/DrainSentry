@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
-  BarChart, 
   Bar, 
   LineChart,
   Line,
@@ -16,7 +15,8 @@ import {
   CartesianGrid, 
   Tooltip, 
   Legend, 
-  ResponsiveContainer 
+  ResponsiveContainer,
+  BarChart as RechartsBarChart
 } from "recharts";
 import { 
   Droplet, 
@@ -25,7 +25,8 @@ import {
   CalendarClock, 
   MapPin,
   Clock,
-  ChevronRight
+  ChevronRight,
+  PieChart as BarChart
 } from "lucide-react";
 import { Device, WaterLevel, WasteBin } from "@/types";
 import { Link, useLocation } from "wouter";
@@ -450,9 +451,17 @@ export default function WasteBins() {
                       Last seen: {device.lastSeen}
                     </div>
                     
-                    <div className="flex items-center text-emerald-600 text-sm">
-                      View Details
-                      <ChevronRight className="h-4 w-4 ml-1" />
+                    <div className="flex gap-3">
+                      <div className="flex items-center text-emerald-600 text-sm">
+                        <Link to={`/waste-bins/${device.id}`} className="flex items-center text-primary text-sm">
+                          Details
+                          <ChevronRight className="h-4 w-4 ml-1" />
+                        </Link>
+                      </div>
+                      <Link to={`/device-history/${device.id}`} className="flex items-center text-emerald-600 text-sm">
+                        History
+                        <BarChart className="h-4 w-4 ml-1" />
+                      </Link>
                     </div>
                   </CardFooter>
                 </Card>
