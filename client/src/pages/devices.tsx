@@ -860,9 +860,24 @@ export default function Devices() {
                   <TableHead>Device</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Water Level</TableHead>
-                  <TableHead>Bin Fullness</TableHead>
-                  <TableHead>Weight</TableHead>
+                  <TableHead>
+                    <div className="flex flex-col">
+                      <span>Water Level</span>
+                      <span className="text-xs text-gray-500">(Threshold)</span>
+                    </div>
+                  </TableHead>
+                  <TableHead>
+                    <div className="flex flex-col">
+                      <span>Bin Fullness</span>
+                      <span className="text-xs text-gray-500">(Threshold)</span>
+                    </div>
+                  </TableHead>
+                  <TableHead>
+                    <div className="flex flex-col">
+                      <span>Weight</span>
+                      <span className="text-xs text-gray-500">(Threshold)</span>
+                    </div>
+                  </TableHead>
                   <TableHead>Last Updated</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -911,16 +926,33 @@ export default function Devices() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className={getWaterLevelColor(waterLevel?.level || 0)}>
-                          {waterLevel?.level || 0}%
+                        <div className="flex flex-col">
+                          <div className={getWaterLevelColor(waterLevel?.level || 0)}>
+                            {waterLevel?.level || 0}%
+                          </div>
+                          <span className="text-xs text-gray-500 mt-1">
+                            Threshold: {device.thresholds?.waterLevel || 80}%
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className={getBinFullnessColor(wasteBin?.fullness || 0)}>
-                          {wasteBin?.fullness || 0}%
+                        <div className="flex flex-col">
+                          <div className={getBinFullnessColor(wasteBin?.fullness || 0)}>
+                            {wasteBin?.fullness || 0}%
+                          </div>
+                          <span className="text-xs text-gray-500 mt-1">
+                            Threshold: {device.thresholds?.binFullness || 80}%
+                          </span>
                         </div>
                       </TableCell>
-                      <TableCell>{wasteBin?.weight || 0} kg</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <div>{wasteBin?.weight || 0} kg</div>
+                          <span className="text-xs text-gray-500 mt-1">
+                            Threshold: {device.thresholds?.wasteWeight || 80} kg
+                          </span>
+                        </div>
+                      </TableCell>
                       <TableCell className="text-xs text-gray-500">
                         {lastUpdated}
                       </TableCell>
