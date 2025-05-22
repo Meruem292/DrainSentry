@@ -114,8 +114,6 @@ export default function Devices() {
 
     return () => {
       devicesUnsubscribe();
-      waterLevelsUnsubscribe();
-      wasteBinsUnsubscribe();
       contactsUnsubscribe();
     };
   }, [user]);
