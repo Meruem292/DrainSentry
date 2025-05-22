@@ -1,0 +1,186 @@
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include <HardwareSerial.h>
+#include "HX711.h"
+
+#define SENSOR1_RX 18
+#define SENSOR1_TX 19
+#define SENSOR2_RX 16
+#define SENSOR2_TX 17
+
+#define GSM_TX 26
+#define GSM_RX 27
+
+#define DIST_THRESHOLD 10.0
+
+#define LOADCELL_DOUT 33
+#define LOADCELL_SCK 32
+#define WEIGHT_THRESHOLD 2.0  // in kg
+
+HX711 scale;
+
+// Timing (read both sensors every 2 seconds)
+const unsigned long interval = 2000;
+unsigned long lastReadTime = 0;
+
+HardwareSerial sensor1(2);    // UART2
+HardwareSerial sensor2(1);    // UART1
+HardwareSerial gsmSerial(0);  // UART0 (default)
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+float lastDist1 = -1;
+float lastDist2 = -1;
+
+void setup() {
+  Serial.begin(115200);
+  sensor1.begin(9600, SERIAL_8N1, SENSOR1_RX, SENSOR1_TX);
+  sensor2.begin(9600, SERIAL_8N1, SENSOR2_RX, SENSOR2_TX);
+  gsmSerial.begin(9600, SERIAL_8N1, GSM_TX, GSM_RX);
+
+  lcd.init();
+  lcd.backlight();
+
+  Serial.println("System starting...");
+  lcd.setCursor(0, 0);
+  lcd.print("Starting...");
+  delay(1000);
+
+  sendATCommand("AT");
+  sendATCommand("AT+CMGF=1");  // SMS text mode
+  scale.begin(LOADCELL_DOUT, LOADCELL_SCK);
+  scale.set_scale();  // Set later after calibration
+  scale.tare();       // Reset the scale to 0
+
+  Serial.println("Load cell initialized");
+}
+
+void loop() {
+  unsigned long currentTime = millis();
+
+  if (scale.is_ready()) {
+  float weight = scale.get_units();  // You may need calibration
+  Serial.print("Weight: ");
+  Serial.print(weight);
+  Serial.println(" kg");
+
+  if (weight >= WEIGHT_THRESHOLD) {
+    sendSMS("09815409364", "Alert: Load cell full (~10kg)!");
+  }
+
+  // Optional LCD line
+  lcd.setCursor(8, 1);
+  lcd.print("W:");
+  lcd.print(weight, 1);
+  lcd.print("kg ");
+} else {
+  Serial.println("HX711 not ready");
+}
+
+
+  if (currentTime - lastReadTime >= interval) {
+    lastReadTime = currentTime;
+
+    // Read sensor 1
+    flushSerial(sensor1);
+    delay(50);
+    lastDist1 = readA02Distance(sensor1);
+    Serial.print("Sensor 1 Distance: ");
+    Serial.print(lastDist1);
+    Serial.println(" cm");
+
+    // Read sensor 2
+    flushSerial(sensor2);
+    delay(50);
+    lastDist2 = readA02Distance(sensor2);
+    Serial.print("Sensor 2 Distance: ");
+    Serial.print(lastDist2);
+    Serial.println(" cm");
+
+    updateLCD(lastDist1, lastDist2);
+
+    if (lastDist1 > 0 && lastDist1 <= DIST_THRESHOLD) {
+      sendSMS("09815409364", "Alert: Water level near Sensor 1!");
+    }
+
+    if (lastDist2 > 0 && lastDist2 <= DIST_THRESHOLD) {
+      sendSMS("09815409364", "Alert: Water level near Sensor 2!");
+    }
+  }
+}
+
+// Flush serial buffer to clear old data
+void flushSerial(HardwareSerial& serial) {
+  while (serial.available()) {
+    serial.read();
+  }
+}
+
+// Read distance from A02-21AU sensor robustly
+float readA02Distance(HardwareSerial& serial) {
+  unsigned char data[4];
+  unsigned long start = millis();
+
+  while (millis() - start < 150) {  // Slightly longer timeout
+    if (serial.available() >= 4) {
+      for (int i = 0; i < 4; i++) {
+        data[i] = serial.read();
+      }
+      if (data[0] == 0xFF) {
+        int sum = (data[0] + data[1] + data[2]) & 0xFF;
+        if (sum == data[3]) {
+          return ((data[1] << 8) + data[2]) / 10.0;
+        }
+      }
+    }
+  }
+  return -1.0;  // Error or no valid data
+}
+
+void sendATCommand(const char* cmd) {
+  gsmSerial.println(cmd);
+  delay(500);
+  while (gsmSerial.available()) {
+    Serial.write(gsmSerial.read());
+  }
+}
+
+void sendSMS(const char* phoneNumber, const char* message) {
+  Serial.print("Sending SMS to ");
+  Serial.println(phoneNumber);
+
+  gsmSerial.println("AT+CMGF=1");
+  delay(500);
+
+  gsmSerial.print("AT+CMGS=\"");
+  gsmSerial.print(phoneNumber);
+  gsmSerial.println("\"");
+  delay(500);
+
+  gsmSerial.print(message);
+  delay(500);
+
+  gsmSerial.write(26);  // Ctrl+Z to send SMS
+  delay(5000);
+
+  Serial.println("SMS sent.");
+}
+
+void updateLCD(float dist1, float dist2) {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("S1: ");
+  if (dist1 >= 0)
+    lcd.print(dist1);
+  else
+    lcd.print("---");
+  lcd.print(" cm");
+
+  lcd.setCursor(0, 1);
+  lcd.print("S2: ");
+  if (dist2 >= 0)
+    lcd.print(dist2);
+  else
+    lcd.print("---");
+  lcd.print(" cm");
+}
