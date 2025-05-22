@@ -1,0 +1,79 @@
+{
+  "users": {
+    "8ZfCe8lt87Q1ueT4m7XkUgw9tOQ2": {
+      "contacts": {
+        "-OQqof3Qyzrw1cpvwx1m": {
+          "name": "gerry tagalinis",
+          "phone": "09776240983",
+          "status": "active"
+        },
+        "-OQr1OdOQNs-SPN3WiB5": {
+          "name": "Kian T.",
+          "phone": "09815409364",
+          "status": "active"
+        }
+      },
+      "devices": {
+        "-OQqwc4Do6nBo2vA6ORV": {
+          "id": "DS-001",
+          "lastSeen": "05/22/2025, 16:12:02",
+          "location": "Gerry house",
+          "name": "Prototype 1",
+          "notifications": {
+            "enabled": true,
+            "notifyContacts": [
+              "-OQqof3Qyzrw1cpvwx1m",
+              "-OQr1OdOQNs-SPN3WiB5"
+            ],
+            "notifyOnBinFullness": true,
+            "notifyOnWaterLevel": true,
+            "notifyOnWeight": true
+          },
+          "status": "active",
+          "thresholds": {
+            "binFullness": 80,
+            "wasteWeight": 80,
+            "waterLevel": 80
+          }
+        }
+      },
+      "settings": {
+        "notifications": {
+          "emailAddress": "newroskoto@gmail.com",
+          "emailEnabled": false,
+          "smsEnabled": true
+        },
+        "regional": {
+          "timeZone": "UTC-8"
+        },
+        "system": {
+          "dataRefreshInterval": "30",
+          "dataRetentionPeriod": "6",
+          "name": "DrainSentry"
+        },
+        "thresholds": {
+          "binFullness": 80,
+          "wasteWeight": 50,
+          "waterLevel": 75
+        }
+      },
+      "wasteBins": {
+        "-OQqwc4Do6nBo2vA6ORV": {
+          "fullness": 0,
+          "id": "DS-001",
+          "lastEmptied": "Never",
+          "location": "Main Street Junction",
+          "weight": 0
+        }
+      },
+      "waterLevels": {
+        "-OQqwc4Do6nBo2vA6ORV": {
+          "id": "DS-001",
+          "lastUpdated": "05/22/2025, 16:12:02",
+          "level": 0,
+          "location": "Main Street Junction"
+        }
+      }
+    }
+  }
+}

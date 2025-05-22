@@ -26,58 +26,99 @@ export function useWaterLevelHistory(deviceId: string) {
       setLoading(false);
       return;
     }
-    
-    console.log("Fetching water level history for device:", deviceId);
-    
-    const fetchHistoryData = async () => {
+
+    // Find the device container key first
+    const findDeviceAndFetchHistory = async () => {
       try {
-        // Using direct approach with device ID
-        // Get the current date for Firebase path
-        const today = new Date();
-        const dateStr = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+        // Get the devices list
+        const devicesRef = ref(database, `users/${user.uid}/devices`);
+        const devicesSnapshot = await get(devicesRef);
         
-        // Get waterLevelHistory for the current date
-        const historyRef = ref(database, `users/${user.uid}/waterLevelHistory/${dateStr}`);
-        const historySnapshot = await get(historyRef);
-        
-        if (!historySnapshot.exists()) {
-          console.log("No history data found for date:", dateStr);
+        if (!devicesSnapshot.exists()) {
           setLoading(false);
           return;
         }
         
-        const historyData = historySnapshot.val();
-        const historyEntries: WaterLevelHistoryEntry[] = [];
+        // Find the container key for this device ID
+        const devicesData = devicesSnapshot.val();
+        let containerKey = null;
         
-        // Iterate through all devices in the history data
-        Object.entries(historyData).forEach(([deviceKey, deviceData]: [string, any]) => {
-          // Check if this device has our device ID
-          // Just scan all device entries since we don't know the device key
-          
-          if (deviceData && typeof deviceData === 'object') {
-            Object.entries(deviceData).forEach(([timeKey, timeData]: [string, any]) => {
-              if (typeof timeData === 'object' && 'value' in timeData) {
-                // Format timestamp from HH_MM_SS to ISO
-                const hour = timeKey.split('_')[0];
-                const minute = timeKey.split('_')[1];
-                const second = timeKey.split('_')[2];
-                const timestamp = `${dateStr}T${hour}:${minute}:${second}`;
-                
-                historyEntries.push({
-                  timestamp: timestamp,
-                  level: timeData.value
-                });
-              }
-            });
+        Object.entries(devicesData).forEach(([key, value]: [string, any]) => {
+          if (value.id === deviceId) {
+            containerKey = key;
           }
         });
         
-        // Sort by timestamp
+        if (!containerKey) {
+          setLoading(false);
+          return;
+        }
+        
+        // Now fetch history data for this device
+        const historyEntries: WaterLevelHistoryEntry[] = [];
+        
+        // Get data for the last 30 days
+        const today = new Date();
+        const promises = [];
+        
+        for (let i = 0; i < 30; i++) {
+          const date = new Date(today);
+          date.setDate(today.getDate() - i);
+          const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+          
+          // Prepare the request for this date
+          const historyRef = ref(database, `users/${user.uid}/waterLevelHistory/${dateStr}/${containerKey}`);
+          promises.push(
+            get(historyRef).then(snapshot => {
+              if (snapshot.exists()) {
+                const dateData = snapshot.val();
+                
+                // Handle different data formats
+                if (typeof dateData === 'number') {
+                  // Old format - single number value
+                  historyEntries.push({
+                    timestamp: `${dateStr}T12:00:00Z`, // Use noon as default time
+                    level: dateData
+                  });
+                } 
+                else if (typeof dateData === 'object') {
+                  // Newer format - could be one entry or multiple timestamped entries
+                  if (dateData.value !== undefined) {
+                    // Single entry with value field
+                    historyEntries.push({
+                      timestamp: `${dateStr}T12:00:00Z`,
+                      level: dateData.value
+                    });
+                  }
+                  else {
+                    // Multiple entries with timestamps as keys
+                    Object.entries(dateData).forEach(([timeKey, timeData]: [string, any]) => {
+                      if (typeof timeData === 'object' && timeData.value !== undefined) {
+                        // Convert HH_MM_SS to HH:MM:SS format
+                        const timeStr = timeKey.replace(/_/g, ':');
+                        historyEntries.push({
+                          timestamp: `${dateStr}T${timeStr}Z`,
+                          level: timeData.value
+                        });
+                      }
+                    });
+                  }
+                }
+              }
+            }).catch(error => {
+              console.error(`Error fetching history for ${dateStr}:`, error);
+            })
+          );
+        }
+        
+        // Wait for all history data to be fetched
+        await Promise.all(promises);
+        
+        // Sort by timestamp and update state
         historyEntries.sort((a, b) => 
           new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
         );
         
-        console.log("Fetched history entries:", historyEntries.length);
         setHistory(historyEntries);
         setLoading(false);
       } catch (error) {
@@ -86,9 +127,9 @@ export function useWaterLevelHistory(deviceId: string) {
       }
     };
     
-    fetchHistoryData();
+    findDeviceAndFetchHistory();
   }, [user, deviceId]);
-  
+
   return { history, loading };
 }
 
@@ -103,57 +144,93 @@ export function useWasteBinHistory(deviceId: string) {
       setLoading(false);
       return;
     }
-    
-    console.log("Fetching waste bin history for device:", deviceId);
-    
-    const fetchHistoryData = async () => {
+
+    // Find the device container key first
+    const findDeviceAndFetchHistory = async () => {
       try {
-        // Using direct approach with device ID
-        // Get the current date for Firebase path
-        const today = new Date();
-        const dateStr = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+        // Get the devices list
+        const devicesRef = ref(database, `users/${user.uid}/devices`);
+        const devicesSnapshot = await get(devicesRef);
         
-        // Get wasteBinHistory for the current date
-        const historyRef = ref(database, `users/${user.uid}/wasteBinHistory/${dateStr}`);
-        const historySnapshot = await get(historyRef);
-        
-        if (!historySnapshot.exists()) {
-          console.log("No waste bin history found for date:", dateStr);
+        if (!devicesSnapshot.exists()) {
           setLoading(false);
           return;
         }
         
-        const historyData = historySnapshot.val();
-        const historyEntries: WasteBinHistoryEntry[] = [];
+        // Find the container key for this device ID
+        const devicesData = devicesSnapshot.val();
+        let containerKey = null;
         
-        // Iterate through all devices in the history data
-        Object.entries(historyData).forEach(([deviceKey, deviceData]: [string, any]) => {
-          // Process all entries in this device's data
-          if (deviceData && typeof deviceData === 'object') {
-            Object.entries(deviceData).forEach(([timeKey, timeData]: [string, any]) => {
-              if (typeof timeData === 'object' && (timeData.fullness !== undefined || timeData.weight !== undefined)) {
-                // Format timestamp from HH_MM_SS to readable format
-                const hour = timeKey.split('_')[0];
-                const minute = timeKey.split('_')[1];
-                const second = timeKey.split('_')[2];
-                const timestamp = `${dateStr}T${hour}:${minute}:${second}`;
-                
-                historyEntries.push({
-                  timestamp: timestamp,
-                  fullness: timeData.fullness || 0,
-                  weight: timeData.weight || 0
-                });
-              }
-            });
+        Object.entries(devicesData).forEach(([key, value]: [string, any]) => {
+          if (value.id === deviceId) {
+            containerKey = key;
           }
         });
         
-        // Sort by timestamp
+        if (!containerKey) {
+          setLoading(false);
+          return;
+        }
+        
+        // Now fetch history data for this device
+        const historyEntries: WasteBinHistoryEntry[] = [];
+        
+        // Get data for the last 30 days
+        const today = new Date();
+        const promises = [];
+        
+        for (let i = 0; i < 30; i++) {
+          const date = new Date(today);
+          date.setDate(today.getDate() - i);
+          const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+          
+          // Prepare the request for this date
+          const historyRef = ref(database, `users/${user.uid}/wasteBinHistory/${dateStr}/${containerKey}`);
+          promises.push(
+            get(historyRef).then(snapshot => {
+              if (snapshot.exists()) {
+                const dateData = snapshot.val();
+                
+                // Handle different data formats
+                if (typeof dateData === 'object') {
+                  // Check if it's the single object format (old format)
+                  if (dateData.fullness !== undefined || dateData.weight !== undefined) {
+                    historyEntries.push({
+                      timestamp: `${dateStr}T12:00:00Z`, // Use noon as default time
+                      fullness: dateData.fullness || 0,
+                      weight: dateData.weight || 0
+                    });
+                  }
+                  else {
+                    // Multiple entries with timestamps as keys (new format)
+                    Object.entries(dateData).forEach(([timeKey, timeData]: [string, any]) => {
+                      if (typeof timeData === 'object') {
+                        // Convert HH_MM_SS to HH:MM:SS format
+                        const timeStr = timeKey.replace(/_/g, ':');
+                        historyEntries.push({
+                          timestamp: `${dateStr}T${timeStr}Z`,
+                          fullness: timeData.fullness || 0,
+                          weight: timeData.weight || 0
+                        });
+                      }
+                    });
+                  }
+                }
+              }
+            }).catch(error => {
+              console.error(`Error fetching history for ${dateStr}:`, error);
+            })
+          );
+        }
+        
+        // Wait for all history data to be fetched
+        await Promise.all(promises);
+        
+        // Sort by timestamp and update state
         historyEntries.sort((a, b) => 
           new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
         );
         
-        console.log("Fetched waste bin history entries:", historyEntries.length);
         setHistory(historyEntries);
         setLoading(false);
       } catch (error) {
@@ -162,7 +239,7 @@ export function useWasteBinHistory(deviceId: string) {
       }
     };
     
-    fetchHistoryData();
+    findDeviceAndFetchHistory();
   }, [user, deviceId]);
 
   return { history, loading };

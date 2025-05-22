@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { ref, onValue } from "firebase/database";
 import { database } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
-import { useLatestDeviceData } from "@/hooks/useLatestDeviceData";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -52,15 +51,38 @@ import {
 export default function Dashboard() {
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
+  const [waterData, setWaterData] = useState<Record<string, WaterLevel>>({});
+  const [wasteData, setWasteData] = useState<Record<string, WasteBin>>({});
   const [devices, setDevices] = useState<Device[]>([]);
-  
-  // Use our custom hook to get real-time sensor data
-  const { waterLevels: waterData, wasteBins: wasteData, loading } = useLatestDeviceData();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
 
+    const waterRef = ref(database, `users/${user.uid}/waterLevels`);
+    const wasteRef = ref(database, `users/${user.uid}/wasteBins`);
     const devicesRef = ref(database, `users/${user.uid}/devices`);
+
+    // Subscribe to water data
+    const waterUnsubscribe = onValue(waterRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setWaterData(data);
+      } else {
+        setWaterData({});
+      }
+      setLoading(false);
+    });
+
+    // Subscribe to waste data
+    const wasteUnsubscribe = onValue(wasteRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setWasteData(data);
+      } else {
+        setWasteData({});
+      }
+    });
 
     // Subscribe to devices data
     const devicesUnsubscribe = onValue(devicesRef, (snapshot) => {
@@ -77,6 +99,8 @@ export default function Dashboard() {
     });
 
     return () => {
+      waterUnsubscribe();
+      wasteUnsubscribe();
       devicesUnsubscribe();
     };
   }, [user]);
@@ -390,7 +414,15 @@ export default function Dashboard() {
                             <div className="text-xs text-gray-500 flex items-center">
                               <Clock className="h-3.5 w-3.5 mr-1" />
                               Last updated: {
-                                waterLevel?.lastUpdated || wasteBin?.lastUpdated || 'Never'
+                                lastUpdatedWater && lastEmptiedBin ? 
+                                  (new Date(Math.max(lastUpdatedWater.getTime(), lastEmptiedBin.getTime())).toLocaleString()) : 
+                                  (lastUpdatedWater ? 
+                                    new Date(lastUpdatedWater).toLocaleString() : 
+                                    (lastEmptiedBin ? 
+                                      new Date(lastEmptiedBin).toLocaleString() : 
+                                      'Never'
+                                    )
+                                  )
                               }
                             </div>
                             <div className="flex gap-2">

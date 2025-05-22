@@ -70,7 +70,7 @@ export default function WaterLevelDetails() {
   const [waterLevel, setWaterLevel] = useState<WaterLevel | null>(null);
   const [wasteBin, setWasteBin] = useState<WasteBin | null>(null);
   const [waterHistory, setWaterHistory] = useState<WaterLevelHistory[]>([]);
-  const [wasteBinHistory, setWasteBinHistory] = useState<WasteBinHistory[]>([]);
+  const [binHistory, setBinHistory] = useState<WasteBinHistory[]>([]);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [waterTrends, setWaterTrends] = useState<TrendData[]>([]);
   const [wasteTrends, setWasteTrends] = useState<TrendData[]>([]);
@@ -156,45 +156,32 @@ export default function WaterLevelDetails() {
   
   // Function to fetch historical data from Firebase
   const fetchHistoricalData = async (userId: string, deviceKey: string) => {
-    console.log("Fetching history data for user:", userId, "device key:", deviceKey);
-    
-    // Ensure deviceKey exists
-    if (!deviceKey) {
-      console.error("Device key is null or undefined");
-      return;
-    }
-    
-    // Use today's date for the history data
-    const today = new Date();
-    const dateStr = today.toISOString().split('T')[0]; // YYYY-MM-DD format
-    
-    // Get water level history data for today
-    const waterHistoryRef = ref(database, `users/${userId}/waterLevelHistory/${dateStr}`);
-    
+    // Get water level history data
+    const waterHistoryRef = ref(database, `users/${userId}/waterLevelHistory`);
     onValue(waterHistoryRef, (snapshot) => {
       if (snapshot.exists()) {
-        console.log("Found water history data for date:", dateStr);
         const historyData = snapshot.val();
         const formattedData: WaterLevelHistory[] = [];
         
-        // Go through all device entries - we don't know which one is ours
-        Object.entries(historyData).forEach(([deviceId, deviceData]: [string, any]) => {
-          if (deviceData && typeof deviceData === 'object') {
-            // Process all timestamps for this device
-            Object.entries(deviceData).forEach(([timeKey, data]: [string, any]) => {
-              // Extract water level value based on the database structure
-              const waterLevel = data && typeof data === 'object' && 'value' in data
-                ? data.value 
-                : (typeof data === 'number' ? data : 0);
-              
-              // Convert time format: 17_45_13 to 17:45:13
-              const timeStr = timeKey.replace(/_/g, ':');
-              
-              formattedData.push({
-                timestamp: `${dateStr}T${timeStr}`,
-                level: waterLevel
+        // Process each date in the history
+        Object.entries(historyData).forEach(([date, dateData]: [string, any]) => {
+          if (dateData && typeof dateData === 'object' && dateData[deviceKey] !== undefined) {
+            const deviceData = dateData[deviceKey];
+            
+            // If data has timestamps
+            if (typeof deviceData === 'object') {
+              Object.entries(deviceData).forEach(([timeKey, data]: [string, any]) => {
+                // Extract water level value based on the database structure
+                const waterLevel = data && typeof data === 'object' && 'value' in data
+                  ? data.value 
+                  : (typeof data === 'number' ? data : 0);
+                
+                formattedData.push({
+                  timestamp: `${date}T${timeKey.replace(/_/g, ':')}`,
+                  level: waterLevel
+                });
               });
-            });
+            }
           }
         });
         
@@ -203,53 +190,42 @@ export default function WaterLevelDetails() {
           new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
         );
         
-        console.log("Processed water history entries:", formattedData.length);
         setWaterHistory(formattedData);
         
-        // Update analytics based on real data
+        // Only generate predictions and trends if we have real data
         if (formattedData.length > 0) {
-          const predictions = formattedData.slice(-5).map((entry, index) => ({
-            timestamp: new Date(new Date(entry.timestamp).getTime() + (index + 1) * 3600000).toISOString(),
-            predictedLevel: Math.min(Math.max(Math.round(entry.level + (Math.random() * 20 - 10)), 0), 100),
-            confidence: Math.round(85 - index * 5)
-          }));
-          
-          setPredictions(predictions);
-          
-          // Generate analytics based on real data
+          setPredictions(generateSamplePredictions(formattedData));
           setWaterTrends(generateSampleWaterTrends(formattedData));
           setRainData(generateSampleRainData());
         }
-      } else {
-        console.log("No water history data found for date:", dateStr);
       }
-    }, (error) => {
-      console.error("Error fetching water level history:", error);
     });
     
-    // Get waste bin history data for today
-    const wasteBinHistoryRef = ref(database, `users/${userId}/wasteBinHistory/${dateStr}`);
+    // Get waste bin history data
+    const wasteBinHistoryRef = ref(database, `users/${userId}/wasteBinHistory`);
     onValue(wasteBinHistoryRef, (snapshot) => {
       if (snapshot.exists()) {
         const historyData = snapshot.val();
         const formattedData: WasteBinHistory[] = [];
         
-        // Process all device entries in the history
-        Object.entries(historyData).forEach(([deviceId, deviceData]: [string, any]) => {
-          if (deviceData && typeof deviceData === 'object') {
-            // Process all timestamps for this device
-            Object.entries(deviceData).forEach(([timeKey, data]: [string, any]) => {
-              if (typeof data === 'object' && (data.fullness !== undefined || data.weight !== undefined)) {
-                // Convert time format: 17_45_13 to 17:45:13
-                const timeStr = timeKey.replace(/_/g, ':');
-                
-                formattedData.push({
-                  timestamp: `${dateStr}T${timeStr}`,
-                  fullness: data.fullness || 0,
-                  weight: data.weight || 0
-                });
-              }
-            });
+        // Process each date in the history
+        Object.entries(historyData).forEach(([date, dateData]: [string, any]) => {
+          if (dateData && typeof dateData === 'object' && dateData[deviceKey] !== undefined) {
+            const deviceData = dateData[deviceKey];
+            
+            // If data has timestamps
+            if (typeof deviceData === 'object') {
+              // Process timestamps from the actual database format
+              Object.entries(deviceData).forEach(([timeKey, data]: [string, any]) => {
+                if (typeof data === 'object') {
+                  formattedData.push({
+                    timestamp: `${date}T${timeKey.replace(/_/g, ':')}`,
+                    fullness: data.fullness !== undefined ? data.fullness : 0,
+                    weight: data.weight !== undefined ? data.weight : 0
+                  });
+                }
+              });
+            }
           }
         });
         
@@ -258,8 +234,7 @@ export default function WaterLevelDetails() {
           new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
         );
         
-        console.log("Processed waste bin history entries:", formattedData.length);
-        setWasteBinHistory(formattedData);
+        setBinHistory(formattedData);
         
         // Only generate trends if we have real data
         if (formattedData.length > 0) {
@@ -743,14 +718,14 @@ export default function WaterLevelDetails() {
             </CardHeader>
             <CardContent>
               <div className="h-80">
-                {waterHistory.length > 0 || wasteBinHistory.length > 0 ? (
+                {waterHistory.length > 0 || binHistory.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart
                       data={waterHistory.map((item, index) => ({
                         date: new Date(item.timestamp).toLocaleDateString(),
                         waterLevel: item.level,
-                        binFullness: wasteBinHistory[index]?.fullness || 0,
-                        binWeight: wasteBinHistory[index]?.weight || 0,
+                        binFullness: binHistory[index]?.fullness || 0,
+                        binWeight: binHistory[index]?.weight || 0,
                       }))}
                       margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                     >
@@ -816,8 +791,8 @@ export default function WaterLevelDetails() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col items-center justify-center h-28">
-                  <div className="text-lg font-bold">{wasteBinHistory.length > 0 ? Math.round(wasteBinHistory.reduce((acc, item) => acc + item.fullness, 0) / wasteBinHistory.length) : 0}%</div>
-                  {wasteBinHistory.length === 0 && (
+                  <div className="text-lg font-bold">{binHistory.length > 0 ? Math.round(binHistory.reduce((acc, item) => acc + item.fullness, 0) / binHistory.length) : 0}%</div>
+                  {binHistory.length === 0 && (
                     <div className="text-xs text-gray-500 mt-2">No data available</div>
                   )}
                 </div>

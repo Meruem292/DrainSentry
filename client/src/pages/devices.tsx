@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { ref, onValue, push, set, remove, get } from "firebase/database";
-import { useLatestDeviceData } from "@/hooks/useLatestDeviceData";
 import { database } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -50,8 +49,8 @@ export default function Devices() {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const [devices, setDevices] = useState<Device[]>([]);
-  // Use the realtime data hook for latest sensor readings
-  const { waterLevels, wasteBins } = useLatestDeviceData();
+  const [waterLevels, setWaterLevels] = useState<Record<string, WaterLevel>>({});
+  const [wasteBins, setWasteBins] = useState<Record<string, WasteBin>>({});
   const [loading, setLoading] = useState(true);
   const [deviceId, setDeviceId] = useState("");
   const [deviceName, setDeviceName] = useState("");
@@ -95,8 +94,25 @@ export default function Devices() {
       setLoading(false);
     });
 
-    // We're now getting the real-time water level and waste bin data 
-    // from the useLatestDeviceData hook - no need to duplicate the listeners here
+    // Get all water level data
+    const waterLevelsUnsubscribe = onValue(waterLevelsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setWaterLevels(data);
+      } else {
+        setWaterLevels({});
+      }
+    });
+
+    // Get all waste bin data
+    const wasteBinsUnsubscribe = onValue(wasteBinsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setWasteBins(data);
+      } else {
+        setWasteBins({});
+      }
+    });
 
     // Get all contacts
     const contactsUnsubscribe = onValue(contactsRef, (snapshot) => {
@@ -114,6 +130,8 @@ export default function Devices() {
 
     return () => {
       devicesUnsubscribe();
+      waterLevelsUnsubscribe();
+      wasteBinsUnsubscribe();
       contactsUnsubscribe();
     };
   }, [user]);
