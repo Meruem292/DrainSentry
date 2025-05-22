@@ -285,7 +285,7 @@ export default function WasteBins() {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="date" />
                     <YAxis domain={[0, 100]} />
-                    <Tooltip formatter={(value) => [`${value} kg`, 'Bin Weight']} />
+                    <RechartsTooltip formatter={(value: any) => [`${value} kg`, 'Bin Weight']} />
                     <Line 
                       type="monotone" 
                       dataKey="weight" 
