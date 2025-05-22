@@ -158,6 +158,12 @@ export default function WaterLevelDetails() {
   const fetchHistoricalData = async (userId: string, deviceKey: string) => {
     console.log("Fetching history data for user:", userId, "device key:", deviceKey);
     
+    // Ensure deviceKey exists
+    if (!deviceKey) {
+      console.error("Device key is null or undefined");
+      return;
+    }
+    
     // Use today's date for the history data
     const today = new Date();
     const dateStr = today.toISOString().split('T')[0]; // YYYY-MM-DD format
@@ -737,14 +743,14 @@ export default function WaterLevelDetails() {
             </CardHeader>
             <CardContent>
               <div className="h-80">
-                {waterHistory.length > 0 || binHistory.length > 0 ? (
+                {waterHistory.length > 0 || wasteBinHistory.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart
                       data={waterHistory.map((item, index) => ({
                         date: new Date(item.timestamp).toLocaleDateString(),
                         waterLevel: item.level,
-                        binFullness: binHistory[index]?.fullness || 0,
-                        binWeight: binHistory[index]?.weight || 0,
+                        binFullness: wasteBinHistory[index]?.fullness || 0,
+                        binWeight: wasteBinHistory[index]?.weight || 0,
                       }))}
                       margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                     >
@@ -810,8 +816,8 @@ export default function WaterLevelDetails() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col items-center justify-center h-28">
-                  <div className="text-lg font-bold">{binHistory.length > 0 ? Math.round(binHistory.reduce((acc, item) => acc + item.fullness, 0) / binHistory.length) : 0}%</div>
-                  {binHistory.length === 0 && (
+                  <div className="text-lg font-bold">{wasteBinHistory.length > 0 ? Math.round(wasteBinHistory.reduce((acc, item) => acc + item.fullness, 0) / wasteBinHistory.length) : 0}%</div>
+                  {wasteBinHistory.length === 0 && (
                     <div className="text-xs text-gray-500 mt-2">No data available</div>
                   )}
                 </div>
