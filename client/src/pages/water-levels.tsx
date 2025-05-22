@@ -7,18 +7,18 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
-  BarChart, 
   Bar, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
-  Tooltip, 
+  Tooltip as RechartsTooltip, 
   Legend, 
   ResponsiveContainer,
   AreaChart,
   Area,
   LineChart,
-  Line
+  Line,
+  BarChart as RechartsBarChart
 } from "recharts";
 import { 
   Droplet, 
@@ -28,7 +28,8 @@ import {
   MapPin,
   Clock,
   ChevronRight,
-  AlertTriangle
+  AlertTriangle,
+  BarChart2 as BarChart
 } from "lucide-react";
 import { Device, WaterLevel, WasteBin } from "@/types";
 import { Link, useLocation } from "wouter";
@@ -267,7 +268,7 @@ export default function WaterLevels() {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="date" />
                   <YAxis domain={[0, 100]} />
-                  <Tooltip formatter={(value) => [`${value}%`, 'Water Level']} />
+                  <RechartsTooltip formatter={(value: any) => [`${value}%`, 'Water Level']} />
                   <Area 
                     type="monotone" 
                     dataKey="level" 
@@ -426,9 +427,15 @@ export default function WaterLevels() {
                       Last seen: {device.lastSeen}
                     </div>
                     
-                    <div className="flex items-center text-primary text-sm">
-                      View Details
-                      <ChevronRight className="h-4 w-4 ml-1" />
+                    <div className="flex gap-3">
+                      <Link to={`/water-levels/${device.id}`} className="flex items-center text-primary text-sm">
+                        Details
+                        <ChevronRight className="h-4 w-4 ml-1" />
+                      </Link>
+                      <Link to={`/device-history/${device.id}`} className="flex items-center text-emerald-600 text-sm">
+                        History
+                        <BarChart className="h-4 w-4 ml-1" />
+                      </Link>
                     </div>
                   </CardFooter>
                 </Card>
