@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { ref, onValue, query, limitToLast, orderByKey } from "firebase/database";
 import { database } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
+import { useWaterLevelHistory, useWasteBinHistory } from "@/hooks/useHistoryData";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { 
@@ -85,6 +86,10 @@ export default function WaterLevelDetails() {
   const [wasteBin, setWasteBin] = useState<WasteBin | null>(null);
   const [waterHistory, setWaterHistory] = useState<WaterLevelHistory[]>([]);
   const [binHistory, setBinHistory] = useState<WasteBinHistory[]>([]);
+  
+  // Use the history hooks to get real data
+  const { history: waterHistoryData } = useWaterLevelHistory(deviceId);
+  const { history: wasteBinHistoryData } = useWasteBinHistory(deviceId);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [waterTrends, setWaterTrends] = useState<TrendData[]>([]);
   const [wasteTrends, setWasteTrends] = useState<TrendData[]>([]);
@@ -132,9 +137,7 @@ export default function WaterLevelDetails() {
     });
 
     // Get historical data
-    // Fetch actual historical data from Firebase
-    fetchWaterLevelHistory(deviceId);
-    fetchWasteBinHistory(deviceId);
+    // No need to fetch history here, we're using the hooks directly
     
     setLoading(false);
 
