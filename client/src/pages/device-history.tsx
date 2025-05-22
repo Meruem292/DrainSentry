@@ -3,7 +3,7 @@ import { database } from "@/lib/firebase";
 import { ref, onValue, get } from "firebase/database";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +18,18 @@ import { Badge } from "@/components/ui/badge";
 import { WaterLevel, WasteBin, Device } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar } from "@/components/ui/calendar";
+import { 
+  Droplet, 
+  Trash, 
+  Scale, 
+  ArrowLeft,
+  CalendarDays,
+  Clock,
+  RefreshCw,
+  AlertTriangle,
+  Info
+} from "lucide-react";
+import { useLocation } from "wouter";
 
 // Define the history entry interfaces
 interface HistoryEntry {
@@ -35,6 +47,7 @@ interface DeviceReadingHistory {
 export default function DeviceHistory() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [location, setLocation] = useLocation();
   const [loading, setLoading] = useState(true);
   const [device, setDevice] = useState<Device | null>(null);
   const [waterLevel, setWaterLevel] = useState<WaterLevel | null>(null);
@@ -46,6 +59,7 @@ export default function DeviceHistory() {
     binWeight: []
   });
   const [historyRange, setHistoryRange] = useState<"24h" | "7d" | "30d">("7d");
+  const [activeTab, setActiveTab] = useState("waterLevel");
   
   // Get device ID from URL path parameter
   const [, deviceId] = window.location.pathname.split("/device-history/");
@@ -59,495 +73,545 @@ export default function DeviceHistory() {
     // Get all devices to find the matching container
     const devicesUnsubscribe = onValue(devicesRef, (devicesSnapshot) => {
       if (!devicesSnapshot.exists()) {
-        setDevice(null);
+        setLoading(false);
         toast({
           title: "Device not found",
-          description: "No devices found in your account.",
-          variant: "destructive",
+          description: "Could not find the device information",
+          variant: "destructive"
         });
         return;
       }
-      
-      // Find the container key for this device ID
-      const devicesData = devicesSnapshot.val();
-      let containerKey = null;
-      let deviceData: any = null;
-      
-      // Loop through devices to find the one with matching ID
-      Object.entries(devicesData).forEach(([key, value]: [string, any]) => {
-        // Check if this device has the ID we're looking for
-        if (value.id === deviceId) {
-          containerKey = key;
-          deviceData = value;
+
+      // Find the device with the given ID
+      let foundDevice: Device | null = null;
+      let deviceContainerKey = null;
+
+      devicesSnapshot.forEach((childSnapshot) => {
+        const deviceContainer = childSnapshot.val();
+        if (deviceContainer.id === deviceId) {
+          foundDevice = deviceContainer;
+          deviceContainerKey = childSnapshot.key;
+          return true; // Break the forEach loop
         }
+        return false;
       });
-      
-      if (!containerKey || !deviceData) {
-        setDevice(null);
+
+      if (!foundDevice || !deviceContainerKey) {
+        setLoading(false);
         toast({
           title: "Device not found",
-          description: "The requested device could not be found in your account.",
-          variant: "destructive",
+          description: "Could not find the device with the specified ID",
+          variant: "destructive"
         });
         return;
       }
+
+      setDevice(foundDevice);
+
+      // Now load the water level and waste bin data
+      const waterLevelRef = ref(database, `users/${user.uid}/waterLevels/${deviceContainerKey}`);
+      const wasteBinRef = ref(database, `users/${user.uid}/wasteBins/${deviceContainerKey}`);
       
-      // Set the device data with proper type casting
-      setDevice({
-        id: deviceId,
-        name: deviceData.name || "",
-        location: deviceData.location || "",
-        status: deviceData.status || "inactive",
-        lastSeen: deviceData.lastSeen || new Date().toISOString(),
-        thresholds: deviceData.thresholds || {},
-        notifications: deviceData.notifications || {}
-      });
-      
-      // Now get the water level data using the container key
-      const waterLevelRef = ref(database, `users/${user.uid}/waterLevels/${containerKey}`);
-      onValue(waterLevelRef, (snapshot) => {
-        if (snapshot.exists()) {
-          setWaterLevel(snapshot.val());
-        } else {
-          setWaterLevel(null);
+      // Get water level data
+      const waterLevelUnsubscribe = onValue(waterLevelRef, (waterLevelSnapshot) => {
+        if (waterLevelSnapshot.exists()) {
+          setWaterLevel(waterLevelSnapshot.val());
         }
       });
       
-      // Get waste bin data using the container key
-      const wasteBinRef = ref(database, `users/${user.uid}/wasteBins/${containerKey}`);
-      onValue(wasteBinRef, (snapshot) => {
-        if (snapshot.exists()) {
-          setWasteBin(snapshot.val());
-        } else {
-          setWasteBin(null);
+      // Get waste bin data
+      const wasteBinUnsubscribe = onValue(wasteBinRef, (wasteBinSnapshot) => {
+        if (wasteBinSnapshot.exists()) {
+          setWasteBin(wasteBinSnapshot.val());
         }
       });
       
-      // Fetch real history data from Firebase
-      fetchHistoryData(containerKey, historyRange);
+      // Load history data based on the selected date and range
+      loadHistoryData(user.uid, deviceContainerKey, selectedDate, historyRange);
       
       setLoading(false);
+      
+      return () => {
+        waterLevelUnsubscribe();
+        wasteBinUnsubscribe();
+      };
     });
     
     return () => {
       devicesUnsubscribe();
     };
-  }, [user, deviceId, historyRange]);
-
-  // Fetch real history data from Firebase based on the selected range
-  const fetchHistoryData = async (deviceContainerId: string, range: "24h" | "7d" | "30d") => {
-    if (!user || !deviceContainerId) return;
+  }, [user, deviceId, selectedDate, historyRange]);
+  
+  const loadHistoryData = async (
+    userId: string, 
+    deviceContainerKey: string, 
+    date: Date | undefined,
+    range: "24h" | "7d" | "30d"
+  ) => {
+    if (!date) return;
     
-    // Calculate date range based on selected range
-    const now = new Date();
-    let daysToFetch = 0;
+    // Format the selected date
+    const formattedDate = date.toISOString().split('T')[0];
     
-    switch (range) {
-      case "24h":
-        daysToFetch = 1;
-        break;
-      case "7d":
-        daysToFetch = 7;
-        break;
-      case "30d":
-        daysToFetch = 30;
-        break;
-    }
+    // Prepare empty history objects
+    const newHistory: DeviceReadingHistory = {
+      waterLevels: [],
+      binFullness: [],
+      binWeight: []
+    };
     
-    // Get dates for the range
-    const dates: string[] = [];
-    for (let i = 0; i < daysToFetch; i++) {
-      const date = new Date(now);
-      date.setDate(now.getDate() - i);
-      dates.push(date.toISOString().split('T')[0]); // YYYY-MM-DD format
-    }
-    
-    // Arrays to hold the history data
-    const waterLevels: HistoryEntry[] = [];
-    const binFullness: HistoryEntry[] = [];
-    const binWeight: HistoryEntry[] = [];
-    
-    // Fetch water level history for each date
-    for (const date of dates) {
-      const waterLevelRef = ref(database, `users/${user.uid}/waterLevelHistory/${date}/${deviceContainerId}`);
-      const wasteBinRef = ref(database, `users/${user.uid}/wasteBinHistory/${date}/${deviceContainerId}`);
+    try {
+      // Load water level history
+      const waterLevelHistoryRef = ref(
+        database, 
+        `users/${userId}/waterLevelHistory/${formattedDate}/${deviceContainerKey}`
+      );
       
-      try {
-        // Get water level data
-        const waterSnapshot = await get(waterLevelRef);
-        if (waterSnapshot.exists()) {
-          const waterValue = waterSnapshot.val();
-          if (typeof waterValue === 'number') {
-            waterLevels.push({
-              timestamp: `${date}T12:00:00.000Z`, // Use noon as default time
-              value: waterValue,
-              type: getStatusType(waterValue)
-            });
-          }
-        }
+      const waterLevelSnapshot = await get(waterLevelHistoryRef);
+      
+      if (waterLevelSnapshot.exists()) {
+        const waterLevelData = waterLevelSnapshot.val();
         
-        // Get waste bin data
-        const wasteSnapshot = await get(wasteBinRef);
-        if (wasteSnapshot.exists()) {
-          const wasteData = wasteSnapshot.val();
-          if (wasteData && typeof wasteData === 'object') {
-            if ('fullness' in wasteData && typeof wasteData.fullness === 'number') {
-              binFullness.push({
-                timestamp: `${date}T12:00:00.000Z`, // Use noon as default time
-                value: wasteData.fullness,
-                type: getStatusType(wasteData.fullness)
-              });
-            }
-            
-            if ('weight' in wasteData && typeof wasteData.weight === 'number') {
-              const weightPercentage = Math.min(100, (wasteData.weight / 10) * 100); // Convert to percentage (max 10kg = 100%)
-              binWeight.push({
-                timestamp: `${date}T12:00:00.000Z`, // Use noon as default time
-                value: Math.round(weightPercentage),
-                type: getStatusType(weightPercentage)
-              });
-            }
-          }
-        }
-      } catch (error) {
-        console.error(`Error fetching history data for ${date}:`, error);
+        // Convert object to array of entries
+        Object.entries(waterLevelData).forEach(([timestamp, level]) => {
+          newHistory.waterLevels.push({
+            timestamp,
+            value: typeof level === 'number' ? level : 0,
+            type: 'water'
+          });
+        });
       }
+      
+      // Load waste bin fullness history
+      const binFullnessHistoryRef = ref(
+        database, 
+        `users/${userId}/wasteBinHistory/${formattedDate}/${deviceContainerKey}/fullness`
+      );
+      
+      const binFullnessSnapshot = await get(binFullnessHistoryRef);
+      
+      if (binFullnessSnapshot.exists()) {
+        const binFullnessData = binFullnessSnapshot.val();
+        
+        // Convert object to array of entries
+        Object.entries(binFullnessData).forEach(([timestamp, fullness]) => {
+          newHistory.binFullness.push({
+            timestamp,
+            value: typeof fullness === 'number' ? fullness : 0,
+            type: 'fullness'
+          });
+        });
+      }
+      
+      // Load waste bin weight history
+      const binWeightHistoryRef = ref(
+        database, 
+        `users/${userId}/wasteBinHistory/${formattedDate}/${deviceContainerKey}/weight`
+      );
+      
+      const binWeightSnapshot = await get(binWeightHistoryRef);
+      
+      if (binWeightSnapshot.exists()) {
+        const binWeightData = binWeightSnapshot.val();
+        
+        // Convert object to array of entries
+        Object.entries(binWeightData).forEach(([timestamp, weight]) => {
+          newHistory.binWeight.push({
+            timestamp,
+            value: typeof weight === 'number' ? weight : 0,
+            type: 'weight'
+          });
+        });
+      }
+      
+      // Sort all history entries by timestamp (most recent first)
+      newHistory.waterLevels.sort((a, b) => 
+        new Date(b.timestamp.replace(/_/g, ':')).getTime() - 
+        new Date(a.timestamp.replace(/_/g, ':')).getTime()
+      );
+      
+      newHistory.binFullness.sort((a, b) => 
+        new Date(b.timestamp.replace(/_/g, ':')).getTime() - 
+        new Date(a.timestamp.replace(/_/g, ':')).getTime()
+      );
+      
+      newHistory.binWeight.sort((a, b) => 
+        new Date(b.timestamp.replace(/_/g, ':')).getTime() - 
+        new Date(a.timestamp.replace(/_/g, ':')).getTime()
+      );
+      
+      setReadingHistory(newHistory);
+      
+    } catch (error) {
+      console.error("Error loading history data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load history data",
+        variant: "destructive"
+      });
     }
-    
-    // Sort by timestamp
-    waterLevels.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-    binFullness.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-    binWeight.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-    
-    // Don't add any dummy data - only show real history data
-    // Leave the arrays empty if no data is found
-    
-    // Add console logging for debugging
-    console.log("Water Level History Data:", waterLevels);
-    console.log("Bin Fullness History Data:", binFullness);
-    console.log("Bin Weight History Data:", binWeight);
-    
-    setReadingHistory({
-      waterLevels,
-      binFullness,
-      binWeight
+  };
+  
+  // Helper function to format the timestamp for display
+  const formatTimestamp = (timestamp: string) => {
+    // Convert from format HH_MM_SS to HH:MM:SS
+    return timestamp.replace(/_/g, ':');
+  };
+  
+  // Helper to add leading zeros to dates
+  const formatDateForDisplay = (date: Date | undefined) => {
+    if (!date) return "";
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
     });
   };
-  
-  // Helper function to determine status type based on value
-  const getStatusType = (value: number): string => {
-    if (value > 85) return "critical";
-    if (value > 65) return "warning";
-    return "normal";
-  };
-  
-  // Format date for table display
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
-    });
-  };
-  
-  // Get CSS class for status badge
-  const getStatusBadgeClass = (type: string) => {
-    switch (type) {
-      case "critical":
-        return "bg-destructive text-destructive-foreground";
-      case "warning":
-        return "bg-warning text-warning-foreground";
-      default:
-        return "bg-success text-success-foreground";
-    }
-  };
-  
-  // Get the number of rows to display based on range
-  const getDisplayedRows = () => {
-    // For demonstration, we'll show a subset of the data
-    switch (historyRange) {
-      case "24h":
-        return 24; // Show all hourly data
-      case "7d":
-        return 28; // Show all 4x daily data
-      case "30d":
-        return 15; // Show half the monthly data to keep table reasonable
-      default:
-        return 10;
-    }
-  };
 
-  // Helper function to find critical events
-  const findCriticalEvents = () => {
-    const allEntries = [
-      ...readingHistory.waterLevels.map(e => ({ ...e, category: 'Water Level' })),
-      ...readingHistory.binFullness.map(e => ({ ...e, category: 'Bin Fullness' })),
-      ...readingHistory.binWeight.map(e => ({ ...e, category: 'Bin Weight' }))
-    ];
-    
-    return allEntries.filter(entry => entry.type === 'critical')
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      .slice(0, 5); // Just show the 5 most recent critical events
+  // Get current water level and waste bin stats
+  const currentWaterLevel = waterLevel?.level || 0;
+  const currentBinFullness = wasteBin?.fullness || 0;
+  const currentBinWeight = wasteBin?.weight || 0;
+  
+  // Get status color classes based on values
+  const getWaterLevelColor = (level: number) => {
+    if (level < 30) return "text-green-500";
+    if (level < 70) return "text-yellow-500";
+    return "text-red-500";
   };
-
-  if (loading) {
-    return (
-      <DashboardLayout title="Device History" subtitle="Loading history data...">
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  if (!device) {
-    return (
-      <DashboardLayout title="Device History" subtitle="Device not found">
-        <div className="flex flex-col items-center justify-center h-64 text-center">
-          <h3 className="text-xl font-medium mb-4">Device not found</h3>
-          <p className="text-gray-500 mb-4">We couldn't find the device you're looking for.</p>
-          <Button onClick={() => window.history.back()}>Go Back</Button>
-        </div>
-      </DashboardLayout>
-    );
-  }
+  
+  const getBinFullnessColor = (fullness: number) => {
+    if (fullness < 30) return "text-green-500";
+    if (fullness < 70) return "text-yellow-500";
+    return "text-red-500";
+  };
 
   return (
     <DashboardLayout 
-      title={`${device.name} History`}
-      subtitle={`Historical sensor readings and statistics for ${device.location}`}
+      title={device?.name || "Device History"} 
+      subtitle={device?.location || "Loading..."}
     >
-      {/* Time Range Selection */}
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-medium mb-2">History Range</h3>
-          <div className="flex space-x-2">
-            <Button 
-              variant={historyRange === "24h" ? "default" : "outline"} 
-              size="sm" 
-              onClick={() => setHistoryRange("24h")}
-            >
-              Last 24 Hours
-            </Button>
-            <Button 
-              variant={historyRange === "7d" ? "default" : "outline"} 
-              size="sm" 
-              onClick={() => setHistoryRange("7d")}
-            >
-              Last 7 Days
-            </Button>
-            <Button 
-              variant={historyRange === "30d" ? "default" : "outline"} 
-              size="sm" 
-              onClick={() => setHistoryRange("30d")}
-            >
-              Last 30 Days
-            </Button>
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-gray-500">Loading device data...</p>
           </div>
         </div>
-        
-        <div className="text-right">
-          <p className="text-sm text-gray-500">Device ID: {deviceId}</p>
-          <p className="text-sm text-gray-500">Status: 
-            <Badge className="ml-2" variant={device.status === "active" ? "default" : "destructive"}>
-              {device.status}
-            </Badge>
-          </p>
-        </div>
-      </div>
+      ) : (
+        <>
+          <div className="mb-4 flex items-center justify-between">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setLocation("/devices")}
+              className="flex items-center gap-1"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Devices
+            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (device && user) {
+                    // Find the device container key again
+                    const deviceContainerKey = device.id;
+                    loadHistoryData(user.uid, deviceContainerKey, selectedDate, historyRange);
+                    toast({
+                      title: "Refreshed",
+                      description: "Data has been refreshed",
+                    });
+                  }
+                }}
+                className="flex items-center gap-1"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Refresh
+              </Button>
+            </div>
+          </div>
 
-      {/* Data Tabs */}
-      <Tabs defaultValue="readings" className="w-full">
-        <TabsList className="mb-6 grid w-full grid-cols-3">
-          <TabsTrigger value="readings">Sensor Readings</TabsTrigger>
-          <TabsTrigger value="statistics">Statistics</TabsTrigger>
-          <TabsTrigger value="alerts">Critical Events</TabsTrigger>
-        </TabsList>
-        
-        {/* Readings Tab */}
-        <TabsContent value="readings">
-          <Card>
-            <CardHeader>
-              <CardTitle>Historical Sensor Readings</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Timestamp</TableHead>
-                    <TableHead>Water Level (%)</TableHead>
-                    <TableHead>Bin Fullness (%)</TableHead>
-                    <TableHead>Bin Weight (%)</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {readingHistory.waterLevels.slice(0, getDisplayedRows()).map((entry, index) => (
-                    <TableRow key={`reading-${index}`}>
-                      <TableCell className="font-medium">{formatDate(entry.timestamp)}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={getStatusBadgeClass(readingHistory.waterLevels[index].type)}>
-                          {readingHistory.waterLevels[index].value}%
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={getStatusBadgeClass(readingHistory.binFullness[index].type)}>
-                          {readingHistory.binFullness[index].value}%
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={getStatusBadgeClass(readingHistory.binWeight[index].type)}>
-                          {readingHistory.binWeight[index].value}%
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              
-              {readingHistory.waterLevels.length > getDisplayedRows() && (
-                <div className="mt-4 text-center text-sm text-gray-500">
-                  Showing the most recent {getDisplayedRows()} readings out of {readingHistory.waterLevels.length} total.
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        {/* Statistics Tab */}
-        <TabsContent value="statistics">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Water Level Statistics</CardTitle>
+          <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3 mb-6">
+            {/* Current Water Level */}
+            <Card className="hover:shadow-md transition-shadow duration-200">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-medium flex items-center gap-2">
+                  <Droplet className="h-5 w-5 text-blue-500" />
+                  Current Water Level
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="text-sm text-gray-500">Average Level</p>
-                    <p className="text-2xl font-semibold">
-                      {Math.round(readingHistory.waterLevels.reduce((sum, entry) => sum + entry.value, 0) / readingHistory.waterLevels.length)}%
-                    </p>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="text-sm text-gray-500">Maximum Level</p>
-                    <p className="text-2xl font-semibold">
-                      {Math.max(...readingHistory.waterLevels.map(entry => entry.value))}%
-                    </p>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="text-sm text-gray-500">Critical Events</p>
-                    <p className="text-2xl font-semibold">
-                      {readingHistory.waterLevels.filter(entry => entry.type === 'critical').length}
-                    </p>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="text-sm text-gray-500">Warning Events</p>
-                    <p className="text-2xl font-semibold">
-                      {readingHistory.waterLevels.filter(entry => entry.type === 'warning').length}
-                    </p>
-                  </div>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <span className={`text-2xl font-bold ${getWaterLevelColor(currentWaterLevel)}`}>
+                    {currentWaterLevel}%
+                  </span>
+                  <Badge variant={currentWaterLevel > 70 ? "destructive" : (currentWaterLevel > 30 ? "warning" : "success")}>
+                    {currentWaterLevel > 70 ? "High" : (currentWaterLevel > 30 ? "Medium" : "Low")}
+                  </Badge>
                 </div>
-                
-                <div className="mt-4">
-                  <h4 className="font-medium mb-2">Insights</h4>
-                  <p className="text-gray-600 text-sm">
-                    Water levels show a distinct pattern with higher readings 
-                    {readingHistory.waterLevels.some(e => e.value > 80) 
-                      ? " reaching critical levels multiple times" 
-                      : " staying mostly within safe ranges"} during the selected period.
-                    {readingHistory.waterLevels[0].value > readingHistory.waterLevels[readingHistory.waterLevels.length - 1].value
-                      ? " The overall trend shows a reduction in water levels."
-                      : " The overall trend shows an increase in water levels."}
-                  </p>
-                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Last updated: {waterLevel?.lastUpdated ? new Date(waterLevel.lastUpdated).toLocaleString() : "Never"}
+                </p>
               </CardContent>
             </Card>
             
-            <Card>
-              <CardHeader>
-                <CardTitle>Waste Bin Statistics</CardTitle>
+            {/* Current Bin Fullness */}
+            <Card className="hover:shadow-md transition-shadow duration-200">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-medium flex items-center gap-2">
+                  <Trash className="h-5 w-5 text-orange-500" />
+                  Current Bin Fullness
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="text-sm text-gray-500">Average Fullness</p>
-                    <p className="text-2xl font-semibold">
-                      {Math.round(readingHistory.binFullness.reduce((sum, entry) => sum + entry.value, 0) / readingHistory.binFullness.length)}%
-                    </p>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="text-sm text-gray-500">Maximum Fullness</p>
-                    <p className="text-2xl font-semibold">
-                      {Math.max(...readingHistory.binFullness.map(entry => entry.value))}%
-                    </p>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="text-sm text-gray-500">Average Weight</p>
-                    <p className="text-2xl font-semibold">
-                      {Math.round(readingHistory.binWeight.reduce((sum, entry) => sum + entry.value, 0) / readingHistory.binWeight.length)}%
-                    </p>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="text-sm text-gray-500">Maximum Weight</p>
-                    <p className="text-2xl font-semibold">
-                      {Math.max(...readingHistory.binWeight.map(entry => entry.value))}%
-                    </p>
-                  </div>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <span className={`text-2xl font-bold ${getBinFullnessColor(currentBinFullness)}`}>
+                    {currentBinFullness}%
+                  </span>
+                  <Badge variant={currentBinFullness > 70 ? "destructive" : (currentBinFullness > 30 ? "warning" : "success")}>
+                    {currentBinFullness > 70 ? "Full" : (currentBinFullness > 30 ? "Medium" : "Empty")}
+                  </Badge>
                 </div>
-                
-                <div className="mt-4">
-                  <h4 className="font-medium mb-2">Insights</h4>
-                  <p className="text-gray-600 text-sm">
-                    The waste bin data indicates a
-                    {readingHistory.binFullness[0].value > readingHistory.binFullness[readingHistory.binFullness.length - 1].value
-                      ? " decreasing trend in fullness levels"
-                      : " increasing trend in fullness levels"}, with
-                    {readingHistory.binFullness.filter(e => e.type === 'critical').length > 0
-                      ? ` ${readingHistory.binFullness.filter(e => e.type === 'critical').length} critical fullness alerts`
-                      : " no critical fullness alerts"} during this period.
-                  </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  Last updated: {wasteBin?.lastEmptied ? new Date(wasteBin.lastEmptied).toLocaleString() : "Never"}
+                </p>
+              </CardContent>
+            </Card>
+            
+            {/* Current Bin Weight */}
+            <Card className="hover:shadow-md transition-shadow duration-200">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-medium flex items-center gap-2">
+                  <Scale className="h-5 w-5 text-purple-500" />
+                  Current Bin Weight
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl font-bold">
+                    {currentBinWeight} kg
+                  </span>
+                  <Badge variant={currentBinWeight > 10 ? "destructive" : (currentBinWeight > 5 ? "warning" : "success")}>
+                    {currentBinWeight > 10 ? "Heavy" : (currentBinWeight > 5 ? "Medium" : "Light")}
+                  </Badge>
                 </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Last updated: {wasteBin?.lastEmptied ? new Date(wasteBin.lastEmptied).toLocaleString() : "Never"}
+                </p>
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
-        
-        {/* Alerts Tab */}
-        <TabsContent value="alerts">
-          <Card>
-            <CardHeader>
-              <CardTitle>Critical Events</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <p className="text-sm text-gray-500">
-                  The following events exceeded critical thresholds during the selected time period:
-                </p>
-                
-                <ul className="space-y-3">
-                  {findCriticalEvents().length > 0 ? (
-                    findCriticalEvents().map((event: any, index) => (
-                      <li key={`event-${index}`} className="border p-3 rounded-lg flex justify-between items-center">
-                        <div>
-                          <span className="font-medium">{event.category}</span>
-                          <span className="ml-2 text-sm text-gray-500">{formatDate(event.timestamp)}</span>
-                        </div>
-                        <Badge variant="destructive">{event.value}%</Badge>
-                      </li>
-                    ))
-                  ) : (
-                    <li className="text-center p-6 text-gray-500">
-                      No critical events recorded during this period
-                    </li>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            {/* Date Selection Card */}
+            <Card className="md:col-span-1">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <CalendarDays className="h-5 w-5 text-gray-500" />
+                  Select Date
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col space-y-4">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    className="border rounded-md"
+                    disabled={(date) => date > new Date() || date < new Date('2024-01-01')}
+                  />
+                  <div className="pt-2">
+                    <p className="text-sm font-medium mb-2">Selected: {formatDateForDisplay(selectedDate)}</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button 
+                        variant={historyRange === "24h" ? "default" : "outline"}
+                        onClick={() => setHistoryRange("24h")}
+                        size="sm"
+                        className="flex-1"
+                      >
+                        24 Hours
+                      </Button>
+                      <Button 
+                        variant={historyRange === "7d" ? "default" : "outline"}
+                        onClick={() => setHistoryRange("7d")}
+                        size="sm"
+                        className="flex-1"
+                      >
+                        7 Days
+                      </Button>
+                      <Button 
+                        variant={historyRange === "30d" ? "default" : "outline"}
+                        onClick={() => setHistoryRange("30d")}
+                        size="sm"
+                        className="flex-1"
+                      >
+                        30 Days
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Readings History Card */}
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-gray-500" />
+                  Sensor Readings History
+                </CardTitle>
+                <CardDescription>
+                  Historical data for {formatDateForDisplay(selectedDate)}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="waterLevel" value={activeTab} onValueChange={setActiveTab} className="w-full">
+                  <TabsList className="mb-4 grid grid-cols-3 w-full">
+                    <TabsTrigger value="waterLevel" className="flex items-center gap-1">
+                      <Droplet className="h-4 w-4" />
+                      <span className="hidden sm:inline">Water Level</span>
+                      <span className="sm:hidden">Water</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="binFullness" className="flex items-center gap-1">
+                      <Trash className="h-4 w-4" />
+                      <span className="hidden sm:inline">Bin Fullness</span>
+                      <span className="sm:hidden">Fullness</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="binWeight" className="flex items-center gap-1">
+                      <Scale className="h-4 w-4" />
+                      <span className="hidden sm:inline">Bin Weight</span>
+                      <span className="sm:hidden">Weight</span>
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="waterLevel">
+                    {readingHistory.waterLevels.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Time</TableHead>
+                              <TableHead>Level (%)</TableHead>
+                              <TableHead>Status</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {readingHistory.waterLevels.map((entry, index) => (
+                              <TableRow key={`water-${index}`} className="hover:bg-gray-50">
+                                <TableCell className="font-medium">{formatTimestamp(entry.timestamp)}</TableCell>
+                                <TableCell className={getWaterLevelColor(entry.value)}>{entry.value}%</TableCell>
+                                <TableCell>
+                                  <Badge variant={entry.value > 70 ? "destructive" : (entry.value > 30 ? "warning" : "success")}>
+                                    {entry.value > 70 ? "High" : (entry.value > 30 ? "Medium" : "Low")}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ) : (
+                      <div className="py-8 text-center">
+                        <AlertTriangle className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
+                        <p className="text-gray-500">No water level readings available for the selected date.</p>
+                      </div>
+                    )}
+                  </TabsContent>
+                  
+                  <TabsContent value="binFullness">
+                    {readingHistory.binFullness.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Time</TableHead>
+                              <TableHead>Fullness (%)</TableHead>
+                              <TableHead>Status</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {readingHistory.binFullness.map((entry, index) => (
+                              <TableRow key={`fullness-${index}`} className="hover:bg-gray-50">
+                                <TableCell className="font-medium">{formatTimestamp(entry.timestamp)}</TableCell>
+                                <TableCell className={getBinFullnessColor(entry.value)}>{entry.value}%</TableCell>
+                                <TableCell>
+                                  <Badge variant={entry.value > 70 ? "destructive" : (entry.value > 30 ? "warning" : "success")}>
+                                    {entry.value > 70 ? "Full" : (entry.value > 30 ? "Medium" : "Empty")}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ) : (
+                      <div className="py-8 text-center">
+                        <AlertTriangle className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
+                        <p className="text-gray-500">No bin fullness readings available for the selected date.</p>
+                      </div>
+                    )}
+                  </TabsContent>
+                  
+                  <TabsContent value="binWeight">
+                    {readingHistory.binWeight.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Time</TableHead>
+                              <TableHead>Weight (kg)</TableHead>
+                              <TableHead>Status</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {readingHistory.binWeight.map((entry, index) => (
+                              <TableRow key={`weight-${index}`} className="hover:bg-gray-50">
+                                <TableCell className="font-medium">{formatTimestamp(entry.timestamp)}</TableCell>
+                                <TableCell>{entry.value} kg</TableCell>
+                                <TableCell>
+                                  <Badge variant={entry.value > 10 ? "destructive" : (entry.value > 5 ? "warning" : "success")}>
+                                    {entry.value > 10 ? "Heavy" : (entry.value > 5 ? "Medium" : "Light")}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ) : (
+                      <div className="py-8 text-center">
+                        <AlertTriangle className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
+                        <p className="text-gray-500">No bin weight readings available for the selected date.</p>
+                      </div>
+                    )}
+                  </TabsContent>
+                  
+                  {readingHistory.waterLevels.length === 0 && 
+                   readingHistory.binFullness.length === 0 && 
+                   readingHistory.binWeight.length === 0 && (
+                    <div className="border rounded-lg p-6 bg-gray-50 mt-4">
+                      <div className="flex flex-col items-center text-center">
+                        <Info className="h-10 w-10 text-blue-500 mb-2" />
+                        <h3 className="text-lg font-semibold mb-1">No Data Available</h3>
+                        <p className="text-gray-600 mb-4">There are no sensor readings available for this device on the selected date.</p>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setSelectedDate(new Date())}
+                        >
+                          Try Today's Date
+                        </Button>
+                      </div>
+                    </div>
                   )}
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                </Tabs>
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
     </DashboardLayout>
   );
 }

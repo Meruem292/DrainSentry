@@ -37,7 +37,8 @@ import {
   CalendarClock,
   MapPin,
   Clock,
-  Eye
+  Eye,
+  BarChart3
 } from "lucide-react";
 import { Device, WaterLevel, WasteBin } from "@/types";
 import { useToast } from "@/hooks/use-toast";
@@ -928,8 +929,19 @@ export default function Devices() {
                           <Button 
                             variant="ghost" 
                             size="sm"
+                            className="text-green-500 hover:bg-green-50 transition-colors duration-200"
+                            onClick={() => setLocation(`/device-history/${device.id}`)}
+                            title="View History"
+                          >
+                            <BarChart3 className="h-4 w-4 hover:scale-110 transition-transform duration-200" />
+                          </Button>
+                          
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
                             className="hover:bg-blue-50 transition-colors duration-200"
                             onClick={() => setLocation(`/water-level-details?id=${device.id}`)}
+                            title="View Details"
                           >
                             <Eye className="h-4 w-4 hover:scale-110 transition-transform duration-200" />
                           </Button>
