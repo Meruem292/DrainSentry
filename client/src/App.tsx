@@ -7,6 +7,7 @@ import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
 import WaterLevels from "@/pages/water-levels";
 import WaterLevelDetails from "@/pages/water-level-details";
+import DeviceHistory from "@/pages/device-history";
 import WasteBins from "@/pages/waste-bins";
 import Devices from "@/pages/devices";
 import Contacts from "@/pages/contacts";
@@ -22,6 +23,7 @@ function Router() {
       <Route path="/water-levels/:id" component={WaterLevelDetails} />
       <Route path="/waste-bins" component={WasteBins} />
       <Route path="/devices" component={Devices} />
+      <Route path="/device-history/:id" component={DeviceHistory} />
       <Route path="/contacts" component={Contacts} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />

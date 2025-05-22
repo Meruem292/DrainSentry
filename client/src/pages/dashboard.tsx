@@ -424,10 +424,16 @@ export default function Dashboard() {
                                   )
                               }
                             </div>
-                            <span className="text-sm text-blue-500 flex items-center">
-                              View Details
-                              <ChevronRight className="h-4 w-4 ml-1" />
-                            </span>
+                            <div className="flex gap-2">
+                              <Link to={`/water-levels/${device.id}`} className="text-sm text-blue-500 flex items-center">
+                                View Details
+                                <ChevronRight className="h-4 w-4 ml-1" />
+                              </Link>
+                              <Link to={`/device-history/${device.id}`} className="text-sm text-emerald-600 flex items-center">
+                                History
+                                <History className="h-4 w-4 ml-1" />
+                              </Link>
+                            </div>
                           </CardFooter>
                         </Card>
                       </motion.div>
