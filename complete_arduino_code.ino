@@ -7,22 +7,24 @@
 #include <ArduinoJson.h>
 #include <time.h>
 
-// Device configuration - This specific device's unique ID
-#define DEVICE_ID "WL-001"  
+// Device configuration
+#define DEVICE_ID "DS-001"  // This is the ID of your device
 
 // Hardware pins
-#define SENSOR1_RX 18  // Water level sensor
+#define SENSOR1_RX 18       // Water level sensor
 #define SENSOR1_TX 19
-#define SENSOR2_RX 16  // Bin fullness sensor
+#define SENSOR2_RX 16       // Bin fullness sensor
 #define SENSOR2_TX 17
-#define GSM_TX 26      // GSM module
+
+#define GSM_TX 26
 #define GSM_RX 27
-#define LOADCELL_DOUT 33  // Weight sensor
+
+#define LOADCELL_DOUT 33
 #define LOADCELL_SCK 32
 
 // Network configuration
-const char* ssid = "YourWiFiSSID";     // Replace with your WiFi SSID
-const char* password = "YourPassword";  // Replace with your WiFi password
+const char* ssid = "YOUR_WIFI_SSID";     // Replace with your WiFi SSID
+const char* password = "YOUR_WIFI_PASSWORD";  // Replace with your WiFi password
 
 // Firebase config - use your Firebase project's URL
 const String firebaseURL = "https://drainsentry-default-rtdb.firebaseio.com";
@@ -34,7 +36,7 @@ String deviceContainerKey = "";
 // Device configuration from Firebase
 float waterLevelThreshold = 80.0;  // Default, will be updated from Firebase
 float binFullnessThreshold = 80.0;  // Default, will be updated from Firebase
-float wasteWeightThreshold = 80.0;  // Default, will be updated from Firebase
+float wasteWeightThreshold = 14.0;  // Default, will be updated from Firebase
 bool notificationsEnabled = true;   // Default, will be updated from Firebase
 bool notifyOnWaterLevel = true;     // Default, will be updated from Firebase
 bool notifyOnBinFullness = true;    // Default, will be updated from Firebase
@@ -96,7 +98,7 @@ void setup() {
   scale.tare();             // Reset the scale to 0
   Serial.println("Load cell initialized");
 
-  // Set up time (important for ISO timestamps)
+  // Set up time
   configTime(8 * 3600, 0, "pool.ntp.org", "time.nist.gov");
 
   // Connect to WiFi
@@ -211,17 +213,18 @@ void findDeviceInDatabase() {
         String userId = user.key().c_str();
         JsonObject userData = user.value().as<JsonObject>();
         
-        // Check water levels first for this device ID
-        if (userData.containsKey("waterLevels")) {
-          JsonObject waterLevels = userData["waterLevels"];
+        // Check if this user has devices
+        if (userData.containsKey("devices")) {
+          JsonObject devices = userData["devices"];
           
-          // Iterate through water levels to find matching ID
-          for (JsonPair waterLevel : waterLevels) {
-            String containerKey = waterLevel.key().c_str();
-            JsonObject levelData = waterLevel.value().as<JsonObject>();
+          // Iterate through all devices of this user
+          for (JsonPair device : devices) {
+            String containerKey = device.key().c_str();
+            JsonObject deviceData = device.value().as<JsonObject>();
             
-            // If this water level record has our device ID
-            if (levelData.containsKey("id") && levelData["id"].as<String>() == DEVICE_ID) {
+            // Check if this is our device
+            if (deviceData.containsKey("id") && deviceData["id"].as<String>() == DEVICE_ID) {
+              // Found our device!
               deviceOwnerUserID = userId;
               deviceContainerKey = containerKey;
               deviceRegistered = true;
@@ -239,72 +242,7 @@ void findDeviceInDatabase() {
               lcd.print("Getting Config...");
               delay(1000);
               
-              // Now fetch the full device configuration
-              fetchDeviceConfiguration();
-              return;
-            }
-          }
-        }
-        
-        // If not found in waterLevels, also check in devices directly
-        if (userData.containsKey("devices") && !deviceRegistered) {
-          JsonObject devices = userData["devices"];
-          
-          for (JsonPair device : devices) {
-            String containerKey = device.key().c_str();
-            JsonObject deviceData = device.value().as<JsonObject>();
-            
-            // Check standard device data
-            if (deviceData.containsKey("id") && deviceData["id"].as<String>() == DEVICE_ID) {
-              deviceOwnerUserID = userId;
-              deviceContainerKey = containerKey;
-              deviceRegistered = true;
-              
-              Serial.println("Device found directly in devices list!");
-              Serial.print("Owner User ID: ");
-              Serial.println(deviceOwnerUserID);
-              Serial.print("Device Container Key: ");
-              Serial.println(deviceContainerKey);
-              
-              lcd.clear();
-              lcd.setCursor(0, 0);
-              lcd.print("Device Found!");
-              lcd.setCursor(0, 1);
-              lcd.print("Getting Config...");
-              delay(1000);
-              
-              fetchDeviceConfiguration();
-              return;
-            }
-          }
-        }
-        
-        // Also check wasteBins as another option
-        if (userData.containsKey("wasteBins") && !deviceRegistered) {
-          JsonObject wasteBins = userData["wasteBins"];
-          
-          for (JsonPair bin : wasteBins) {
-            String containerKey = bin.key().c_str();
-            JsonObject binData = bin.value().as<JsonObject>();
-            
-            if (binData.containsKey("id") && binData["id"].as<String>() == DEVICE_ID) {
-              deviceOwnerUserID = userId;
-              deviceContainerKey = containerKey;
-              deviceRegistered = true;
-              
-              Serial.println("Device found in waste bins list!");
-              Serial.print("Owner User ID: ");
-              Serial.println(deviceOwnerUserID);
-              Serial.print("Device Container Key: ");
-              Serial.println(deviceContainerKey);
-              
-              lcd.clear();
-              lcd.setCursor(0, 0);
-              lcd.print("Device Found!");
-              lcd.setCursor(0, 1);
-              lcd.print("Getting Config...");
-              delay(1000);
-              
+              // Now that we found the device, get its configuration
               fetchDeviceConfiguration();
               return;
             }
@@ -466,16 +404,26 @@ void readSensors() {
   delay(50);
   lastDist1 = readA02Distance(sensor1);
   
+  // Convert distance to water level percentage (assuming max water height is 100cm)
+  // When distance is small, water level is high
+  if (lastDist1 > 0 && lastDist1 <= 100) {
+    // Map distance to percentage (invert the relationship)
+    // 100cm (far) = 0% water level, 0cm (close) = 100% water level
+    float waterLevelPercent = 100.0 - (lastDist1 / 100.0 * 100.0);
+    // Ensure the percentage is within valid range
+    waterLevelPercent = constrain(waterLevelPercent, 0.0, 100.0);
+  }
+  
   // Read bin fullness sensor (sensor 2)
   flushSerial(sensor2);
   delay(50);
   lastDist2 = readA02Distance(sensor2);
   
-  // Convert distance to fullness percentage (assuming bin height of 100cm)
+  // Convert distance to bin fullness percentage (assuming bin height of 50cm)
   // Adjust the calculation based on your bin's dimensions
   if (lastDist2 > 0) {
     // Invert the relationship: closer distance = higher fullness
-    binFullness = map(constrain(lastDist2, 0, 100), 100, 0, 0, 100);
+    binFullness = map(constrain(lastDist2, 0, 50), 50, 0, 0, 100);
   }
   
   // Read weight from load cell
@@ -508,9 +456,13 @@ void updateLCD() {
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("WL:");
+  
+  // Calculate and display water level percentage
+  float waterLevel = 0;
   if (lastDist1 >= 0) {
-    int waterLevelPercent = 100 - constrain(lastDist1, 0, 100);
-    lcd.print(waterLevelPercent);
+    waterLevel = 100.0 - (lastDist1 / 100.0 * 100.0);
+    waterLevel = constrain(waterLevel, 0.0, 100.0);
+    lcd.print(waterLevel, 0);
     lcd.print("%");
   } else {
     lcd.print("Error");
@@ -534,9 +486,10 @@ void checkAlertConditions() {
   bool shouldSendWeightAlert = false;
   String alertMessage = "DrainSentry Alert: ";
   
-  // Check water level alert condition (lower distance = higher water level)
-  // Assuming 100cm is empty and 0cm is full
-  float waterLevelPercent = 100 - constrain(lastDist1, 0, 100);  // Convert to percentage
+  // Check water level alert condition
+  float waterLevelPercent = 100.0 - (lastDist1 / 100.0 * 100.0);
+  waterLevelPercent = constrain(waterLevelPercent, 0.0, 100.0);
+  
   if (notifyOnWaterLevel && waterLevelPercent >= waterLevelThreshold) {
     shouldSendWaterAlert = true;
     alertMessage += "Water level at " + String(waterLevelPercent, 0) + "% (>" + String(waterLevelThreshold, 0) + "%). ";
@@ -563,28 +516,6 @@ void checkAlertConditions() {
   }
 }
 
-String getCurrentTimeString() {
-  // Get current time
-  time_t now;
-  time(&now);
-  struct tm timeinfo;
-  localtime_r(&now, &timeinfo);
-  char timeStr[30];
-  strftime(timeStr, sizeof(timeStr), "%m/%d/%Y, %H:%M:%S", &timeinfo);
-  return String(timeStr);
-}
-
-String getCurrentISOTimeString() {
-  // Get current time in ISO format
-  time_t now;
-  time(&now);
-  struct tm timeinfo;
-  gmtime_r(&now, &timeinfo);
-  char timeStr[30];
-  strftime(timeStr, sizeof(timeStr), "%Y-%m-%dT%H:%M:%S.000Z", &timeinfo);
-  return String(timeStr);
-}
-
 void sendDataToFirebase() {
   if (!deviceRegistered || WiFi.status() != WL_CONNECTED) {
     if (!deviceRegistered) {
@@ -593,12 +524,17 @@ void sendDataToFirebase() {
     return;
   }
   
-  // Get current formatted time strings
-  String timeStr = getCurrentTimeString();
-  String isoTimeStr = getCurrentISOTimeString();
+  // Get current time
+  time_t now;
+  time(&now);
+  struct tm timeinfo;
+  localtime_r(&now, &timeinfo);
+  char timeStr[30];
+  strftime(timeStr, sizeof(timeStr), "%m/%d/%Y, %H:%M:%S", &timeinfo);
   
-  // Calculate water level percentage from distance
-  int waterLevelPercent = 100 - constrain(lastDist1, 0, 100);
+  // Calculate water level percentage
+  float waterLevelPercent = 100.0 - (lastDist1 / 100.0 * 100.0);
+  waterLevelPercent = constrain(waterLevelPercent, 0.0, 100.0);
   
   // Update water level data
   HTTPClient http;
@@ -610,13 +546,13 @@ void sendDataToFirebase() {
   DynamicJsonDocument waterLevelDoc(1024);
   waterLevelDoc["id"] = DEVICE_ID;
   waterLevelDoc["location"] = "Main Street Junction"; // This should come from the config
-  waterLevelDoc["level"] = waterLevelPercent;
-  waterLevelDoc["lastUpdated"] = timeStr;
+  waterLevelDoc["level"] = (int)waterLevelPercent;
+  waterLevelDoc["lastUpdated"] = String(timeStr);
   
   String waterLevelJson;
   serializeJson(waterLevelDoc, waterLevelJson);
   
-  int httpCode = http.PATCH(waterLevelJson);
+  int httpCode = http.PUT(waterLevelJson);
   if (httpCode > 0) {
     Serial.print("Water level data sent, response: ");
     Serial.println(httpCode);
@@ -637,12 +573,12 @@ void sendDataToFirebase() {
   wasteBinDoc["location"] = "Main Street Junction"; // This should come from the config
   wasteBinDoc["fullness"] = binFullness;
   wasteBinDoc["weight"] = lastWeight;
-  wasteBinDoc["lastEmptied"] = "Never"; // This should be updated when bin is emptied
+  wasteBinDoc["lastEmptied"] = "Never"; // This would need to be updated when bin is emptied
   
   String wasteBinJson;
   serializeJson(wasteBinDoc, wasteBinJson);
   
-  httpCode = http.PATCH(wasteBinJson);
+  httpCode = http.PUT(wasteBinJson);
   if (httpCode > 0) {
     Serial.print("Waste bin data sent, response: ");
     Serial.println(httpCode);
@@ -652,18 +588,13 @@ void sendDataToFirebase() {
   }
   http.end();
   
-  // Update device status (to show as active in the app)
+  // Update device status (active)
   String deviceUrl = firebaseURL + "/users/" + deviceOwnerUserID + "/devices/" + deviceContainerKey + ".json";
   http.begin(deviceUrl);
   http.addHeader("Content-Type", "application/json");
   
-  // Create JSON for device status update
-  DynamicJsonDocument deviceDoc(256);
-  deviceDoc["lastSeen"] = timeStr;
-  deviceDoc["status"] = "active";
-  
-  String deviceJson;
-  serializeJson(deviceDoc, deviceJson);
+  // Only update status and lastSeen fields
+  String deviceJson = "{\"status\":\"active\",\"lastSeen\":\"" + String(timeStr) + "\"}";
   
   httpCode = http.PATCH(deviceJson);
   if (httpCode > 0) {
@@ -675,12 +606,102 @@ void sendDataToFirebase() {
   }
   http.end();
   
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Data Sent");
-  lcd.setCursor(0, 1);
-  lcd.print("Status: Active");
-  delay(1000);
+  // Save history data with timestamps (to avoid replacing previous entries)
+  saveWaterLevelHistory();
+  saveWasteBinHistory();
+}
+
+// Save water level history to Firebase with unique timestamp to preserve all readings
+void saveWaterLevelHistory() {
+  if (!deviceRegistered || WiFi.status() != WL_CONNECTED) {
+    return;
+  }
+  
+  // Get date and time
+  time_t now;
+  time(&now);
+  struct tm timeinfo;
+  localtime_r(&now, &timeinfo);
+  
+  // Format date (YYYY-MM-DD) for the main path
+  char dateStr[11];
+  strftime(dateStr, sizeof(dateStr), "%Y-%m-%d", &timeinfo);
+  
+  // Format timestamp (HH_MM_SS) for unique key - using underscore for valid Firebase path
+  char timeStr[9];
+  strftime(timeStr, sizeof(timeStr), "%H_%M_%S", &timeinfo);
+  
+  // Calculate water level percentage
+  float waterLevelPercent = 100.0 - (lastDist1 / 100.0 * 100.0);
+  waterLevelPercent = constrain(waterLevelPercent, 0.0, 100.0);
+  
+  // Create URL with timestamp as key to make each reading unique
+  String historyUrl = firebaseURL + "/users/" + deviceOwnerUserID + 
+                     "/waterLevelHistory/" + String(dateStr) + "/" + 
+                     deviceContainerKey + "/" + String(timeStr) + ".json";
+  
+  // Create JSON for the water level value
+  String payload = "{\"value\":" + String((int)waterLevelPercent) + "}";
+  
+  HTTPClient http;
+  http.begin(historyUrl);
+  http.addHeader("Content-Type", "application/json");
+  
+  int httpCode = http.PUT(payload);
+  if (httpCode > 0) {
+    Serial.println("Water level history saved with timestamp: " + String(httpCode));
+  } else {
+    Serial.println("Error saving water level history: " + http.errorToString(httpCode));
+  }
+  
+  http.end();
+}
+
+// Save waste bin history to Firebase with unique timestamp to preserve all readings
+void saveWasteBinHistory() {
+  if (!deviceRegistered || WiFi.status() != WL_CONNECTED) {
+    return;
+  }
+  
+  // Get date and time
+  time_t now;
+  time(&now);
+  struct tm timeinfo;
+  localtime_r(&now, &timeinfo);
+  
+  // Format date (YYYY-MM-DD) for the main path
+  char dateStr[11];
+  strftime(dateStr, sizeof(dateStr), "%Y-%m-%d", &timeinfo);
+  
+  // Format timestamp (HH_MM_SS) for unique key
+  char timeStr[9];
+  strftime(timeStr, sizeof(timeStr), "%H_%M_%S", &timeinfo);
+  
+  // Create URL with timestamp as key to make each reading unique
+  String historyUrl = firebaseURL + "/users/" + deviceOwnerUserID + 
+                     "/wasteBinHistory/" + String(dateStr) + "/" + 
+                     deviceContainerKey + "/" + String(timeStr) + ".json";
+  
+  // Create JSON for waste bin data
+  DynamicJsonDocument doc(128);
+  doc["fullness"] = binFullness;
+  doc["weight"] = lastWeight;
+  
+  String payload;
+  serializeJson(doc, payload);
+  
+  HTTPClient http;
+  http.begin(historyUrl);
+  http.addHeader("Content-Type", "application/json");
+  
+  int httpCode = http.PUT(payload);
+  if (httpCode > 0) {
+    Serial.println("Waste bin history saved with timestamp: " + String(httpCode));
+  } else {
+    Serial.println("Error saving waste bin history: " + http.errorToString(httpCode));
+  }
+  
+  http.end();
 }
 
 // Flush serial buffer to clear old data
@@ -690,12 +711,12 @@ void flushSerial(HardwareSerial& serial) {
   }
 }
 
-// Read distance from A02-21AU sensor
+// Read distance from A02-21AU sensor robustly
 float readA02Distance(HardwareSerial& serial) {
   unsigned char data[4];
   unsigned long start = millis();
 
-  while (millis() - start < 150) {  // 150ms timeout
+  while (millis() - start < 150) {  // Slightly longer timeout
     if (serial.available() >= 4) {
       for (int i = 0; i < 4; i++) {
         data[i] = serial.read();
