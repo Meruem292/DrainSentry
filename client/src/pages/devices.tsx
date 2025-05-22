@@ -324,6 +324,55 @@ export default function Devices() {
     if (!user) return;
     
     try {
+      // If this is a row with no ID, it could be one of the problematic entries
+      if (!deviceId) {
+        // First, let's remove the entry from the table visually
+        setDevices(prev => prev.filter(d => d.id !== deviceId));
+        
+        // Then search for devices without IDs in Firebase
+        const devicesRef = ref(database, `users/${user.uid}/devices`);
+        const devicesSnapshot = await get(devicesRef);
+        
+        if (devicesSnapshot.exists()) {
+          const devicesData = devicesSnapshot.val();
+          
+          // Find any devices that don't have an ID or have empty/null properties
+          for (const [key, value] of Object.entries(devicesData)) {
+            const deviceData = value as any;
+            // Check if this is a problematic entry (missing ID or mostly empty)
+            if (!deviceData.id || 
+                (Object.keys(deviceData).length <= 2 && 
+                 (deviceData.hasOwnProperty('status') || deviceData.hasOwnProperty('lastSeen')))) {
+              
+              // Remove this device entry
+              const blankDeviceRef = ref(database, `users/${user.uid}/devices/${key}`);
+              await remove(blankDeviceRef);
+              
+              // Also check and remove any corresponding blank entries in waterLevels
+              const waterRef = ref(database, `users/${user.uid}/waterLevels/${key}`);
+              const waterSnapshot = await get(waterRef);
+              if (waterSnapshot.exists()) {
+                await remove(waterRef);
+              }
+              
+              // And check wasteBins
+              const wasteRef = ref(database, `users/${user.uid}/wasteBins/${key}`);
+              const wasteSnapshot = await get(wasteRef);
+              if (wasteSnapshot.exists()) {
+                await remove(wasteRef);
+              }
+            }
+          }
+        }
+        
+        toast({
+          title: "Blank Device Removed",
+          description: "The blank device entry has been removed successfully",
+        });
+        return;
+      }
+      
+      // For regular devices with IDs, proceed normally
       // First, find the container key for this device ID
       const devicesRef = ref(database, `users/${user.uid}/devices`);
       const devicesSnapshot = await get(devicesRef);
@@ -349,12 +398,17 @@ export default function Devices() {
       });
       
       if (!containerKey) {
-        toast({
-          title: "Device not found",
-          description: "The device could not be found in your account.",
-          variant: "destructive",
-        });
-        return;
+        // If we didn't find by ID, check if the device container key itself matches
+        if (devicesData.hasOwnProperty(deviceId)) {
+          containerKey = deviceId;
+        } else {
+          toast({
+            title: "Device not found",
+            description: "The device could not be found in your account.",
+            variant: "destructive",
+          });
+          return;
+        }
       }
       
       // Remove device using the correct container key
