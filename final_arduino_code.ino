@@ -7,17 +7,17 @@
 #include <ArduinoJson.h>
 #include <time.h>
 
-// Device configuration
-#define DEVICE_ID "WL-001"
+// Device configuration - This specific device's unique ID
+#define DEVICE_ID "WL-001"  
 
 // Hardware pins
-#define SENSOR1_RX 18
+#define SENSOR1_RX 18  // Water level sensor
 #define SENSOR1_TX 19
-#define SENSOR2_RX 16
+#define SENSOR2_RX 16  // Bin fullness sensor
 #define SENSOR2_TX 17
-#define GSM_TX 26
+#define GSM_TX 26      // GSM module
 #define GSM_RX 27
-#define LOADCELL_DOUT 33
+#define LOADCELL_DOUT 33  // Weight sensor
 #define LOADCELL_SCK 32
 
 // Network configuration
@@ -25,13 +25,16 @@ const char* ssid = "YourWiFiSSID";     // Replace with your WiFi SSID
 const char* password = "YourPassword";  // Replace with your WiFi password
 
 // Firebase config - use your Firebase project's URL
-const String firebaseURL = "https://your-firebase-project-id-default-rtdb.firebaseio.com";
-const String userID = "5crasIlN8rd78y9j7nY9ukj61SH2"; // The user ID from your database
+const String firebaseURL = "https://drainsentry-default-rtdb.firebaseio.com";
+
+// Device owner info (will be found automatically)
+String deviceOwnerUserID = "";
+String deviceContainerKey = "";
 
 // Device configuration from Firebase
 float waterLevelThreshold = 80.0;  // Default, will be updated from Firebase
 float binFullnessThreshold = 80.0;  // Default, will be updated from Firebase
-float wasteWeightThreshold = 14.0;  // Default, will be updated from Firebase
+float wasteWeightThreshold = 80.0;  // Default, will be updated from Firebase
 bool notificationsEnabled = true;   // Default, will be updated from Firebase
 bool notifyOnWaterLevel = true;     // Default, will be updated from Firebase
 bool notifyOnBinFullness = true;    // Default, will be updated from Firebase
@@ -43,9 +46,14 @@ int numContacts = 0;                // Number of contacts
 const unsigned long sensorReadInterval = 2000;         // Read sensors every 2 seconds
 const unsigned long configFetchInterval = 300000;      // Fetch config every 5 minutes
 const unsigned long dataSendInterval = 60000;          // Send data every 1 minute
+const unsigned long findDeviceInterval = 60000;        // If device not found, retry every minute
 unsigned long lastSensorReadTime = 0;
 unsigned long lastConfigFetchTime = 0;
 unsigned long lastDataSendTime = 0;
+unsigned long lastFindDeviceTime = 0;
+
+// Device status
+bool deviceRegistered = false;
 
 // Sensor variables
 HX711 scale;
@@ -88,15 +96,27 @@ void setup() {
   scale.tare();             // Reset the scale to 0
   Serial.println("Load cell initialized");
 
+  // Set up time (important for ISO timestamps)
+  configTime(8 * 3600, 0, "pool.ntp.org", "time.nist.gov");
+
   // Connect to WiFi
   connectToWiFi();
   
-  // Get initial configuration from Firebase
-  fetchDeviceConfiguration();
+  // Find this device in the database
+  findDeviceInDatabase();
 }
 
 void loop() {
   unsigned long currentTime = millis();
+
+  // If device not registered, try to find it periodically
+  if (!deviceRegistered) {
+    if (currentTime - lastFindDeviceTime >= findDeviceInterval) {
+      lastFindDeviceTime = currentTime;
+      findDeviceInDatabase();
+    }
+    return;  // Don't proceed with other operations until registered
+  }
 
   // Read sensors at regular interval
   if (currentTime - lastSensorReadTime >= sensorReadInterval) {
@@ -156,7 +176,167 @@ void connectToWiFi() {
   }
 }
 
+void findDeviceInDatabase() {
+  if (WiFi.status() != WL_CONNECTED) {
+    connectToWiFi();
+    if (WiFi.status() != WL_CONNECTED) {
+      return;  // Still not connected, exit
+    }
+  }
+
+  Serial.println("Searching for device in database...");
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Finding Device");
+  lcd.setCursor(0, 1);
+  lcd.print(DEVICE_ID);
+
+  HTTPClient http;
+  // Get all users
+  String url = firebaseURL + "/users.json";
+  
+  http.begin(url);
+  int httpCode = http.GET();
+  
+  if (httpCode == HTTP_CODE_OK) {
+    String payload = http.getString();
+    
+    DynamicJsonDocument doc(16384);  // Larger doc to fit all users
+    DeserializationError error = deserializeJson(doc, payload);
+    
+    if (!error) {
+      // Iterate through all users
+      JsonObject users = doc.as<JsonObject>();
+      for (JsonPair user : users) {
+        String userId = user.key().c_str();
+        JsonObject userData = user.value().as<JsonObject>();
+        
+        // Check water levels first for this device ID
+        if (userData.containsKey("waterLevels")) {
+          JsonObject waterLevels = userData["waterLevels"];
+          
+          // Iterate through water levels to find matching ID
+          for (JsonPair waterLevel : waterLevels) {
+            String containerKey = waterLevel.key().c_str();
+            JsonObject levelData = waterLevel.value().as<JsonObject>();
+            
+            // If this water level record has our device ID
+            if (levelData.containsKey("id") && levelData["id"].as<String>() == DEVICE_ID) {
+              deviceOwnerUserID = userId;
+              deviceContainerKey = containerKey;
+              deviceRegistered = true;
+              
+              Serial.println("Device found in database!");
+              Serial.print("Owner User ID: ");
+              Serial.println(deviceOwnerUserID);
+              Serial.print("Device Container Key: ");
+              Serial.println(deviceContainerKey);
+              
+              lcd.clear();
+              lcd.setCursor(0, 0);
+              lcd.print("Device Found!");
+              lcd.setCursor(0, 1);
+              lcd.print("Getting Config...");
+              delay(1000);
+              
+              // Now fetch the full device configuration
+              fetchDeviceConfiguration();
+              return;
+            }
+          }
+        }
+        
+        // If not found in waterLevels, also check in devices directly
+        if (userData.containsKey("devices") && !deviceRegistered) {
+          JsonObject devices = userData["devices"];
+          
+          for (JsonPair device : devices) {
+            String containerKey = device.key().c_str();
+            JsonObject deviceData = device.value().as<JsonObject>();
+            
+            // Check standard device data
+            if (deviceData.containsKey("id") && deviceData["id"].as<String>() == DEVICE_ID) {
+              deviceOwnerUserID = userId;
+              deviceContainerKey = containerKey;
+              deviceRegistered = true;
+              
+              Serial.println("Device found directly in devices list!");
+              Serial.print("Owner User ID: ");
+              Serial.println(deviceOwnerUserID);
+              Serial.print("Device Container Key: ");
+              Serial.println(deviceContainerKey);
+              
+              lcd.clear();
+              lcd.setCursor(0, 0);
+              lcd.print("Device Found!");
+              lcd.setCursor(0, 1);
+              lcd.print("Getting Config...");
+              delay(1000);
+              
+              fetchDeviceConfiguration();
+              return;
+            }
+          }
+        }
+        
+        // Also check wasteBins as another option
+        if (userData.containsKey("wasteBins") && !deviceRegistered) {
+          JsonObject wasteBins = userData["wasteBins"];
+          
+          for (JsonPair bin : wasteBins) {
+            String containerKey = bin.key().c_str();
+            JsonObject binData = bin.value().as<JsonObject>();
+            
+            if (binData.containsKey("id") && binData["id"].as<String>() == DEVICE_ID) {
+              deviceOwnerUserID = userId;
+              deviceContainerKey = containerKey;
+              deviceRegistered = true;
+              
+              Serial.println("Device found in waste bins list!");
+              Serial.print("Owner User ID: ");
+              Serial.println(deviceOwnerUserID);
+              Serial.print("Device Container Key: ");
+              Serial.println(deviceContainerKey);
+              
+              lcd.clear();
+              lcd.setCursor(0, 0);
+              lcd.print("Device Found!");
+              lcd.setCursor(0, 1);
+              lcd.print("Getting Config...");
+              delay(1000);
+              
+              fetchDeviceConfiguration();
+              return;
+            }
+          }
+        }
+      }
+      
+      // If we get here, device not found
+      Serial.println("Device not found in any user's account");
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Device Not Found");
+      lcd.setCursor(0, 1);
+      lcd.print("Waiting...");
+    } else {
+      Serial.print("JSON parsing error: ");
+      Serial.println(error.c_str());
+    }
+  } else {
+    Serial.print("HTTP error finding device: ");
+    Serial.println(httpCode);
+  }
+  
+  http.end();
+}
+
 void fetchDeviceConfiguration() {
+  if (!deviceRegistered) {
+    Serial.println("Device not registered, cannot fetch configuration");
+    return;
+  }
+  
   if (WiFi.status() != WL_CONNECTED) {
     connectToWiFi();
     if (WiFi.status() != WL_CONNECTED) {
@@ -170,7 +350,7 @@ void fetchDeviceConfiguration() {
   lcd.print("Fetching config");
 
   HTTPClient http;
-  String url = firebaseURL + "/users/" + userID + "/devices/device1.json";  
+  String url = firebaseURL + "/users/" + deviceOwnerUserID + "/devices/" + deviceContainerKey + ".json";  
   
   http.begin(url);
   int httpCode = http.GET();
@@ -244,12 +424,12 @@ void fetchDeviceConfiguration() {
 }
 
 void fetchContactPhoneNumber(String contactID) {
-  if (WiFi.status() != WL_CONNECTED) {
-    return;  // Not connected to WiFi
+  if (!deviceRegistered || WiFi.status() != WL_CONNECTED) {
+    return;  // Not connected or registered
   }
   
   HTTPClient http;
-  String url = firebaseURL + "/users/" + userID + "/contacts/" + contactID + ".json";
+  String url = firebaseURL + "/users/" + deviceOwnerUserID + "/contacts/" + contactID + ".json";
   
   http.begin(url);
   int httpCode = http.GET();
@@ -329,8 +509,9 @@ void updateLCD() {
   lcd.setCursor(0, 0);
   lcd.print("WL:");
   if (lastDist1 >= 0) {
-    lcd.print(lastDist1, 1);
-    lcd.print("cm");
+    int waterLevelPercent = 100 - constrain(lastDist1, 0, 100);
+    lcd.print(waterLevelPercent);
+    lcd.print("%");
   } else {
     lcd.print("Error");
   }
@@ -344,8 +525,8 @@ void updateLCD() {
 }
 
 void checkAlertConditions() {
-  if (!notificationsEnabled) {
-    return;  // Notifications are disabled
+  if (!deviceRegistered || !notificationsEnabled) {
+    return;  // Not registered or notifications disabled
   }
   
   bool shouldSendWaterAlert = false;
@@ -355,7 +536,7 @@ void checkAlertConditions() {
   
   // Check water level alert condition (lower distance = higher water level)
   // Assuming 100cm is empty and 0cm is full
-  float waterLevelPercent = 100 - lastDist1;  // Convert to percentage
+  float waterLevelPercent = 100 - constrain(lastDist1, 0, 100);  // Convert to percentage
   if (notifyOnWaterLevel && waterLevelPercent >= waterLevelThreshold) {
     shouldSendWaterAlert = true;
     alertMessage += "Water level at " + String(waterLevelPercent, 0) + "% (>" + String(waterLevelThreshold, 0) + "%). ";
@@ -382,14 +563,7 @@ void checkAlertConditions() {
   }
 }
 
-void sendDataToFirebase() {
-  if (WiFi.status() != WL_CONNECTED) {
-    connectToWiFi();
-    if (WiFi.status() != WL_CONNECTED) {
-      return;  // Still not connected, exit
-    }
-  }
-  
+String getCurrentTimeString() {
   // Get current time
   time_t now;
   time(&now);
@@ -397,10 +571,38 @@ void sendDataToFirebase() {
   localtime_r(&now, &timeinfo);
   char timeStr[30];
   strftime(timeStr, sizeof(timeStr), "%m/%d/%Y, %H:%M:%S", &timeinfo);
+  return String(timeStr);
+}
+
+String getCurrentISOTimeString() {
+  // Get current time in ISO format
+  time_t now;
+  time(&now);
+  struct tm timeinfo;
+  gmtime_r(&now, &timeinfo);
+  char timeStr[30];
+  strftime(timeStr, sizeof(timeStr), "%Y-%m-%dT%H:%M:%S.000Z", &timeinfo);
+  return String(timeStr);
+}
+
+void sendDataToFirebase() {
+  if (!deviceRegistered || WiFi.status() != WL_CONNECTED) {
+    if (!deviceRegistered) {
+      Serial.println("Device not registered, cannot send data");
+    }
+    return;
+  }
+  
+  // Get current formatted time strings
+  String timeStr = getCurrentTimeString();
+  String isoTimeStr = getCurrentISOTimeString();
+  
+  // Calculate water level percentage from distance
+  int waterLevelPercent = 100 - constrain(lastDist1, 0, 100);
   
   // Update water level data
   HTTPClient http;
-  String waterLevelUrl = firebaseURL + "/users/" + userID + "/waterLevels/device1.json";
+  String waterLevelUrl = firebaseURL + "/users/" + deviceOwnerUserID + "/waterLevels/" + deviceContainerKey + ".json";
   http.begin(waterLevelUrl);
   http.addHeader("Content-Type", "application/json");
   
@@ -408,8 +610,8 @@ void sendDataToFirebase() {
   DynamicJsonDocument waterLevelDoc(1024);
   waterLevelDoc["id"] = DEVICE_ID;
   waterLevelDoc["location"] = "Main Street Junction"; // This should come from the config
-  waterLevelDoc["level"] = 100 - lastDist1;  // Convert distance to level percentage
-  waterLevelDoc["lastUpdated"] = String(timeStr);
+  waterLevelDoc["level"] = waterLevelPercent;
+  waterLevelDoc["lastUpdated"] = timeStr;
   
   String waterLevelJson;
   serializeJson(waterLevelDoc, waterLevelJson);
@@ -425,7 +627,7 @@ void sendDataToFirebase() {
   http.end();
   
   // Update waste bin data
-  String wasteBinUrl = firebaseURL + "/users/" + userID + "/wasteBins/device1.json";
+  String wasteBinUrl = firebaseURL + "/users/" + deviceOwnerUserID + "/wasteBins/" + deviceContainerKey + ".json";
   http.begin(wasteBinUrl);
   http.addHeader("Content-Type", "application/json");
   
@@ -451,19 +653,26 @@ void sendDataToFirebase() {
   http.end();
   
   // Update device status (to show as active in the app)
-  String deviceUrl = firebaseURL + "/users/" + userID + "/devices/device1.json";
+  String deviceUrl = firebaseURL + "/users/" + deviceOwnerUserID + "/devices/" + deviceContainerKey + ".json";
   http.begin(deviceUrl);
   http.addHeader("Content-Type", "application/json");
   
   // Create JSON for device status update
   DynamicJsonDocument deviceDoc(256);
-  deviceDoc["lastSeen"] = String(timeStr);
+  deviceDoc["lastSeen"] = timeStr;
   deviceDoc["status"] = "active";
   
   String deviceJson;
   serializeJson(deviceDoc, deviceJson);
   
   httpCode = http.PATCH(deviceJson);
+  if (httpCode > 0) {
+    Serial.print("Device status updated, response: ");
+    Serial.println(httpCode);
+  } else {
+    Serial.print("Device status update error: ");
+    Serial.println(http.errorToString(httpCode));
+  }
   http.end();
   
   lcd.clear();
