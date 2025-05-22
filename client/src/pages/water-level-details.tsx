@@ -140,10 +140,11 @@ export default function WaterLevelDetails() {
     setBinHistory(binHistoryData);
     
     // Generate analytics data for enhanced insights
-    setPredictions(generatePredictionsData(waterHistoryData));
-    setWaterTrends(generateWaterTrendsData(waterHistoryData));
-    setWasteTrends(generateWasteTrendsData(binHistoryData));
-    setRainData(generateRainDataSample());
+    // Use the utility functions defined below in the component
+    setPredictions(generateSamplePredictions(waterHistoryData));
+    setWaterTrends(generateSampleWaterTrends(waterHistoryData));
+    setWasteTrends(generateSampleWasteTrends(binHistoryData));
+    setRainData(generateSampleRainData());
     
     setLoading(false);
 
@@ -243,6 +244,139 @@ export default function WaterLevelDetails() {
     return `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
   };
 
+  // Generate sample predictions
+  function generateSamplePredictions(history: WaterLevelHistory[]): Prediction[] {
+    const predictions: Prediction[] = [];
+    const now = new Date();
+    
+    // Create predictions for the next 12 hours
+    for (let i = 1; i <= 12; i++) {
+      const timestamp = new Date(now);
+      timestamp.setHours(now.getHours() + i);
+      
+      // Calculate a prediction based on historical trend
+      // For sample data we'll just use a simple algorithm based on recent values
+      const recentValues = history.slice(-3).map(h => h.level);
+      const avgRecentChange = recentValues.length > 1 
+        ? (recentValues[recentValues.length-1] - recentValues[0]) / (recentValues.length - 1) 
+        : 0;
+      
+      // Predicted level based on the last known value plus the average change trend
+      let predictedLevel = history.length > 0 
+        ? Math.min(100, Math.max(0, history[history.length-1].level + (avgRecentChange * i)))
+        : 50;
+      
+      // Add some randomness
+      predictedLevel = Math.round(predictedLevel + (Math.random() * 10 - 5));
+      
+      predictions.push({
+        timestamp: timestamp.toISOString(),
+        predictedLevel,
+        confidence: 85 - (i * 5) // Confidence decreases as we predict further into the future
+      });
+    }
+    
+    return predictions;
+  }
+  
+  // Generate water trend data
+  function generateSampleWaterTrends(history: WaterLevelHistory[]): TrendData[] {
+    const trends: TrendData[] = [];
+    
+    // Add daily trend
+    if (history.length > 0) {
+      const lastValue = history[history.length-1].level;
+      const firstValue = history[0].level;
+      const changePct = firstValue !== 0 ? ((lastValue - firstValue) / firstValue) * 100 : 0;
+      
+      trends.push({
+        period: "Daily",
+        value: lastValue,
+        trend: changePct > 5 ? 'increasing' : changePct < -5 ? 'decreasing' : 'stable',
+        changePct: Math.round(changePct)
+      });
+    }
+    
+    // Add weekly trend (simulate with random data)
+    trends.push({
+      period: "Weekly",
+      value: Math.floor(Math.random() * 100),
+      trend: Math.random() > 0.5 ? 'increasing' : Math.random() > 0.5 ? 'decreasing' : 'stable',
+      changePct: Math.floor(Math.random() * 30 - 15)
+    });
+    
+    // Add monthly trend (simulate with random data)
+    trends.push({
+      period: "Monthly",
+      value: Math.floor(Math.random() * 100),
+      trend: Math.random() > 0.5 ? 'increasing' : Math.random() > 0.5 ? 'decreasing' : 'stable',
+      changePct: Math.floor(Math.random() * 50 - 25)
+    });
+    
+    return trends;
+  }
+  
+  // Generate waste trend data
+  function generateSampleWasteTrends(history: WasteBinHistory[]): TrendData[] {
+    const trends: TrendData[] = [];
+    
+    // Add daily trend for fullness
+    if (history.length > 0) {
+      const lastValue = history[history.length-1].fullness;
+      const firstValue = history[0].fullness;
+      const changePct = firstValue !== 0 ? ((lastValue - firstValue) / firstValue) * 100 : 0;
+      
+      trends.push({
+        period: "Daily Fullness",
+        value: lastValue,
+        trend: changePct > 5 ? 'increasing' : changePct < -5 ? 'decreasing' : 'stable',
+        changePct: Math.round(changePct)
+      });
+    }
+    
+    // Add daily trend for weight
+    if (history.length > 0) {
+      const lastValue = history[history.length-1].weight;
+      const firstValue = history[0].weight;
+      const changePct = firstValue !== 0 ? ((lastValue - firstValue) / firstValue) * 100 : 0;
+      
+      trends.push({
+        period: "Daily Weight",
+        value: lastValue,
+        trend: changePct > 5 ? 'increasing' : changePct < -5 ? 'decreasing' : 'stable',
+        changePct: Math.round(changePct)
+      });
+    }
+    
+    // Add weekly trend (simulate with random data)
+    trends.push({
+      period: "Weekly Average",
+      value: Math.floor(Math.random() * 100),
+      trend: Math.random() > 0.5 ? 'increasing' : Math.random() > 0.5 ? 'decreasing' : 'stable',
+      changePct: Math.floor(Math.random() * 30 - 15)
+    });
+    
+    return trends;
+  }
+  
+  // Generate rainfall data for correlation analysis
+  function generateSampleRainData(): RainData[] {
+    const data: RainData[] = [];
+    const now = new Date();
+    
+    for (let i = 0; i < 14; i++) {
+      const date = new Date(now);
+      date.setDate(now.getDate() - i);
+      
+      data.push({
+        date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        precipitation: Math.random() * 25 // 0-25mm of rain
+      });
+    }
+    
+    return data.reverse();
+  }
+  
   // Get trend analysis based on historical data
   function getTrendAnalysis(): string {
     if (!waterHistory.length) return "Insufficient data";

@@ -59,7 +59,7 @@ export default function Settings() {
     return () => unsubscribe();
   }, [user]);
 
-  const handleSaveSettings = async (section: 'system' | 'regional' | 'thresholds' | 'notifications') => {
+  const handleSaveSettings = async (section: 'system' | 'regional' | 'notifications') => {
     if (!user) return;
     
     try {
@@ -103,12 +103,7 @@ export default function Settings() {
           >
             General
           </TabsTrigger>
-          <TabsTrigger 
-            value="thresholds" 
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent text-gray-500 data-[state=active]:text-primary"
-          >
-            Thresholds
-          </TabsTrigger>
+
           <TabsTrigger 
             value="notifications" 
             className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent text-gray-500 data-[state=active]:text-primary"
@@ -232,87 +227,6 @@ export default function Settings() {
               handleSaveSettings('system');
               handleSaveSettings('regional');
             }}>
-              Save Changes
-            </Button>
-          </div>
-        </TabsContent>
-        
-        {/* Thresholds Tab */}
-        <TabsContent value="thresholds">
-          <h3 className="text-lg font-medium text-gray-800 mb-6">Alert Thresholds</h3>
-          <p className="text-gray-600 mb-6">Configure when alerts should be triggered for your monitoring devices.</p>
-          
-          <Card className="mb-6">
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <Label htmlFor="waterLevelThreshold">Water Level Threshold (%)</Label>
-                  <div className="flex items-center mt-1">
-                    <Input 
-                      id="waterLevelThreshold" 
-                      type="number" 
-                      value={settings.thresholds.waterLevel}
-                      onChange={(e) => setSettings({
-                        ...settings,
-                        thresholds: {
-                          ...settings.thresholds,
-                          waterLevel: Number(e.target.value)
-                        }
-                      })}
-                      className="mr-2"
-                    />
-                    <span>%</span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">Alert when water level exceeds this percentage</p>
-                </div>
-                
-                <div>
-                  <Label htmlFor="binFullnessThreshold">Bin Fullness Threshold (%)</Label>
-                  <div className="flex items-center mt-1">
-                    <Input 
-                      id="binFullnessThreshold" 
-                      type="number" 
-                      value={settings.thresholds.binFullness}
-                      onChange={(e) => setSettings({
-                        ...settings,
-                        thresholds: {
-                          ...settings.thresholds,
-                          binFullness: Number(e.target.value)
-                        }
-                      })}
-                      className="mr-2"
-                    />
-                    <span>%</span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">Alert when bin fullness exceeds this percentage</p>
-                </div>
-              </div>
-              
-              <div className="mt-6">
-                <Label htmlFor="wasteWeightThreshold">Waste Weight Threshold (kg)</Label>
-                <div className="flex items-center mt-1">
-                  <Input 
-                    id="wasteWeightThreshold" 
-                    type="number" 
-                    value={settings.thresholds.wasteWeight}
-                    onChange={(e) => setSettings({
-                      ...settings,
-                      thresholds: {
-                        ...settings.thresholds,
-                        wasteWeight: Number(e.target.value)
-                      }
-                    })}
-                    className="mr-2"
-                  />
-                  <span>kg</span>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">Alert when waste weight exceeds this value</p>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <div className="flex justify-end">
-            <Button onClick={() => handleSaveSettings('thresholds')}>
               Save Changes
             </Button>
           </div>
