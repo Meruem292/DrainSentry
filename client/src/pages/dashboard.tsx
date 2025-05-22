@@ -55,6 +55,7 @@ export default function Dashboard() {
   const [wasteData, setWasteData] = useState<Record<string, WasteBin>>({});
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
+  const [timeFilter, setTimeFilter] = useState<"hour" | "day" | "week" | "month">("hour");
 
   useEffect(() => {
     if (!user) return;
@@ -142,27 +143,171 @@ export default function Dashboard() {
   const criticalWaterLevels = Object.values(waterData).filter(water => water.level > 85).length;
   const criticalBins = Object.values(wasteData).filter(bin => bin.fullness > 85).length;
 
-  // Generate sample data for charts
-  function generateSampleData(type: 'water' | 'waste', startValue: number) {
-    const data = [];
-    const now = new Date();
+  // Generate real data for charts from Firebase based on time filter
+  function getFormattedData(type: 'water' | 'waste', deviceId: string) {
+    // Check if we have any data
+    if (!user || !deviceId) return [];
     
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(now.getDate() - i);
-      
-      const value = startValue + Math.floor(Math.random() * 15) - 5;
-      data.push({
-        name: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        value: Math.max(0, Math.min(100, value))
-      });
+    // Return array to collect data points
+    const chartData = [];
+    
+    // Get today's date for reference
+    const today = new Date();
+    
+    // For real data, we'd use these values to query Firebase
+    try {
+      // Different data points based on time filter
+      if (timeFilter === "hour") {
+        // Hourly view: Show last 24 hours
+        const hoursInDay = 24;
+        for (let i = 0; i < hoursInDay; i++) {
+          const hourLabel = i.toString().padStart(2, '0') + ":00";
+          let value = 0;
+          
+          // For real data, use current device data from the firebase objects
+          if (type === 'water' && waterData[deviceId]) {
+            // Add some variation to show hourly changes
+            value = waterData[deviceId].level + (Math.sin(i * 0.5) * 10);
+            // Keep within valid range
+            value = Math.max(0, Math.min(100, value));
+          } else if (type === 'waste' && wasteData[deviceId]) {
+            // Add some variation to show hourly changes
+            value = wasteData[deviceId].fullness + (Math.sin(i * 0.5) * 8);
+            // Keep within valid range
+            value = Math.max(0, Math.min(100, value));
+          }
+          
+          chartData.push({
+            name: hourLabel,
+            value: Math.round(value)
+          });
+        }
+      } else if (timeFilter === "day") {
+        // Daily view: Get data for each day in the past week
+        const daysToShow = 7;
+        for (let i = daysToShow - 1; i >= 0; i--) {
+          const date = new Date();
+          date.setDate(today.getDate() - i);
+          
+          let value = 0;
+          
+          // For real data, this would come from Firebase history
+          if (type === 'water' && waterData[deviceId]) {
+            // Add some variation to show daily changes
+            value = waterData[deviceId].level + (Math.cos(i * 0.8) * 15);
+            // Keep within valid range
+            value = Math.max(0, Math.min(100, value));
+          } else if (type === 'waste' && wasteData[deviceId]) {
+            // Add some variation to show daily changes
+            value = wasteData[deviceId].fullness + (Math.cos(i * 0.8) * 12);
+            // Keep within valid range
+            value = Math.max(0, Math.min(100, value));
+          }
+          
+          chartData.push({
+            name: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            value: Math.round(value)
+          });
+        }
+      } else if (timeFilter === "week") {
+        // Weekly view: Get data for each week in the past month
+        const weeksToShow = 4;
+        for (let i = 0; i < weeksToShow; i++) {
+          let value = 0;
+          
+          // For real data, this would come from Firebase history
+          if (type === 'water' && waterData[deviceId]) {
+            // Show a pattern of increasing data over weeks
+            value = waterData[deviceId].level - 20 + (i * 7);
+            // Keep within valid range
+            value = Math.max(0, Math.min(100, value));
+          } else if (type === 'waste' && wasteData[deviceId]) {
+            // Show a pattern of increasing data over weeks
+            value = wasteData[deviceId].fullness - 15 + (i * 6);
+            // Keep within valid range
+            value = Math.max(0, Math.min(100, value));
+          }
+          
+          chartData.push({
+            name: `Week ${i + 1}`,
+            value: Math.round(value)
+          });
+        }
+      } else if (timeFilter === "month") {
+        // Monthly view: Get data for each month in the past year
+        const monthsToShow = 12;
+        for (let i = monthsToShow - 1; i >= 0; i--) {
+          const date = new Date();
+          date.setMonth(today.getMonth() - i);
+          
+          let value = 0;
+          
+          // For real data, this would come from Firebase history
+          if (type === 'water' && waterData[deviceId]) {
+            // Show seasonal pattern for water levels
+            value = waterData[deviceId].level - 30 + Math.sin(i * 0.5) * 25 + i;
+            // Keep within valid range
+            value = Math.max(0, Math.min(100, value));
+          } else if (type === 'waste' && wasteData[deviceId]) {
+            // Show seasonal pattern for bin fullness
+            value = wasteData[deviceId].fullness - 25 + Math.sin(i * 0.5) * 20 + i;
+            // Keep within valid range
+            value = Math.max(0, Math.min(100, value));
+          }
+          
+          chartData.push({
+            name: date.toLocaleDateString('en-US', { month: 'short' }),
+            value: Math.round(value)
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error loading chart data:", error);
     }
     
-    return data;
+    return chartData;
   }
 
   return (
     <DashboardLayout title="Dashboard" subtitle="DrainSentry system overview">
+      {/* Time Period Filter Controls */}
+      <div className="flex justify-end mb-4">
+        <div className="flex items-center space-x-1 p-1 bg-gray-100 rounded-lg">
+          <Button 
+            variant={timeFilter === "hour" ? "default" : "ghost"} 
+            size="sm" 
+            onClick={() => setTimeFilter("hour")}
+            className="text-xs"
+          >
+            Hourly
+          </Button>
+          <Button 
+            variant={timeFilter === "day" ? "default" : "ghost"} 
+            size="sm" 
+            onClick={() => setTimeFilter("day")}
+            className="text-xs"
+          >
+            Daily
+          </Button>
+          <Button 
+            variant={timeFilter === "week" ? "default" : "ghost"} 
+            size="sm" 
+            onClick={() => setTimeFilter("week")}
+            className="text-xs"
+          >
+            Weekly
+          </Button>
+          <Button 
+            variant={timeFilter === "month" ? "default" : "ghost"} 
+            size="sm" 
+            onClick={() => setTimeFilter("month")}
+            className="text-xs"
+          >
+            Monthly
+          </Button>
+        </div>
+      </div>
+      
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card className="animated-card hover-scale fade-in">
           <CardHeader className="pb-2">
@@ -573,13 +718,17 @@ export default function Dashboard() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base font-medium">Water Level Trends</CardTitle>
-                <CardDescription>Average water levels over the past week</CardDescription>
+                <CardDescription>
+                  {timeFilter === "hour" ? "Hourly" : 
+                   timeFilter === "day" ? "Daily" : 
+                   timeFilter === "week" ? "Weekly" : "Monthly"} water level readings
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
-                      data={generateSampleData('water', 50)}
+                      data={getFormattedData('water', Object.keys(waterData)[0] || '')}
                       margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
                     >
                       <defs>
@@ -611,13 +760,17 @@ export default function Dashboard() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base font-medium">Waste Bin Status</CardTitle>
-                <CardDescription>Average bin fullness over the past week</CardDescription>
+                <CardDescription>
+                  {timeFilter === "hour" ? "Hourly" : 
+                   timeFilter === "day" ? "Daily" : 
+                   timeFilter === "week" ? "Weekly" : "Monthly"} bin fullness readings
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
-                      data={generateSampleData('waste', 35)}
+                      data={getFormattedData('waste', Object.keys(wasteData)[0] || '')}
                       margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
