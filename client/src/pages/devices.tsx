@@ -858,6 +858,7 @@ export default function Devices() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Device</TableHead>
+                  <TableHead>Device ID</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>
