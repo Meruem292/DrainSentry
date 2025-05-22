@@ -324,19 +324,52 @@ export default function Devices() {
     if (!user) return;
     
     try {
-      // Remove device from devices
-      const deviceRef = ref(database, `users/${user.uid}/devices/${deviceId}`);
+      // First, find the container key for this device ID
+      const devicesRef = ref(database, `users/${user.uid}/devices`);
+      const devicesSnapshot = await get(devicesRef);
+      
+      if (!devicesSnapshot.exists()) {
+        toast({
+          title: "No devices found",
+          description: "No devices found in your account.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Find the device container key
+      const devicesData = devicesSnapshot.val();
+      let containerKey = null;
+      
+      // Loop through devices to find the one with matching ID
+      Object.entries(devicesData).forEach(([key, value]: [string, any]) => {
+        if (value.id === deviceId) {
+          containerKey = key;
+        }
+      });
+      
+      if (!containerKey) {
+        toast({
+          title: "Device not found",
+          description: "The device could not be found in your account.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Remove device using the correct container key
+      const deviceRef = ref(database, `users/${user.uid}/devices/${containerKey}`);
       await remove(deviceRef);
       
-      // Check if there's associated water level data
-      const waterRef = ref(database, `users/${user.uid}/waterLevels/${deviceId}`);
+      // Remove associated water level data
+      const waterRef = ref(database, `users/${user.uid}/waterLevels/${containerKey}`);
       const waterSnapshot = await get(waterRef);
       if (waterSnapshot.exists()) {
         await remove(waterRef);
       }
       
-      // Check if there's associated waste bin data
-      const wasteRef = ref(database, `users/${user.uid}/wasteBins/${deviceId}`);
+      // Remove associated waste bin data
+      const wasteRef = ref(database, `users/${user.uid}/wasteBins/${containerKey}`);
       const wasteSnapshot = await get(wasteRef);
       if (wasteSnapshot.exists()) {
         await remove(wasteRef);
