@@ -15,6 +15,7 @@ export interface WasteBin {
 }
 
 export interface Device {
+  firebaseId: any;
   id: string;
   name: string;
   location: string;
@@ -69,8 +70,10 @@ export interface WaterLevelHistory {
 
 export interface WasteBinHistory {
   date: string;
-  [binId: string]: {
-    weight: number;
-    fullness: number;
-  } | string;
+  [binId: string]:
+    | {
+        weight: number;
+        fullness: number;
+      }
+    | string;
 }

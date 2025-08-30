@@ -13,20 +13,22 @@ import Devices from "@/pages/devices";
 import Contacts from "@/pages/contacts";
 import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
+import Conveyor from "@/pages/conveyor";
 
 function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
-      <Route path="/" exact component={Dashboard} />
-      <Route path="/water-levels" exact component={WaterLevels} />
+      <Route path="/" component={Dashboard} />
+      <Route path="/water-levels" component={WaterLevels} />
       <Route path="/water-levels/:id" component={WaterLevelDetails} />
       <Route path="/water-level-details" component={WaterLevelDetails} />
-      <Route path="/waste-bins" exact component={WasteBins} />
-      <Route path="/devices" exact component={Devices} />
+      <Route path="/waste-bins" component={WasteBins} />
+      <Route path="/devices" component={Devices} />
       <Route path="/device-history/:id" component={DeviceHistory} />
-      <Route path="/contacts" exact component={Contacts} />
-      <Route path="/settings" exact component={Settings} />
+      <Route path="/contacts" component={Contacts} />
+      <Route path="/settings" component={Settings} />
+      <Route path="/conveyor" component={Conveyor} />
       <Route component={NotFound} />
     </Switch>
   );

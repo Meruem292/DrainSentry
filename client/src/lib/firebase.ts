@@ -3,13 +3,14 @@ import { getAuth } from "firebase/auth";
 import { getDatabase } from "firebase/database";
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
-  authDomain: `${import.meta.env.VITE_FIREBASE_PROJECT_ID || ""}.firebaseapp.com`,
-  databaseURL: `https://${import.meta.env.VITE_FIREBASE_PROJECT_ID || ""}-default-rtdb.firebaseio.com`,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
-  storageBucket: `${import.meta.env.VITE_FIREBASE_PROJECT_ID || ""}.appspot.com`,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "",
+  apiKey: "AIzaSyD50Lsmg3khTmYkGiu7LREqivXsBkePQMI",
+  authDomain: "drainsentry.firebaseapp.com",
+  databaseURL: "https://drainsentry-default-rtdb.firebaseio.com",
+  projectId: "drainsentry",
+  storageBucket: "drainsentry.firebasestorage.app",
+  messagingSenderId: "610406293973",
+  appId: "1:610406293973:web:e112664f4dbfd9d6dd1d5c",
+  measurementId: "G-PF2451RX9Q",
 };
 
 // Initialize Firebase
