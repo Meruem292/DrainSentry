@@ -47,6 +47,7 @@ import {
   Pie,
   Legend
 } from "recharts";
+import { useWaterLevelHistory, useWasteBinHistory } from "@/hooks/useHistoryData";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -56,6 +57,11 @@ export default function Dashboard() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState<"hour" | "day" | "week" | "month">("hour");
+  const [chartDeviceId, setChartDeviceId] = useState<string | null>(null);
+
+  // Get history data
+  const { history: waterHistory, loading: waterHistoryLoading } = useWaterLevelHistory(chartDeviceId || "");
+  const { history: wasteHistory, loading: wasteHistoryLoading } = useWasteBinHistory(chartDeviceId || "");
 
   useEffect(() => {
     if (!user) return;
@@ -94,6 +100,9 @@ export default function Dashboard() {
           ...(value as any),
         }));
         setDevices(deviceList);
+        if (deviceList.length > 0 && !chartDeviceId) {
+          setChartDeviceId(deviceList[0].id);
+        }
       } else {
         setDevices([]);
       }
@@ -104,7 +113,7 @@ export default function Dashboard() {
       wasteUnsubscribe();
       devicesUnsubscribe();
     };
-  }, [user]);
+  }, [user, chartDeviceId]);
 
   const totalDevices = devices.length;
   
@@ -144,129 +153,74 @@ export default function Dashboard() {
   const criticalBins = Object.values(wasteData).filter(bin => bin.fullness > 85).length;
 
   // Generate real data for charts from Firebase based on time filter
-  function getFormattedData(type: 'water' | 'waste', deviceId: string) {
-    // Check if we have any data
-    if (!user || !deviceId) return [];
-    
-    // Return array to collect data points
-    const chartData = [];
-    
-    // Get today's date for reference
-    const today = new Date();
-    
-    // For real data, we'd use these values to query Firebase
-    try {
-      // Different data points based on time filter
-      if (timeFilter === "hour") {
-        // Hourly view: Show last 24 hours
-        const hoursInDay = 24;
-        for (let i = 0; i < hoursInDay; i++) {
-          const hourLabel = i.toString().padStart(2, '0') + ":00";
-          let value = 0;
-          
-          // For real data, use current device data from the firebase objects
-          if (type === 'water' && waterData[deviceId]) {
-            // Add some variation to show hourly changes
-            value = waterData[deviceId].level + (Math.sin(i * 0.5) * 10);
-            // Keep within valid range
-            value = Math.max(0, Math.min(100, value));
-          } else if (type === 'waste' && wasteData[deviceId]) {
-            // Add some variation to show hourly changes
-            value = wasteData[deviceId].fullness + (Math.sin(i * 0.5) * 8);
-            // Keep within valid range
-            value = Math.max(0, Math.min(100, value));
-          }
-          
-          chartData.push({
-            name: hourLabel,
-            value: Math.round(value)
-          });
-        }
-      } else if (timeFilter === "day") {
-        // Daily view: Get data for each day in the past week
-        const daysToShow = 7;
-        for (let i = daysToShow - 1; i >= 0; i--) {
-          const date = new Date();
-          date.setDate(today.getDate() - i);
-          
-          let value = 0;
-          
-          // For real data, this would come from Firebase history
-          if (type === 'water' && waterData[deviceId]) {
-            // Add some variation to show daily changes
-            value = waterData[deviceId].level + (Math.cos(i * 0.8) * 15);
-            // Keep within valid range
-            value = Math.max(0, Math.min(100, value));
-          } else if (type === 'waste' && wasteData[deviceId]) {
-            // Add some variation to show daily changes
-            value = wasteData[deviceId].fullness + (Math.cos(i * 0.8) * 12);
-            // Keep within valid range
-            value = Math.max(0, Math.min(100, value));
-          }
-          
-          chartData.push({
-            name: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            value: Math.round(value)
-          });
-        }
-      } else if (timeFilter === "week") {
-        // Weekly view: Get data for each week in the past month
-        const weeksToShow = 4;
-        for (let i = 0; i < weeksToShow; i++) {
-          let value = 0;
-          
-          // For real data, this would come from Firebase history
-          if (type === 'water' && waterData[deviceId]) {
-            // Show a pattern of increasing data over weeks
-            value = waterData[deviceId].level - 20 + (i * 7);
-            // Keep within valid range
-            value = Math.max(0, Math.min(100, value));
-          } else if (type === 'waste' && wasteData[deviceId]) {
-            // Show a pattern of increasing data over weeks
-            value = wasteData[deviceId].fullness - 15 + (i * 6);
-            // Keep within valid range
-            value = Math.max(0, Math.min(100, value));
-          }
-          
-          chartData.push({
-            name: `Week ${i + 1}`,
-            value: Math.round(value)
-          });
-        }
-      } else if (timeFilter === "month") {
-        // Monthly view: Get data for each month in the past year
-        const monthsToShow = 12;
-        for (let i = monthsToShow - 1; i >= 0; i--) {
-          const date = new Date();
-          date.setMonth(today.getMonth() - i);
-          
-          let value = 0;
-          
-          // For real data, this would come from Firebase history
-          if (type === 'water' && waterData[deviceId]) {
-            // Show seasonal pattern for water levels
-            value = waterData[deviceId].level - 30 + Math.sin(i * 0.5) * 25 + i;
-            // Keep within valid range
-            value = Math.max(0, Math.min(100, value));
-          } else if (type === 'waste' && wasteData[deviceId]) {
-            // Show seasonal pattern for bin fullness
-            value = wasteData[deviceId].fullness - 25 + Math.sin(i * 0.5) * 20 + i;
-            // Keep within valid range
-            value = Math.max(0, Math.min(100, value));
-          }
-          
-          chartData.push({
-            name: date.toLocaleDateString('en-US', { month: 'short' }),
-            value: Math.round(value)
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Error loading chart data:", error);
+  function getFormattedData(type: 'water' | 'waste', history: any[]) {
+    if (!history || history.length === 0) {
+      return [];
     }
-    
-    return chartData;
+
+    const now = new Date();
+    let data = [];
+
+    switch (timeFilter) {
+      case 'hour':
+        // Filter data for the last 24 hours
+        const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        data = history.filter(item => new Date(item.timestamp) >= last24Hours);
+        return data.map(item => ({
+          name: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          value: type === 'water' ? item.level : item.fullness,
+        }));
+      case 'day':
+        // Filter data for the last 7 days
+        const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        data = history.filter(item => new Date(item.timestamp) >= last7Days);
+        return data.map(item => ({
+          name: new Date(item.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' }),
+          value: type === 'water' ? item.level : item.fullness,
+        }));
+      case 'week':
+        // Filter data for the last 4 weeks
+        const last4Weeks = new Date(now.getTime() - 4 * 7 * 24 * 60 * 60 * 1000);
+        data = history.filter(item => new Date(item.timestamp) >= last4Weeks);
+        // Aggregate data by week
+        const weeklyData = data.reduce((acc: Record<string, { name: string; values: number[] }>, item: any) => {
+          const weekStart = new Date(item.timestamp);
+          weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+          const weekKey = weekStart.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
+          if (!acc[weekKey]) {
+            acc[weekKey] = { name: `Week of ${weekKey}`, values: [] };
+          }
+          acc[weekKey].values.push(type === 'water' ? item.level : item.fullness);
+          return acc;
+        }, {});
+        return Object.values(weeklyData).map((week: { name: string; values: number[] }) => ({
+          name: week.name,
+          value: week.values.reduce((a: number, b: number) => a + b, 0) / week.values.length,
+        }));
+      case 'month':
+        // Filter data for the last 12 months
+        const last12Months = new Date(now.setMonth(now.getMonth() - 12));
+        data = history.filter(item => new Date(item.timestamp) >= last12Months);
+        // Aggregate data by month
+        const monthlyData = data.reduce((acc: Record<string, { name: string; values: number[] }>, item: any) => {
+          const monthKey = new Date(item.timestamp).toLocaleDateString([], { year: 'numeric', month: 'short' });
+          if (!acc[monthKey]) {
+            acc[monthKey] = { name: monthKey, values: [] };
+          }
+          acc[monthKey].values.push(type === 'water' ? item.level : item.fullness);
+          return acc;
+        }, {});
+        return Object.values(monthlyData).map((month: { name: string; values: number[] }) => ({
+            name: month.name,
+            value: month.values.reduce((a: number, b: number) => a + b, 0) / month.values.length,
+        }));
+      default:
+        return [];
+    }
   }
+
+  const waterChartData = getFormattedData('water', waterHistory);
+  const wasteChartData = getFormattedData('waste', wasteHistory);
 
   return (
     <DashboardLayout title="Dashboard" subtitle="DrainSentry system overview">
@@ -796,63 +750,71 @@ export default function Dashboard() {
                   </div>
                 </CardHeader>
                 <CardContent className="p-4">
-                  <div className="h-72">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart
-                        data={getFormattedData('water', Object.keys(waterData)[0] || '')}
-                        margin={{ top: 10, right: 10, left: 10, bottom: 10 }}
-                      >
-                        <defs>
-                          <linearGradient id="colorWater" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-                        <XAxis 
-                          dataKey="name" 
-                          tick={{ fontSize: 12 }}
-                          axisLine={{ stroke: '#e5e7eb' }}
-                          tickLine={{ stroke: '#e5e7eb' }}
-                        />
-                        <YAxis 
-                          tickFormatter={(value) => `${value}%`}
-                          domain={[0, 100]}
-                          tick={{ fontSize: 12 }}
-                          axisLine={{ stroke: '#e5e7eb' }}
-                          tickLine={{ stroke: '#e5e7eb' }}
-                        />
-                        <Tooltip 
-                          formatter={(value) => [`${value}%`, 'Water Level']}
-                          contentStyle={{
-                            backgroundColor: 'white',
-                            borderRadius: '6px',
-                            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
-                            border: '1px solid #e5e7eb'
-                          }}
-                        />
-                        <Area 
-                          type="monotone" 
-                          dataKey="value" 
-                          stroke="#3b82f6" 
-                          strokeWidth={2}
-                          fillOpacity={1} 
-                          fill="url(#colorWater)" 
-                          activeDot={{ r: 6, stroke: 'white', strokeWidth: 2 }}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                  
-                  <div className="flex justify-between items-center mt-4 px-2">
-                    <div className="flex items-center">
-                      <div className="h-3 w-3 rounded-full bg-blue-500 mr-2"></div>
-                      <span className="text-sm text-gray-500">Water Level</span>
+                  {waterChartData.length === 0 ? (
+                    <div className="flex items-center justify-center h-72">
+                      <p className="text-gray-500">No data found</p>
                     </div>
-                    <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                      Last update: {new Date().toLocaleTimeString()}
-                    </div>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="h-72">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart
+                            data={waterChartData}
+                            margin={{ top: 10, right: 10, left: 10, bottom: 10 }}
+                          >
+                            <defs>
+                              <linearGradient id="colorWater" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                            <XAxis
+                              dataKey="name"
+                              tick={{ fontSize: 12 }}
+                              axisLine={{ stroke: '#e5e7eb' }}
+                              tickLine={{ stroke: '#e5e7eb' }}
+                            />
+                            <YAxis
+                              tickFormatter={(value) => `${value}%`}
+                              domain={[0, 100]}
+                              tick={{ fontSize: 12 }}
+                              axisLine={{ stroke: '#e5e7eb' }}
+                              tickLine={{ stroke: '#e5e7eb' }}
+                            />
+                            <Tooltip
+                              formatter={(value) => [`${value}%`, 'Water Level']}
+                              contentStyle={{
+                                backgroundColor: 'white',
+                                borderRadius: '6px',
+                                boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
+                                border: '1px solid #e5e7eb'
+                              }}
+                            />
+                            <Area
+                              type="monotone"
+                              dataKey="value"
+                              stroke="#3b82f6"
+                              strokeWidth={2}
+                              fillOpacity={1}
+                              fill="url(#colorWater)"
+                              activeDot={{ r: 6, stroke: 'white', strokeWidth: 2 }}
+                            />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      <div className="flex justify-between items-center mt-4 px-2">
+                        <div className="flex items-center">
+                          <div className="h-3 w-3 rounded-full bg-blue-500 mr-2"></div>
+                          <span className="text-sm text-gray-500">Water Level</span>
+                        </div>
+                        <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                          Last update: {new Date().toLocaleTimeString()}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
               
@@ -876,55 +838,63 @@ export default function Dashboard() {
                   </div>
                 </CardHeader>
                 <CardContent className="p-4">
-                  <div className="h-72">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={getFormattedData('waste', Object.keys(wasteData)[0] || '')}
-                        margin={{ top: 10, right: 10, left: 10, bottom: 10 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-                        <XAxis 
-                          dataKey="name" 
-                          tick={{ fontSize: 12 }}
-                          axisLine={{ stroke: '#e5e7eb' }}
-                          tickLine={{ stroke: '#e5e7eb' }}
-                        />
-                        <YAxis 
-                          tickFormatter={(value) => `${value}%`}
-                          domain={[0, 100]}
-                          tick={{ fontSize: 12 }}
-                          axisLine={{ stroke: '#e5e7eb' }}
-                          tickLine={{ stroke: '#e5e7eb' }}
-                        />
-                        <Tooltip 
-                          formatter={(value) => [`${value}%`, 'Bin Fullness']}
-                          contentStyle={{
-                            backgroundColor: 'white',
-                            borderRadius: '6px',
-                            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
-                            border: '1px solid #e5e7eb'
-                          }}
-                        />
-                        <Bar 
-                          dataKey="value" 
-                          radius={[4, 4, 0, 0]}
-                          fillOpacity={0.9}
-                          barSize={30}
-                          fill="#10b981"
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                  
-                  <div className="flex justify-between items-center mt-4 px-2">
-                    <div className="flex items-center">
-                      <div className="h-3 w-3 rounded-full bg-emerald-500 mr-2"></div>
-                      <span className="text-sm text-gray-500">Bin Fullness</span>
+                  {wasteChartData.length === 0 ? (
+                    <div className="flex items-center justify-center h-72">
+                      <p className="text-gray-500">No data found</p>
                     </div>
-                    <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                      Last update: {new Date().toLocaleTimeString()}
-                    </div>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="h-72">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={wasteChartData}
+                            margin={{ top: 10, right: 10, left: 10, bottom: 10 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                            <XAxis
+                              dataKey="name"
+                              tick={{ fontSize: 12 }}
+                              axisLine={{ stroke: '#e5e7eb' }}
+                              tickLine={{ stroke: '#e5e7eb' }}
+                            />
+                            <YAxis
+                              tickFormatter={(value) => `${value}%`}
+                              domain={[0, 100]}
+                              tick={{ fontSize: 12 }}
+                              axisLine={{ stroke: '#e5e7eb' }}
+                              tickLine={{ stroke: '#e5e7eb' }}
+                            />
+                            <Tooltip
+                              formatter={(value) => [`${value}%`, 'Bin Fullness']}
+                              contentStyle={{
+                                backgroundColor: 'white',
+                                borderRadius: '6px',
+                                boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
+                                border: '1px solid #e5e7eb'
+                              }}
+                            />
+                            <Bar
+                              dataKey="value"
+                              radius={[4, 4, 0, 0]}
+                              fillOpacity={0.9}
+                              barSize={30}
+                              fill="#10b981"
+                            />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      <div className="flex justify-between items-center mt-4 px-2">
+                        <div className="flex items-center">
+                          <div className="h-3 w-3 rounded-full bg-emerald-500 mr-2"></div>
+                          <span className="text-sm text-gray-500">Bin Fullness</span>
+                        </div>
+                        <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                          Last update: {new Date().toLocaleTimeString()}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </div>

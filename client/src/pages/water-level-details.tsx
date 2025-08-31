@@ -144,7 +144,9 @@ export default function WaterLevelDetails() {
       });
       
       // Fetch historical data for this device
-      fetchHistoricalData(user.uid, deviceKey);
+      if (deviceKey) {
+        fetchHistoricalData(user.uid, deviceKey);
+      }
     });
     
     setLoading(false);
