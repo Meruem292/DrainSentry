@@ -1,0 +1,143 @@
+import { Link, useLocation } from "wouter";
+import {
+  LayoutDashboard,
+  Droplet,
+  Trash2,
+  CircuitBoard,
+  Users,
+  Settings,
+  LogOut,
+  Power,
+} from "lucide-react";
+import { auth } from "@/lib/firebase";
+import { useToast } from "@/hooks/use-toast";
+
+interface SidebarProps {
+  mobile?: boolean;
+}
+
+export default function Sidebar({ mobile = false }: SidebarProps) {
+  const [location] = useLocation();
+  const { toast } = useToast();
+
+  const handleSignOut = async () => {
+    try {
+      await auth.signOut();
+      toast({
+        title: "Signed out successfully",
+        description: "You have been logged out of DrainSentry",
+      });
+    } catch (error) {
+      toast({
+        title: "Sign out failed",
+        description: "There was an error signing out. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const isActive = (path: string) => {
+    return location === path ? "active" : "";
+  };
+
+  const navItems = [
+    {
+      icon: <LayoutDashboard size={mobile ? 20 : 18} />,
+      label: "Dashboard",
+      path: "/",
+    },
+    {
+      icon: <Droplet size={mobile ? 20 : 18} />,
+      label: "Water Levels",
+      path: "/water-levels",
+    },
+    {
+      icon: <Trash2 size={mobile ? 20 : 18} />,
+      label: "Waste Bins",
+      path: "/waste-bins",
+    },
+    {
+      icon: <CircuitBoard size={mobile ? 20 : 18} />,
+      label: "Devices",
+      path: "/devices",
+    },
+    {
+      icon: <Users size={mobile ? 20 : 18} />,
+      label: "Contacts",
+      path: "/contacts",
+    },
+    {
+      icon: <Power size={mobile ? 20 : 18} />,
+      label: "Conveyor",
+      path: "/conveyor",
+    },
+    {
+      icon: <Settings size={mobile ? 20 : 18} />,
+      label: "Settings",
+      path: "/settings",
+    },
+  ];
+
+  if (mobile) {
+    return (
+      <div className="flex justify-around py-2 bg-white border-t border-gray-200 fixed bottom-0 left-0 right-0 z-50">
+        {navItems.map((item) => (
+          <Link 
+            key={item.path} 
+            href={item.path}
+            className={`flex flex-col items-center p-2 ${
+              isActive(item.path) ? "text-primary" : "text-gray-500"
+            }`}
+          >
+            {item.icon}
+            <span className="text-xs mt-1">{item.label}</span>
+          </Link>
+        ))}
+        {/* Add logout button to mobile navbar */}
+        <button
+          onClick={handleSignOut}
+          className="flex flex-col items-center p-2 text-gray-500"
+          style={{ background: "none", border: "none" }}
+          aria-label="Logout"
+        >
+          <LogOut size={mobile ? 20 : 18} />
+          <span className="text-xs mt-1">Logout</span>
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-64 h-full bg-white shadow-md flex flex-col">
+      <div className="p-4 border-b border-gray-200">
+        <h1 className="text-2xl font-bold">
+          <span className="text-primary">Drain</span>
+          <span className="text-secondary">Sentry</span>
+        </h1>
+      </div>
+
+      <div className="flex-1 p-2">
+        {navItems.map((item) => (
+          <Link
+            key={item.path}
+            href={item.path}
+            className={`sidebar-link ${isActive(item.path)}`}
+          >
+            <span className="mr-3 text-gray-500">{item.icon}</span>
+            <span>{item.label}</span>
+          </Link>
+        ))}
+      </div>
+
+      <div className="p-4 border-t border-gray-200">
+        <button
+          onClick={handleSignOut}
+          className="sidebar-link w-full text-gray-700"
+        >
+          <LogOut size={18} className="mr-3" />
+          <span>Logout</span>
+        </button>
+      </div>
+    </div>
+  );
+}
