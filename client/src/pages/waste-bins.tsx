@@ -19,7 +19,13 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Bar,
   LineChart,
@@ -46,6 +52,7 @@ import { Device, WaterLevel, WasteBin } from "@/types";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useWasteBinHistory } from "@/hooks/useHistoryData";
+import { ref as dbRef, onValue as onDbValue } from "firebase/database";
 
 export default function WasteBins() {
   const { user } = useAuth();
@@ -57,9 +64,23 @@ export default function WasteBins() {
   const [wasteBins, setWasteBins] = useState<Record<string, WasteBin>>({});
   const [loading, setLoading] = useState(true);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
-  
-  // Get history data for the selected device
-  const { history: wasteHistory, loading: historyLoading } = useWasteBinHistory(selectedDeviceId || "");
+  // Store all device histories
+  const [allWasteHistories, setAllWasteHistories] = useState<
+    Record<
+      string,
+      Array<{ timestamp: string; fullness: number; weight: number }>
+    >
+  >({});
+
+  // Debug function to log history data
+  useEffect(() => {
+    console.log("Current history data:", allWasteHistories);
+    console.log("Current devices:", devices);
+  }, [allWasteHistories, devices]);
+  // Get history data for the selected device (for chart)
+  const { history: wasteHistory, loading: historyLoading } = useWasteBinHistory(
+    selectedDeviceId || ""
+  );
 
   useEffect(() => {
     if (!user) return;
@@ -67,27 +88,69 @@ export default function WasteBins() {
     const devicesRef = ref(database, `users/${user.uid}/devices`);
     const waterLevelsRef = ref(database, `users/${user.uid}/waterLevels`);
     const wasteBinsRef = ref(database, `users/${user.uid}/wasteBins`);
+    const historyUnsubscribes: Array<() => void> = [];
 
-    // Get all devices
+    // Get all devices and their histories
     const devicesUnsubscribe = onValue(devicesRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const deviceList = Object.entries(data).map(([key, device]: [string, any]) => ({
-          firebaseKey: key,
-          id: device.id,
-          name: device.name,
-          location: device.location,
-          status: device.status,
-          lastSeen: device.lastSeen,
-          ...device
-        }));
+        const deviceList = Object.entries(data).map(
+          ([key, device]: [string, any]) => ({
+            firebaseKey: key,
+            id: device.id,
+            name: device.name,
+            location: device.location,
+            status: device.status,
+            lastSeen: device.lastSeen,
+            ...device,
+          })
+        );
         setDevices(deviceList);
+
         // Set the first device as selected for charts if none is selected
         if (deviceList.length > 0 && !selectedDeviceId) {
           setSelectedDeviceId(deviceList[0].id);
         }
+
+        // Clear previous history subscriptions
+        historyUnsubscribes.forEach((unsub) => unsub());
+        historyUnsubscribes.length = 0;
+
+        // Subscribe to each device's waste bin history
+        deviceList.forEach((device) => {
+          const historyRef = ref(
+            database,
+            `users/${user.uid}/devices/${device.firebaseKey}/wasteBinHistory`
+          );
+          const unsub = onValue(historyRef, (historySnapshot) => {
+            const historyData = historySnapshot.val();
+            if (historyData) {
+              const formattedHistory = Object.entries(historyData).map(
+                ([timestamp, data]: [string, any]) => ({
+                  timestamp,
+                  fullness:
+                    typeof data.fullness === "number" ? data.fullness : 0,
+                  weight: typeof data.weight === "number" ? data.weight : 0,
+                })
+              );
+
+              setAllWasteHistories((prev) => ({
+                ...prev,
+                [device.firebaseKey]: formattedHistory,
+              }));
+              console.log(`History for ${device.name}:`, formattedHistory);
+            } else {
+              setAllWasteHistories((prev) => ({
+                ...prev,
+                [device.firebaseKey]: [],
+              }));
+            }
+          });
+          historyUnsubscribes.push(unsub);
+        });
       } else {
         setDevices([]);
+        setAllWasteHistories({});
       }
       setLoading(false);
     });
@@ -116,8 +179,9 @@ export default function WasteBins() {
       devicesUnsubscribe();
       waterLevelsUnsubscribe();
       wasteBinsUnsubscribe();
+      historyUnsubscribes.forEach((unsub) => unsub());
     };
-  }, [user]);
+  }, [user, selectedDeviceId]);
 
   // Helper functions for water level
   function getWaterLevelColor(level: number): string {
@@ -161,6 +225,23 @@ export default function WasteBins() {
   const fiveMinutesAgo = new Date();
   fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
 
+  // Debug logging
+  useEffect(() => {
+    console.log("Devices:", devices);
+    console.log("All Waste Histories:", allWasteHistories);
+
+    // Log latest values from each device's history
+    devices.forEach((device) => {
+      const history = allWasteHistories[device.firebaseKey] || [];
+      if (history.length > 0) {
+        const latest = history.reduce((a, b) =>
+          new Date(a.timestamp) > new Date(b.timestamp) ? a : b
+        );
+        console.log(`Latest data for ${device.name}:`, latest);
+      }
+    });
+  }, [devices, allWasteHistories]);
+
   // Format history data for charts
   function formatWasteBinHistoryData(history: any[]) {
     if (!history || history.length === 0) {
@@ -170,12 +251,12 @@ export default function WasteBins() {
     // Take the last 7 days of data
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
-    const recentHistory = history.filter(item => 
-      new Date(item.timestamp) >= sevenDaysAgo
+
+    const recentHistory = history.filter(
+      (item) => new Date(item.timestamp) >= sevenDaysAgo
     );
 
-    return recentHistory.map(item => ({
+    return recentHistory.map((item) => ({
       date: new Date(item.timestamp).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
@@ -187,24 +268,45 @@ export default function WasteBins() {
 
   const chartData = formatWasteBinHistoryData(wasteHistory);
 
-  // Calculate average waste bin metrics across all devices
+  // Calculate average bin fullness and weight using only the latest history values
+  function getLatestHistoryValueFromAll(
+    deviceFirebaseKey: string,
+    key: "fullness" | "weight"
+  ) {
+    const deviceHistory = allWasteHistories[deviceFirebaseKey] || [];
+    if (deviceHistory.length > 0) {
+      // Sort by timestamp descending and get the latest
+      const latest = deviceHistory.reduce((a, b) =>
+        new Date(a.timestamp) > new Date(b.timestamp) ? a : b
+      );
+      return typeof latest[key] === "number" ? latest[key] : 0;
+    }
+    return 0;
+  }
+
+  // Get all valid latest history values
+  const binFullnessValues = devices
+    .map((d) => getLatestHistoryValueFromAll(d.firebaseKey, "fullness"))
+    .filter((v) => typeof v === "number");
+
+  const binWeightValues = devices
+    .map((d) => getLatestHistoryValueFromAll(d.firebaseKey, "weight"))
+    .filter((v) => typeof v === "number");
+
+  // Calculate averages using only history values
   const averageBinFullness =
-    Object.values(wasteBins).length > 0
+    binFullnessValues.length > 0
       ? Math.round(
-          Object.values(wasteBins).reduce(
-            (sum, bin) => sum + (bin.fullness || 0),
-            0
-          ) / Object.values(wasteBins).length
+          binFullnessValues.reduce((sum, val) => sum + val, 0) /
+            binFullnessValues.length
         )
       : 0;
 
   const averageBinWeight =
-    Object.values(wasteBins).length > 0
+    binWeightValues.length > 0
       ? Math.round(
-          Object.values(wasteBins).reduce(
-            (sum, bin) => sum + (bin.weight || 0),
-            0
-          ) / Object.values(wasteBins).length
+          binWeightValues.reduce((sum, val) => sum + val, 0) /
+            binWeightValues.length
         )
       : 0;
 
@@ -236,11 +338,15 @@ export default function WasteBins() {
             <p className="text-sm text-muted-foreground mt-1">
               {
                 devices.filter((d) => {
-                  const wasteBin = wasteBins[d.firebaseKey];
-                  const lastEmptiedBin = wasteBin?.lastEmptied
-                    ? new Date(wasteBin.lastEmptied)
+                  const history = allWasteHistories[d.firebaseKey];
+                  if (!history || history.length === 0) return false;
+                  const latestEntry = history.reduce((a, b) =>
+                    new Date(a.timestamp) > new Date(b.timestamp) ? a : b
+                  );
+                  const lastUpdated = latestEntry
+                    ? new Date(latestEntry.timestamp)
                     : null;
-                  return lastEmptiedBin && lastEmptiedBin >= fiveMinutesAgo;
+                  return lastUpdated && lastUpdated >= fiveMinutesAgo;
                 }).length
               }{" "}
               active
@@ -299,7 +405,9 @@ export default function WasteBins() {
       {devices.length > 0 && (
         <div className="mb-4">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-700">Select device for charts:</span>
+            <span className="text-sm font-medium text-gray-700">
+              Select device for charts:
+            </span>
             <Select
               value={selectedDeviceId || ""}
               onValueChange={setSelectedDeviceId}
@@ -337,7 +445,9 @@ export default function WasteBins() {
                   </div>
                 ) : chartData.length === 0 ? (
                   <div className="flex items-center justify-center h-full">
-                    <p className="text-gray-500">No historical data available</p>
+                    <p className="text-gray-500">
+                      No historical data available
+                    </p>
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
@@ -349,7 +459,10 @@ export default function WasteBins() {
                       <XAxis dataKey="date" />
                       <YAxis domain={[0, 100]} />
                       <RechartsTooltip
-                        formatter={(value: any) => [`${value}%`, "Bin Fullness"]}
+                        formatter={(value: any) => [
+                          `${value}%`,
+                          "Bin Fullness",
+                        ]}
                       />
                       <Bar
                         dataKey="fullness"
@@ -381,7 +494,9 @@ export default function WasteBins() {
                   </div>
                 ) : chartData.length === 0 ? (
                   <div className="flex items-center justify-center h-full">
-                    <p className="text-gray-500">No historical data available</p>
+                    <p className="text-gray-500">
+                      No historical data available
+                    </p>
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
@@ -393,7 +508,10 @@ export default function WasteBins() {
                       <XAxis dataKey="date" />
                       <YAxis domain={[0, 100]} />
                       <RechartsTooltip
-                        formatter={(value: any) => [`${value} kg`, "Bin Weight"]}
+                        formatter={(value: any) => [
+                          `${value} kg`,
+                          "Bin Weight",
+                        ]}
                       />
                       <Line
                         type="monotone"
@@ -413,7 +531,6 @@ export default function WasteBins() {
           </Card>
         </div>
       )}
-
     </DashboardLayout>
   );
 }
