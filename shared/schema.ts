@@ -43,6 +43,17 @@ export const settings = pgTable("settings", {
   notifications: jsonb("notifications").notNull()
 });
 
+// FCM Tokens table for push notifications
+export const fcmTokens = pgTable("fcm_tokens", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  token: text("token").notNull().unique(),
+  deviceInfo: text("device_info"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: text("created_at").notNull(),
+  lastUsed: text("last_used")
+});
+
 // Water Levels table
 export const waterLevels = pgTable("water_levels", {
   id: serial("id").primaryKey(),
@@ -70,6 +81,7 @@ export const insertContactSchema = createInsertSchema(contacts).omit({ id: true 
 export const insertSettingsSchema = createInsertSchema(settings).omit({ id: true });
 export const insertWaterLevelSchema = createInsertSchema(waterLevels).omit({ id: true });
 export const insertWasteBinSchema = createInsertSchema(wasteBins).omit({ id: true });
+export const insertFcmTokenSchema = createInsertSchema(fcmTokens).omit({ id: true });
 
 // Type definitions
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -78,6 +90,7 @@ export type InsertContact = z.infer<typeof insertContactSchema>;
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type InsertWaterLevel = z.infer<typeof insertWaterLevelSchema>;
 export type InsertWasteBin = z.infer<typeof insertWasteBinSchema>;
+export type InsertFcmToken = z.infer<typeof insertFcmTokenSchema>;
 
 export type User = typeof users.$inferSelect;
 export type Device = typeof devices.$inferSelect;
@@ -85,3 +98,4 @@ export type Contact = typeof contacts.$inferSelect;
 export type Settings = typeof settings.$inferSelect;
 export type WaterLevel = typeof waterLevels.$inferSelect;
 export type WasteBin = typeof wasteBins.$inferSelect;
+export type FcmToken = typeof fcmTokens.$inferSelect;

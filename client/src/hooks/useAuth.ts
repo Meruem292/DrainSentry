@@ -5,14 +5,41 @@ import { useToast } from "./use-toast";
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
+  const [sessionUser, setSessionUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(
       auth,
-      (firebaseUser) => {
+      async (firebaseUser) => {
         setUser(firebaseUser);
+        
+        if (firebaseUser) {
+          // Create Express session when Firebase user signs in
+          try {
+            // Get Firebase ID token for server verification
+            const idToken = await firebaseUser.getIdToken();
+            
+            const response = await fetch('/api/auth/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ idToken }),
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              setSessionUser(data.user);
+            } else {
+              console.error('Failed to verify auth with server');
+            }
+          } catch (error) {
+            console.error('Error verifying auth:', error);
+          }
+        } else {
+          setSessionUser(null);
+        }
+        
         setLoading(false);
       },
       (error) => {
@@ -29,5 +56,5 @@ export function useAuth() {
     return () => unsubscribe();
   }, [toast]);
 
-  return { user, loading };
+  return { user, sessionUser, loading };
 }

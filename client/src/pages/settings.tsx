@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { NotificationSettings } from "@/components/ui/notification-settings";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function Settings() {
@@ -120,6 +121,13 @@ export default function Settings() {
         </CardContent>
       </Card>
 
+      {/* Push Notifications */}
+      {user && (
+        <div className="mb-6">
+          <NotificationSettings />
+        </div>
+      )}
+
       {/* Change Password */}
       <Card>
         <CardHeader>
@@ -136,11 +144,13 @@ export default function Settings() {
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   placeholder="Enter your current password"
+                  data-testid="input-current-password"
                 />
                 <button
                   type="button"
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  data-testid="button-toggle-current-password"
                 >
                   {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -156,11 +166,13 @@ export default function Settings() {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Enter your new password"
+                  data-testid="input-new-password"
                 />
                 <button
                   type="button"
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   onClick={() => setShowNewPassword(!showNewPassword)}
+                  data-testid="button-toggle-new-password"
                 >
                   {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -177,11 +189,13 @@ export default function Settings() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Confirm your new password"
+                  data-testid="input-confirm-password"
                 />
                 <button
                   type="button"
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  data-testid="button-toggle-confirm-password"
                 >
                   {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -192,6 +206,7 @@ export default function Settings() {
               onClick={handlePasswordChange}
               disabled={isChangingPassword || !currentPassword || !newPassword || !confirmPassword}
               className="w-full"
+              data-testid="button-change-password"
             >
               {isChangingPassword ? "Changing Password..." : "Change Password"}
             </Button>
