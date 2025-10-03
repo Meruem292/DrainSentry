@@ -8,6 +8,32 @@ DrainSentry is a comprehensive IoT monitoring system designed to track water lev
 
 Preferred communication style: Simple, everyday language.
 
+## Replit Environment Setup
+
+### Configuration Status
+- ✅ **Database**: PostgreSQL database provisioned and schema pushed successfully
+- ✅ **Session Management**: Express session middleware configured with secure settings
+- ✅ **Dependencies**: All required packages installed including `nanoid`
+- ✅ **Workflow**: Configured to run `npm run dev` on port 5000 with webview output
+- ✅ **Vite Server**: Configured with `allowedHosts: true` for Replit proxy compatibility
+- ✅ **Server Binding**: Express server binds to `0.0.0.0:5000` as required
+
+### Development
+- **Start Command**: `npm run dev` (runs both Express backend and Vite dev server)
+- **Port**: 5000 (frontend and backend on same port)
+- **Database Migration**: Use `npm run db:push` (or `npm run db:push --force` if data-loss warning)
+- **TypeScript Check**: `npm run check`
+
+### Production
+- **Build Command**: `npm run build` (builds frontend with Vite, bundles backend with esbuild)
+- **Start Command**: `npm run start` (runs production server from `dist/index.js`)
+- **Deployment**: Configured for Replit autoscale deployment
+
+### Environment Variables
+- `DATABASE_URL`: PostgreSQL connection string (auto-configured by Replit)
+- `SESSION_SECRET`: Session secret key (defaults to dev secret, should be set in production)
+- `NODE_ENV`: Set to `development` or `production`
+
 ## System Architecture
 
 ### Frontend Architecture
