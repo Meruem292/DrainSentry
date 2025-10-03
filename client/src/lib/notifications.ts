@@ -10,7 +10,7 @@ export interface NotificationData {
 }
 
 // Vapid key for push notifications - you'll need to get this from Firebase Console
-const VAPID_KEY = "BKqKz8ZQhHllbS8C9VZQKf8JXoNDJ6O_Y0FQ8fD2HxY";
+const VAPID_KEY = "BKqKz8ZQhHllbS8C9VZQKf8JXoNDJ6O_Y0FQ8fD2HxYJJxX_aKqKz8ZQhHllbS8C9VZQKf8JXoNDJ6O_Y0FQ8fD2HxY";
 
 export class NotificationService {
   private static instance: NotificationService;
