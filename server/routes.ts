@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertFcmTokenSchema, type FcmToken } from "@shared/schema";
 import { PushNotificationService } from "./notification-service";
+import { database, ref, get } from "./firebase";
+import { log } from "./vite";
 
 // Define session user interface
 interface SessionUser {
@@ -266,43 +268,97 @@ async function checkCriticalAlerts(userId: number) {
   return alerts;
 }
 
-// Simplified helper function to check ALL critical alerts (no user filtering)
+// Simplified helper function to check ALL critical alerts from Firebase (no user filtering)
 async function checkAllCriticalAlerts() {
-  const alerts: Array<{ type: string; message: string; severity: string; deviceId?: number }> = [];
+  const alerts: Array<{ type: string; message: string; severity: string; deviceId?: string; deviceName?: string }> = [];
 
   try {
-    // Get ALL water levels and devices
-    const waterLevels = await storage.getAllWaterLevels();
-    const devices = await storage.getAllDevices();
+    // Get all users from Firebase
+    const usersRef = ref(database, 'users');
+    const usersSnapshot = await get(usersRef);
     
-    // Check water levels for critical readings (>85%)
-    for (const level of waterLevels) {
-      if (level.level > 85) {
-        const device = devices.find(d => d.id === level.deviceId);
-        alerts.push({
-          type: 'water_level',
-          message: `Critical water level: ${level.level}% at ${device?.name || 'Unknown Device'}`,
-          severity: 'critical',
-          deviceId: level.deviceId
-        });
+    if (!usersSnapshot.exists()) {
+      return alerts;
+    }
+
+    const usersData = usersSnapshot.val();
+    
+    // Iterate through all users
+    for (const userId in usersData) {
+      const userData = usersData[userId];
+      
+      // Check water levels from history (latest readings) (>85%)
+      if (userData.waterLevelHistory) {
+        for (const deviceKey in userData.waterLevelHistory) {
+          const history = userData.waterLevelHistory[deviceKey];
+          
+          // Get the latest reading from history
+          let latestLevel = 0;
+          let latestTimestamp = 0;
+          
+          for (const timestampKey in history) {
+            const entry = history[timestampKey];
+            const timestamp = new Date(entry.timestamp || timestampKey).getTime();
+            const level = entry.level || entry.value || entry.waterLevel || 0;
+            
+            if (timestamp > latestTimestamp) {
+              latestTimestamp = timestamp;
+              latestLevel = level;
+            }
+          }
+          
+          if (latestLevel > 85) {
+            const deviceName = userData.devices?.[deviceKey]?.name || deviceKey;
+            alerts.push({
+              type: 'water_level',
+              message: `Critical water level: ${latestLevel}% at ${deviceName}`,
+              severity: 'critical',
+              deviceId: deviceKey,
+              deviceName: deviceName
+            });
+          }
+        }
+      }
+
+      // Check waste bins from history (latest readings) (>85%)
+      if (userData.wasteBinHistory) {
+        for (const deviceKey in userData.wasteBinHistory) {
+          const history = userData.wasteBinHistory[deviceKey];
+          
+          // Get the latest reading from history
+          let latestFullness = 0;
+          let latestTimestamp = 0;
+          
+          for (const timestampKey in history) {
+            const entry = history[timestampKey];
+            const timestamp = new Date(entry.timestamp || timestampKey).getTime();
+            const fullness = entry.fullness || entry.binFullness || 0;
+            
+            if (timestamp > latestTimestamp) {
+              latestTimestamp = timestamp;
+              latestFullness = fullness;
+            }
+          }
+          
+          if (latestFullness > 85) {
+            const deviceName = userData.devices?.[deviceKey]?.name || deviceKey;
+            alerts.push({
+              type: 'waste_bin',
+              message: `Critical waste bin: ${latestFullness}% full at ${deviceName}`,
+              severity: 'critical',
+              deviceId: deviceKey,
+              deviceName: deviceName
+            });
+          }
+        }
       }
     }
 
-    // Check waste bins for critical fullness (>85%)
-    const wasteBins = await storage.getAllWasteBins();
-    for (const bin of wasteBins) {
-      if (bin.fullness > 85) {
-        const device = devices.find(d => d.id === bin.deviceId);
-        alerts.push({
-          type: 'waste_bin',
-          message: `Critical waste bin: ${bin.fullness}% full at ${device?.name || 'Unknown Device'}`,
-          severity: 'critical',
-          deviceId: bin.deviceId
-        });
-      }
+    if (alerts.length > 0) {
+      log(`Found ${alerts.length} critical alert(s)`, "alerts");
     }
   } catch (error) {
-    console.error("Error checking critical alerts:", error);
+    console.error("Error checking critical alerts from Firebase:", error);
   }
 
   return alerts;
@@ -342,7 +398,7 @@ async function checkAndSendCriticalAlerts() {
         type: alert.type as 'water_level' | 'waste_bin' | 'device_offline',
         message: alert.message,
         severity: alert.severity as 'low' | 'medium' | 'high' | 'critical',
-        deviceId: alert.deviceId
+        deviceId: undefined // Firebase uses string IDs, notification service expects number
       });
     }
 
