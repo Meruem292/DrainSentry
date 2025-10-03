@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertFcmTokenSchema, type FcmToken } from "@shared/schema";
 import { PushNotificationService } from "./notification-service";
-import { database, ref, get } from "./firebase";
+import { ref, get } from "./firebase";
 import { log } from "./vite";
 
 // Define session user interface
@@ -106,16 +106,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // FCM Token endpoints for push notifications - SIMPLIFIED (No auth required)
+  // FCM Token endpoints for push notifications - SECURED
   app.post("/api/notifications/token", async (req: any, res: Response) => {
     try {
+      // Require authentication
+      if (!req.session?.user?.id) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
       const { token, deviceInfo } = req.body;
       if (!token) {
         return res.status(400).json({ error: "FCM token is required" });
       }
 
-      // Use a default user ID (1) for all tokens since we removed authentication
-      const userId = 1;
+      // Use authenticated user ID, ignore any userId from client
+      const userId = req.session.user.id;
 
       const validatedData = insertFcmTokenSchema.parse({
         userId,
@@ -126,9 +131,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastUsed: new Date().toISOString()
       });
 
-      // Check if token already exists
-      const allTokens = await storage.getAllFcmTokens();
-      const tokenExists = allTokens.find(t => t.token === token);
+      // Check if token already exists for this user
+      const existingTokens = await storage.getFcmTokens(userId);
+      const tokenExists = existingTokens.find(t => t.token === token);
       
       if (tokenExists) {
         await storage.updateFcmToken(token, new Date().toISOString());
@@ -145,6 +150,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/notifications/token/:token", async (req: any, res: Response) => {
     try {
+      // Require authentication
+      if (!req.session?.user?.id) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      // Verify the token belongs to the authenticated user
+      const userId = req.session.user.id;
+      const userTokens = await storage.getFcmTokens(userId);
+      const tokenExists = userTokens.find(t => t.token === req.params.token);
+
+      if (!tokenExists) {
+        return res.status(404).json({ error: "Token not found or not owned by user" });
+      }
+
       await storage.deleteFcmToken(req.params.token);
       res.json({ success: true });
     } catch (error) {
@@ -153,25 +172,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Critical alerts endpoint - Check all critical alerts (no auth required)
+  // Critical alerts endpoint - this will be used to check for alerts and send notifications
   app.get("/api/notifications/alerts", async (req: any, res: Response) => {
     try {
-      const alerts = await checkAllCriticalAlerts();
-      res.json({ alerts });
+      if (!req.session?.user?.id) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const userId = req.session.user.id;
+      const notificationService = PushNotificationService.getInstance();
+      const result = await notificationService.checkAndNotifyAlerts(userId);
+      res.json({ alerts: result.alerts });
     } catch (error) {
       console.error("Error checking alerts:", error);
       res.status(500).json({ error: "Failed to check alerts" });
-    }
-  });
-
-  // Endpoint to check and send push notifications for critical alerts
-  app.post("/api/notifications/check", async (req: any, res: Response) => {
-    try {
-      const result = await checkAndSendCriticalAlerts();
-      res.json(result);
-    } catch (error) {
-      console.error("Error checking and sending alerts:", error);
-      res.status(500).json({ error: "Failed to check and send alerts" });
     }
   });
 
@@ -206,216 +220,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
 
   return httpServer;
-}
-
-// Helper function to check for critical alerts
-async function checkCriticalAlerts(userId: number) {
-  const alerts: Array<{ type: string; message: string; severity: string; deviceId?: number }> = [];
-
-  try {
-    // Check water levels for high readings
-    const waterLevels = await storage.getWaterLevels(userId);
-    const devices = await storage.getDevices(userId);
-    
-    for (const level of waterLevels) {
-      if (level.level > 80) { // High water level threshold
-        const device = devices.find(d => d.id === level.deviceId);
-        alerts.push({
-          type: 'water_level',
-          message: `High water level detected: ${level.level}% at ${device?.name || 'Unknown Device'}`,
-          severity: level.level > 95 ? 'critical' : 'high',
-          deviceId: level.deviceId
-        });
-      }
-    }
-
-    // Check waste bins for fullness
-    const wasteBins = await storage.getWasteBins(userId);
-    for (const bin of wasteBins) {
-      if (bin.fullness > 85) { // Full waste bin threshold
-        const device = devices.find(d => d.id === bin.deviceId);
-        alerts.push({
-          type: 'waste_bin',
-          message: `Waste bin is ${bin.fullness}% full at ${device?.name || 'Unknown Device'}`,
-          severity: bin.fullness > 95 ? 'critical' : 'high',
-          deviceId: bin.deviceId
-        });
-      }
-    }
-
-    // Check for offline devices
-    const now = new Date();
-    for (const device of devices) {
-      if (device.lastSeen) {
-        const lastSeen = new Date(device.lastSeen);
-        const hoursSinceLastSeen = (now.getTime() - lastSeen.getTime()) / (1000 * 60 * 60);
-        
-        if (hoursSinceLastSeen > 2) { // Device offline for more than 2 hours
-          alerts.push({
-            type: 'device_offline',
-            message: `Device ${device.name} has been offline for ${Math.round(hoursSinceLastSeen)} hours`,
-            severity: hoursSinceLastSeen > 24 ? 'critical' : 'medium',
-            deviceId: device.id
-          });
-        }
-      }
-    }
-
-  } catch (error) {
-    console.error("Error checking critical alerts:", error);
-  }
-
-  return alerts;
-}
-
-// Simplified helper function to check ALL critical alerts from Firebase (no user filtering)
-async function checkAllCriticalAlerts() {
-  const alerts: Array<{ type: string; message: string; severity: string; deviceId?: string; deviceName?: string }> = [];
-
-  try {
-    // Get all users from Firebase
-    const usersRef = ref(database, 'users');
-    const usersSnapshot = await get(usersRef);
-    
-    if (!usersSnapshot.exists()) {
-      return alerts;
-    }
-
-    const usersData = usersSnapshot.val();
-    
-    // Iterate through all users
-    for (const userId in usersData) {
-      const userData = usersData[userId];
-      
-      // Check water levels from history (latest readings) (>85%)
-      if (userData.waterLevelHistory) {
-        for (const deviceKey in userData.waterLevelHistory) {
-          const history = userData.waterLevelHistory[deviceKey];
-          
-          // Get the latest reading from history
-          let latestLevel = 0;
-          let latestTimestamp = 0;
-          
-          for (const timestampKey in history) {
-            const entry = history[timestampKey];
-            const timestamp = new Date(entry.timestamp || timestampKey).getTime();
-            const level = entry.level || entry.value || entry.waterLevel || 0;
-            
-            if (timestamp > latestTimestamp) {
-              latestTimestamp = timestamp;
-              latestLevel = level;
-            }
-          }
-          
-          if (latestLevel > 85) {
-            const deviceName = userData.devices?.[deviceKey]?.name || deviceKey;
-            alerts.push({
-              type: 'water_level',
-              message: `Critical water level: ${latestLevel}% at ${deviceName}`,
-              severity: 'critical',
-              deviceId: deviceKey,
-              deviceName: deviceName
-            });
-          }
-        }
-      }
-
-      // Check waste bins from history (latest readings) (>85%)
-      if (userData.wasteBinHistory) {
-        for (const deviceKey in userData.wasteBinHistory) {
-          const history = userData.wasteBinHistory[deviceKey];
-          
-          // Get the latest reading from history
-          let latestFullness = 0;
-          let latestTimestamp = 0;
-          
-          for (const timestampKey in history) {
-            const entry = history[timestampKey];
-            const timestamp = new Date(entry.timestamp || timestampKey).getTime();
-            const fullness = entry.fullness || entry.binFullness || 0;
-            
-            if (timestamp > latestTimestamp) {
-              latestTimestamp = timestamp;
-              latestFullness = fullness;
-            }
-          }
-          
-          if (latestFullness > 85) {
-            const deviceName = userData.devices?.[deviceKey]?.name || deviceKey;
-            alerts.push({
-              type: 'waste_bin',
-              message: `Critical waste bin: ${latestFullness}% full at ${deviceName}`,
-              severity: 'critical',
-              deviceId: deviceKey,
-              deviceName: deviceName
-            });
-          }
-        }
-      }
-    }
-
-    if (alerts.length > 0) {
-      log(`Found ${alerts.length} critical alert(s)`, "alerts");
-    }
-  } catch (error) {
-    console.error("Error checking critical alerts from Firebase:", error);
-  }
-
-  return alerts;
-}
-
-// Check and send push notifications for critical alerts
-async function checkAndSendCriticalAlerts() {
-  try {
-    const alerts = await checkAllCriticalAlerts();
-    
-    if (alerts.length === 0) {
-      return {
-        success: true,
-        message: "No critical alerts found",
-        alertsCount: 0
-      };
-    }
-
-    // Get all active FCM tokens
-    const allTokens = await storage.getAllFcmTokens();
-    const activeTokens = allTokens.filter(token => token.isActive);
-
-    if (activeTokens.length === 0) {
-      return {
-        success: true,
-        message: "Critical alerts found but no tokens registered",
-        alertsCount: alerts.length,
-        alerts
-      };
-    }
-
-    // Send notifications (simplified - send to all tokens)
-    const notificationService = PushNotificationService.getInstance();
-    
-    for (const alert of alerts) {
-      await notificationService.sendCriticalAlert(1, {
-        type: alert.type as 'water_level' | 'waste_bin' | 'device_offline',
-        message: alert.message,
-        severity: alert.severity as 'low' | 'medium' | 'high' | 'critical',
-        deviceId: undefined // Firebase uses string IDs, notification service expects number
-      });
-    }
-
-    return {
-      success: true,
-      message: "Push notifications sent",
-      alertsCount: alerts.length,
-      tokensCount: activeTokens.length,
-      alerts
-    };
-  } catch (error) {
-    console.error("Error checking and sending critical alerts:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    };
-  }
 }
 
 // Helper function to create sample data for testing
