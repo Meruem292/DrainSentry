@@ -1,5 +1,4 @@
-import { initializeApp } from "firebase/app";
-import { getDatabase, ref, get } from "firebase/database";
+import * as admin from "firebase-admin";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD50Lsmg3khTmYkGiu7LREqivXsBkePQMI",
@@ -12,8 +11,14 @@ const firebaseConfig = {
   measurementId: "G-PF2451RX9Q",
 };
 
-// Initialize Firebase for server
-const app = initializeApp(firebaseConfig, "server");
-const database = getDatabase(app);
+// Initialize Firebase Admin SDK
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.applicationDefault(),
+    databaseURL: firebaseConfig.databaseURL,
+  });
+}
 
-export { database, ref, get };
+const database = admin.database();
+
+export { admin, database };
