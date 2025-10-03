@@ -1,4 +1,4 @@
-import { getToken, onMessage } from "firebase/messaging";
+import { getToken, onMessage, deleteToken as deleteFCMToken } from "firebase/messaging";
 import { messaging } from "./firebase";
 
 export interface NotificationData {
@@ -43,7 +43,7 @@ export class NotificationService {
     return permission === 'granted';
   }
 
-  async getFCMToken(): Promise<string | null> {
+  async getToken(): Promise<string | null> {
     if (!messaging) {
       console.warn('Firebase messaging not available');
       return null;
@@ -56,7 +56,6 @@ export class NotificationService {
         return null;
       }
 
-      // Register service worker
       if ('serviceWorker' in navigator) {
         await navigator.serviceWorker.register('/firebase-messaging-sw.js');
       }
@@ -67,7 +66,6 @@ export class NotificationService {
 
       if (token) {
         this.fcmToken = token;
-        console.log('FCM Token:', token);
         return token;
       } else {
         console.warn('No registration token available');
@@ -79,6 +77,20 @@ export class NotificationService {
     }
   }
 
+  async deleteToken(): Promise<void> {
+    if (!messaging) {
+      console.warn('Firebase messaging not available');
+      return;
+    }
+    try {
+      await deleteFCMToken(messaging);
+      this.fcmToken = null;
+      console.log('FCM Token deleted.');
+    } catch (error) {
+      console.error('Error deleting FCM token:', error);
+    }
+  }
+
   setupForegroundMessageListener(callback: (payload: any) => void) {
     if (!messaging) return;
 
@@ -86,7 +98,6 @@ export class NotificationService {
       console.log('Foreground message received:', payload);
       callback(payload);
       
-      // Show notification if page is not in focus
       if (document.hidden) {
         this.showLocalNotification(payload);
       }
@@ -114,44 +125,5 @@ export class NotificationService {
         notification.close();
       };
     }
-  }
-
-  getStoredToken(): string | null {
-    return this.fcmToken;
-  }
-
-  async updateTokenOnServer(token: string, userId: number): Promise<void> {
-    try {
-      const response = await fetch('/api/notifications/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ token, userId }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update token on server');
-      }
-    } catch (error) {
-      console.error('Error updating token on server:', error);
-    }
-  }
-
-  static createCriticalAlert(data: NotificationData): string {
-    const severityEmoji = {
-      low: '🟡',
-      medium: '🟠', 
-      high: '🔴',
-      critical: '🚨'
-    };
-
-    const typeMessages = {
-      water_level: 'Water level alert',
-      waste_bin: 'Waste bin alert',
-      device_offline: 'Device offline alert'
-    };
-
-    return `${severityEmoji[data.severity]} ${typeMessages[data.type]}: ${data.message}`;
   }
 }

@@ -92,10 +92,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // These FCM token endpoints are now handled by the client-side `useNotifications` hook directly.
-  // They can be removed as they are no longer called by the client.
-  // We'll leave them here for now as they don't break anything, but they are deprecated.
-
   // Create HTTP server
   const httpServer = createServer(app);
 

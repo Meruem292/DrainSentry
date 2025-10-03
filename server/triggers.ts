@@ -1,4 +1,4 @@
-import { admin } from "./firebase";
+import { admin, isFirebaseInitialized } from "./firebase";
 import { PushNotificationService } from "./notification-service";
 
 // Simple in-memory cooldown to avoid spamming notifications for the same event
@@ -16,6 +16,11 @@ function canSendNotification(key: string): boolean {
 }
 
 export function initializeTriggers() {
+  if (!isFirebaseInitialized) {
+    console.warn("TRIGGERS: Skipping initialization because Firebase Admin SDK is not available.");
+    return;
+  }
+
   console.log("🔥 Initializing real-time notification triggers...");
 
   const db = admin.database();
@@ -60,8 +65,8 @@ export function initializeTriggers() {
                   device.name || device.id
                 }.`;
 
-          console.log(`CRITICAL EVENT DETECTED: ${message}`);
-          service.sendNotificationToAll({
+          console.log(`CRITICAL EVENT DETECTED for user ${user.uid}: ${message}`);
+          service.sendNotificationToUser(user.uid, {
             type: type,
             message: message,
             severity: "critical",

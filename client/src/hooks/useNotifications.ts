@@ -24,9 +24,7 @@ export interface NotificationAlert {
 export function useNotifications() {
   const { user } = useAuth();
   const [permissionGranted, setPermissionGranted] = useState<boolean>(false);
-  const HARDCODED_FCM_TOKEN =
-    "BAiBMAW5a6LDGPSMz7T_GFqCXtY7i3v_dM34mynRvlFmkFpj7ugH_J692Kt9022jzl7kpvFuk6nmc9YwcK9ofiE";
-  const [fcmToken, setFcmToken] = useState<string | null>(HARDCODED_FCM_TOKEN);
+  const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [notificationService] = useState(() =>
     NotificationService.getInstance()
   );
@@ -39,9 +37,14 @@ export function useNotifications() {
   const alertsMapRef = useRef<Map<string, NotificationAlert>>(new Map());
 
   useEffect(() => {
-    const checkPermission = () => {
+    const checkPermission = async () => {
       if ("Notification" in window) {
-        setPermissionGranted(Notification.permission === "granted");
+        const currentPermission = Notification.permission;
+        setPermissionGranted(currentPermission === "granted");
+        if (currentPermission === "granted") {
+          const currentToken = await notificationService.getToken();
+          setFcmToken(currentToken);
+        }
       }
     };
     checkPermission();
@@ -62,12 +65,15 @@ export function useNotifications() {
   const registerTokenMutation = useMutation({
     mutationFn: async ({
       token,
+      userId,
       deviceInfo,
     }: {
       token: string;
+      userId: string;
       deviceInfo?: string;
     }) => {
-      const tokenRef = ref(database, `fcm_tokens/${token}`);
+      // Store token under the user's specific path
+      const tokenRef = ref(database, `users/${userId}/fcm_tokens/${token}`);
       await set(tokenRef, {
         token,
         deviceInfo,
@@ -104,7 +110,6 @@ export function useNotifications() {
     const devicesListenerUnsubscribe = onValue(
       devicesRef,
       (snapshot) => {
-        // Cleanup old history listeners before creating new ones
         historyListenersUnsubscribeRef.current.forEach((unsub) => unsub());
         historyListenersUnsubscribeRef.current = [];
         alertsMapRef.current.clear();
@@ -131,7 +136,6 @@ export function useNotifications() {
           const deviceId = device.id;
           const deviceName = device.name || deviceId;
 
-          // Water Level Listener
           const waterHistoryQuery = query(
             ref(
               database,
@@ -167,7 +171,6 @@ export function useNotifications() {
           });
           historyListenersUnsubscribeRef.current.push(waterUnsub);
 
-          // Waste Bin Listener
           const wasteHistoryQuery = query(
             ref(
               database,
@@ -212,7 +215,6 @@ export function useNotifications() {
       }
     );
 
-    // Cleanup function for the main useEffect
     return () => {
       devicesListenerUnsubscribe();
       historyListenersUnsubscribeRef.current.forEach((unsub) => unsub());
@@ -221,6 +223,15 @@ export function useNotifications() {
   }, [user]);
 
   const enableNotifications = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "You must be logged in to enable notifications.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const hasPermission = await notificationService.requestPermission();
       setPermissionGranted(hasPermission);
@@ -235,11 +246,14 @@ export function useNotifications() {
         return;
       }
 
-      const token = HARDCODED_FCM_TOKEN;
+      const token = await notificationService.getToken();
+      if (!token) {
+        throw new Error("Could not generate FCM token.");
+      }
       setFcmToken(token);
 
       const deviceInfo = navigator.userAgent;
-      registerTokenMutation.mutate({ token, deviceInfo });
+      registerTokenMutation.mutate({ token, userId: user.uid, deviceInfo });
 
       notificationService.setupForegroundMessageListener((payload) => {
         toast({
@@ -261,13 +275,15 @@ export function useNotifications() {
   };
 
   const disableNotifications = async () => {
-    if (HARDCODED_FCM_TOKEN) {
+    if (fcmToken && user) {
       try {
         const tokenRef = ref(
           database,
-          `fcm_tokens/${encodeURIComponent(HARDCODED_FCM_TOKEN)}`
+          `users/${user.uid}/fcm_tokens/${encodeURIComponent(fcmToken)}`
         );
         await remove(tokenRef);
+
+        await notificationService.deleteToken();
 
         setPermissionGranted(false);
         setFcmToken(null);
