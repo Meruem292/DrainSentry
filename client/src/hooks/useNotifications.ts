@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
+import { ref, set, remove, onValue } from "firebase/database";
+import { database } from "@/lib/firebase";
 import { NotificationService } from "@/lib/notifications";
 import { useToast } from "./use-toast";
 
@@ -12,7 +14,6 @@ export interface NotificationAlert {
 
 export function useNotifications() {
   const [permissionGranted, setPermissionGranted] = useState<boolean>(false);
-  // Hardcoded FCM token for testing
   const HARDCODED_FCM_TOKEN =
     "BAiBMAW5a6LDGPSMz7T_GFqCXtY7i3v_dM34mynRvlFmkFpj7ugH_J692Kt9022jzl7kpvFuk6nmc9YwcK9ofiE";
   const [fcmToken, setFcmToken] = useState<string | null>(HARDCODED_FCM_TOKEN);
@@ -20,19 +21,19 @@ export function useNotifications() {
     NotificationService.getInstance()
   );
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  // Check current permission status without auto-requesting
+  const [alerts, setAlerts] = useState<NotificationAlert[]>([]);
+  const [alertsLoading, setAlertsLoading] = useState(true);
+  const [alertsError, setAlertsError] = useState<Error | null>(null);
+
   useEffect(() => {
     const checkPermission = () => {
       if ("Notification" in window) {
         setPermissionGranted(Notification.permission === "granted");
       }
     };
-
     checkPermission();
 
-    // Only set up message listener if permission already granted
     if (Notification.permission === "granted") {
       notificationService.setupForegroundMessageListener((payload) => {
         toast({
@@ -46,7 +47,6 @@ export function useNotifications() {
     }
   }, [notificationService, toast]);
 
-  // Register FCM token with backend
   const registerTokenMutation = useMutation({
     mutationFn: async ({
       token,
@@ -55,22 +55,12 @@ export function useNotifications() {
       token: string;
       deviceInfo?: string;
     }) => {
-      const response = await fetch("/api/notifications/token", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, deviceInfo }),
+      const tokenRef = ref(database, `fcm_tokens/${token}`);
+      await set(tokenRef, {
+        token,
+        deviceInfo,
+        timestamp: new Date().toISOString(),
       });
-
-      if (response.status === 401) {
-        throw new Error("Authentication required. Please sign in again.");
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to register token");
-      }
-
-      return response.json();
     },
     onSuccess: () => {
       toast({
@@ -78,46 +68,43 @@ export function useNotifications() {
         description:
           "You will now receive push notifications for critical alerts.",
       });
-      // Invalidate alerts to refresh them
-      queryClient.invalidateQueries({
-        queryKey: ["/api/notifications/alerts"],
-      });
     },
     onError: (error) => {
       console.error("Error registering token:", error);
       toast({
         title: "Error",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to enable notifications. Please try again.",
+        description: "Failed to enable notifications. Please try again.",
         variant: "destructive",
       });
     },
   });
 
-  // Fetch critical alerts with proper error handling
-  const {
-    data: alerts,
-    isLoading: alertsLoading,
-    error: alertsError,
-  } = useQuery({
-    queryKey: ["/api/notifications/alerts"],
-    refetchInterval: 30000, // Check every 30 seconds
-    select: (data: any) => data?.alerts || [],
-    retry: (failureCount, error: any) => {
-      // Don't retry if unauthorized
-      if (error?.response?.status === 401) {
-        return false;
+  useEffect(() => {
+    const alertsRef = ref(database, "alerts");
+    const unsubscribe = onValue(
+      alertsRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          const alertsData = Object.values(data) as NotificationAlert[];
+          setAlerts(alertsData);
+        } else {
+          setAlerts([]);
+        }
+        setAlertsLoading(false);
+      },
+      (error) => {
+        console.error("Error fetching alerts:", error);
+        setAlertsError(error);
+        setAlertsLoading(false);
       }
-      return failureCount < 3;
-    },
-  });
+    );
 
-  // Request notification permission and register token
+    return () => unsubscribe();
+  }, []);
+
   const enableNotifications = async () => {
     try {
-      // Step 1: Request permission
       const hasPermission = await notificationService.requestPermission();
       setPermissionGranted(hasPermission);
 
@@ -131,15 +118,12 @@ export function useNotifications() {
         return;
       }
 
-      // Step 2: Use hardcoded FCM token
       const token = HARDCODED_FCM_TOKEN;
       setFcmToken(token);
 
-      // Step 3: Register token immediately (don't use state)
       const deviceInfo = navigator.userAgent;
       registerTokenMutation.mutate({ token, deviceInfo });
 
-      // Step 4: Set up foreground message listener
       notificationService.setupForegroundMessageListener((payload) => {
         toast({
           title: payload.notification?.title || "Alert",
@@ -159,16 +143,14 @@ export function useNotifications() {
     }
   };
 
-  // Disable notifications
   const disableNotifications = async () => {
     if (HARDCODED_FCM_TOKEN) {
       try {
-        await fetch(
-          `/api/notifications/token/${encodeURIComponent(HARDCODED_FCM_TOKEN)}`,
-          {
-            method: "DELETE",
-          }
+        const tokenRef = ref(
+          database,
+          `fcm_tokens/${encodeURIComponent(HARDCODED_FCM_TOKEN)}`
         );
+        await remove(tokenRef);
 
         setPermissionGranted(false);
         setFcmToken(null);
@@ -191,7 +173,7 @@ export function useNotifications() {
   return {
     permissionGranted,
     fcmToken,
-    alerts: alerts || [],
+    alerts,
     alertsLoading,
     alertsError,
     enableNotifications,

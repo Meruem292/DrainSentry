@@ -122,11 +122,9 @@ export default function Settings() {
       </Card>
 
       {/* Push Notifications */}
-      {user && (
-        <div className="mb-6">
-          <NotificationSettings />
-        </div>
-      )}
+      <div className="mb-6">
+        <NotificationSettings />
+      </div>
 
       {/* Change Password */}
       <Card>
