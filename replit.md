@@ -63,11 +63,20 @@ Preferred communication style: Simple, everyday language.
 - **Token Verification**: Firebase ID token verification on the server
 - **Access Control**: Session-based authentication for API endpoints
 
-### Push Notifications
+### Push Notifications (Simplified)
 - **Service**: Firebase Cloud Messaging (FCM) for push notifications
 - **Architecture**: Service worker for background message handling
-- **Features**: Critical alerts for water levels, waste bin fullness, and device offline status
-- **Storage**: FCM tokens stored in PostgreSQL with user associations
+- **Authentication**: No authentication required - anyone can register for notifications
+- **Automatic Alerts**: System automatically checks for critical conditions:
+  - Water levels > 85% (Critical)
+  - Waste bin fullness > 85% (Critical)
+- **Notification Trigger**: Push notifications are sent to all registered tokens when critical conditions are detected
+- **API Endpoints**:
+  - `POST /api/notifications/token` - Register FCM token (no auth)
+  - `DELETE /api/notifications/token/:token` - Unregister token (no auth)
+  - `GET /api/notifications/alerts` - Get current critical alerts
+  - `POST /api/notifications/check` - Manually trigger check and send notifications
+- **Storage**: FCM tokens stored in PostgreSQL (all tokens use default user ID 1)
 
 ### External Dependencies
 

@@ -37,9 +37,15 @@ export interface IStorage {
   
   // FCM Token methods
   getFcmTokens(userId: number): Promise<FcmToken[]>;
+  getAllFcmTokens(): Promise<FcmToken[]>;
   createFcmToken(token: InsertFcmToken): Promise<FcmToken>;
   updateFcmToken(token: string, lastUsed: string): Promise<void>;
   deleteFcmToken(token: string): Promise<void>;
+  
+  // Get all data methods (for simple push notifications)
+  getAllWaterLevels(): Promise<WaterLevel[]>;
+  getAllWasteBins(): Promise<WasteBin[]>;
+  getAllDevices(): Promise<Device[]>;
   
   // Settings methods
   getSettings(userId: number): Promise<Settings | undefined>;
@@ -200,6 +206,22 @@ export class MemStorage implements IStorage {
     
     this.fcmTokens.delete(id);
     this.tokenToId.delete(tokenStr);
+  }
+
+  async getAllFcmTokens(): Promise<FcmToken[]> {
+    return Array.from(this.fcmTokens.values());
+  }
+
+  async getAllWaterLevels(): Promise<WaterLevel[]> {
+    return Array.from(this.waterLevels.values());
+  }
+
+  async getAllWasteBins(): Promise<WasteBin[]> {
+    return Array.from(this.wasteBins.values());
+  }
+
+  async getAllDevices(): Promise<Device[]> {
+    return Array.from(this.devices.values());
   }
 
   // Settings methods
