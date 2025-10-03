@@ -93,63 +93,57 @@ export default function Conveyor() {
             </CardContent>
           </Card>
         ) : (
-          devices.map((device) => {
-            const { firebaseId } = device;
-            if (!firebaseId) {
-              return null;
-            }
-            return (
-              <Card key={firebaseId} className="">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Power
-                      className={
-                        conveyorStates[firebaseId]
-                          ? "text-green-500"
-                          : "text-gray-400"
-                      }
-                    />
-                    {device.name || device.id} Conveyor
-                  </CardTitle>
-                  <div className="text-sm text-gray-500 mt-1">
-                    Location: {device.location || "Unknown"}
+          devices.map((device) => (
+            <Card key={device.firebaseId} className="">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Power
+                    className={
+                      conveyorStates[device.firebaseId]
+                        ? "text-green-500"
+                        : "text-gray-400"
+                    }
+                  />
+                  {device.name || device.id} Conveyor
+                </CardTitle>
+                <div className="text-sm text-gray-500 mt-1">
+                  Location: {device.location || "Unknown"}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col items-center gap-4">
+                  <div
+                    className={`text-lg font-semibold ${
+                      conveyorStates[device.firebaseId]
+                        ? "text-green-600"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    Conveyor is{" "}
+                    {conveyorStates[device.firebaseId] ? "ON" : "OFF"}
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col items-center gap-4">
-                    <div
-                      className={`text-lg font-semibold ${
-                        conveyorStates[firebaseId]
-                          ? "text-green-600"
-                          : "text-gray-500"
-                      }`}
-                    >
-                      Conveyor is{" "}
-                      {conveyorStates[firebaseId] ? "ON" : "OFF"}
-                    </div>
-                    <Button
-                      onClick={() => handleToggle(firebaseId)}
-                      variant={
-                        conveyorStates[firebaseId]
-                          ? "destructive"
-                          : "default"
-                      }
-                      disabled={loadingStates[firebaseId]}
-                      className="w-32"
-                    >
-                      {loadingStates[firebaseId] ? (
-                        <Loader className="animate-spin h-4 w-4 mr-2" />
-                      ) : conveyorStates[firebaseId] ? (
-                        "Turn OFF"
-                      ) : (
-                        "Turn ON"
-                      )}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })
+                  <Button
+                    onClick={() => handleToggle(device.firebaseId)}
+                    variant={
+                      conveyorStates[device.firebaseId]
+                        ? "destructive"
+                        : "default"
+                    }
+                    disabled={loadingStates[device.firebaseId]}
+                    className="w-32"
+                  >
+                    {loadingStates[device.firebaseId] ? (
+                      <Loader className="animate-spin h-4 w-4 mr-2" />
+                    ) : conveyorStates[device.firebaseId] ? (
+                      "Turn OFF"
+                    ) : (
+                      "Turn ON"
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))
         )}
       </div>
     </DashboardLayout>
