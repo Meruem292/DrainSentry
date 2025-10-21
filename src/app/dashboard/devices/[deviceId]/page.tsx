@@ -3,9 +3,9 @@
 
 import React from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useUser, useDatabase } from "@/firebase";
+import { useUser } from "@/firebase";
 import useRtdbValue from "@/firebase/rtdb/use-rtdb-value";
-import { ref, push } from "firebase/database";
+import { ref, push, getDatabase } from "firebase/database";
 import OverviewCards from "../../components/overview-cards";
 import WaterLevelChart from "../../components/water-level-chart";
 import MethaneLevelChart from "../../components/methane-level-chart";
@@ -26,9 +26,9 @@ import {
 
 const parseTimestamp = (timestamp: string): Date => {
     const parts = timestamp.match(/(\d{2})\/(\d{2})\/(\d{4}), (\d{1,2}):(\d{2}):(\d{2})/);
-    if (!parts) return new Date(0);
-    // new Date(year, monthIndex, day, hours, minutes, seconds)
-    return new Date(parseInt(parts[3]), parseInt(parts[1]) - 1, parseInt(parts[2]), parseInt(parts[4]), parseInt(parts[5]), parseInt(parts[6]));
+    if (!parts) return new Date(timestamp); // Fallback for different formats
+    const [, month, day, year, hours, minutes, seconds] = parts.map(Number);
+    return new Date(year, month - 1, day, hours, minutes, seconds);
 };
 
 
@@ -80,7 +80,7 @@ export default function DeviceDetailsPage() {
   const router = useRouter();
   const { deviceId } = params;
   const { user } = useUser();
-  const { database } = useDatabase();
+  const database = getDatabase();
   const path = user ? `users/${user.uid}/devices/${deviceId}` : "";
   const { data: device, loading } = useRtdbValue(path);
 
