@@ -56,7 +56,7 @@ function InnerDashboardLayout({ children }: { children: React.ReactNode }) {
     if (pathname.startsWith('/dashboard/water-levels')) return 'Water Levels';
     if (pathname.startsWith('/dashboard/waste-bins')) return 'Waste Bins';
     if (pathname.startsWith('/dashboard/contacts')) return 'Contacts';
-    if (pathname.startsWith('/dashboard/conveyor')) return 'Conveyor';
+    if (pathname.startsWith('/dashboard/conveyor')) return 'Conveyor Control';
     if (pathname.startsWith('/dashboard/settings')) return 'Settings';
     return 'Dashboard';
   }
@@ -100,7 +100,7 @@ function InnerDashboardLayout({ children }: { children: React.ReactNode }) {
             </SidebarMenuItem>
              <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={pathname.startsWith("/dashboard/conveyor")} tooltip="Conveyor">
-                <Link href="#"><Power /><span>Conveyor</span></Link>
+                <Link href="/dashboard/conveyor"><Power /><span>Conveyor</span></Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
