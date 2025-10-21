@@ -10,15 +10,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import DeviceRow from "./components/device-row";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import AddDeviceDialog from "./components/add-device-dialog";
-import { ref, set } from "firebase/database";
+import { ref, set, update } from "firebase/database";
 import { useToast } from "@/hooks/use-toast";
+import EditDeviceDialog from "./components/edit-device-dialog";
 
 export default function DevicesPage() {
   const { user } = useUser();
   const { database } = useDatabase();
   const path = user ? `users/${user.uid}/devices` : "";
   const { data: devices, loading } = useRtdbValue(path);
+  
   const [isAddDialogOpen, setAddDialogOpen] = React.useState(false);
+  const [isEditDialogOpen, setEditDialogOpen] = React.useState(false);
+  const [selectedDevice, setSelectedDevice] = React.useState<any | null>(null);
+
   const { toast } = useToast();
 
   const deviceList = React.useMemo(() => {
@@ -77,6 +82,40 @@ export default function DevicesPage() {
     });
   };
 
+  const handleEditDevice = (device: any) => {
+    setSelectedDevice(device);
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveDeviceSettings = (deviceId: string, thresholds: any) => {
+    if (!user || !database) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Not logged in or database not available.',
+      });
+      return;
+    }
+
+    const deviceRef = ref(database, `users/${user.uid}/devices/${deviceId}/thresholds`);
+    update(deviceRef, thresholds)
+      .then(() => {
+        toast({
+          title: 'Settings Saved',
+          description: 'Device thresholds have been updated.',
+        });
+        setEditDialogOpen(false);
+      })
+      .catch((error) => {
+        toast({
+          variant: 'destructive',
+          title: 'Failed to save settings',
+          description: error.message,
+        });
+      });
+  };
+
+
   return (
     <div className="space-y-6">
       <div>
@@ -112,7 +151,7 @@ export default function DevicesPage() {
                     </div>
                 ) : deviceList.length > 0 ? (
                     deviceList.map(device => (
-                        <DeviceRow key={device.id} device={device} />
+                        <DeviceRow key={device.id} device={device} onEdit={() => handleEditDevice(device)} />
                     ))
                 ) : (
                     <div className="text-center p-8 text-muted-foreground">
@@ -128,6 +167,14 @@ export default function DevicesPage() {
         onOpenChange={setAddDialogOpen}
         onAddDevice={handleAddDevice}
       />
+      {selectedDevice && (
+        <EditDeviceDialog
+          isOpen={isEditDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          device={selectedDevice}
+          onSave={handleSaveDeviceSettings}
+        />
+      )}
     </div>
   );
 }

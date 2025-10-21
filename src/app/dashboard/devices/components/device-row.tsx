@@ -23,7 +23,7 @@ const formatLastUpdated = (timestamp?: string) => {
     return date.toLocaleDateString();
 }
 
-export default function DeviceRow({ device }: { device: any }) {
+export default function DeviceRow({ device, onEdit }: { device: any, onEdit: (device: any) => void }) {
 
     const latestData = React.useMemo(() => {
         let waterLevel = 0;
@@ -105,7 +105,7 @@ export default function DeviceRow({ device }: { device: any }) {
                         <Eye className="h-4 w-4" />
                     </Button>
                 </Link>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary">
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => onEdit(device)}>
                     <Pencil className="h-4 w-4" />
                 </Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/70 hover:text-destructive">
