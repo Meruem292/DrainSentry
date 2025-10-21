@@ -4,7 +4,6 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import WaterLevelIcon from "@/components/icons/water-level-icon";
 import WasteBinIcon from "@/components/icons/waste-bin-icon";
-import MethaneIcon from "@/components/icons/methane-icon";
 import { useUser } from "@/firebase";
 import useRtdbValue from "@/firebase/rtdb/use-rtdb-value";
 import { Skeleton } from "@/components/ui/skeleton";
