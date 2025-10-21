@@ -264,7 +264,7 @@ export default function EditDeviceDialog({ isOpen, onOpenChange, device, contact
                             value={sensorReadInterval}
                             onChange={(e) => setSensorReadInterval(Number(e.target.value))}
                         />
-                        <p className='text-xs text-muted-foreground'>How often to read sensor data.</p>
+                        <p className='text-xs text-muted-foreground'>How often to read sensor data (e.g., 1000ms = 1s).</p>
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="data-send-interval">Data Send Interval (ms)</Label>
@@ -274,7 +274,7 @@ export default function EditDeviceDialog({ isOpen, onOpenChange, device, contact
                             value={dataSendInterval}
                             onChange={(e) => setDataSendInterval(Number(e.target.value))}
                         />
-                        <p className='text-xs text-muted-foreground'>How often to send data to the server.</p>
+                        <p className='text-xs text-muted-foreground'>How often to send data to the server (e.g., 2000ms = 2s).</p>
                     </div>
                      <div className="grid gap-2">
                         <Label htmlFor="config-fetch-interval">Config Fetch Interval (ms)</Label>
@@ -284,7 +284,7 @@ export default function EditDeviceDialog({ isOpen, onOpenChange, device, contact
                             value={configFetchInterval}
                             onChange={(e) => setConfigFetchInterval(Number(e.target.value))}
                         />
-                        <p className='text-xs text-muted-foreground'>How often to fetch remote configuration.</p>
+                        <p className='text-xs text-muted-foreground'>How often to fetch remote config (e.g., 300000ms = 5min).</p>
                     </div>
                      <div className="grid gap-2">
                         <Label htmlFor="find-device-interval">Device Retry Interval (ms)</Label>
@@ -294,7 +294,7 @@ export default function EditDeviceDialog({ isOpen, onOpenChange, device, contact
                             value={findDeviceInterval}
                             onChange={(e) => setFindDeviceInterval(Number(e.target.value))}
                         />
-                        <p className='text-xs text-muted-foreground'>Retry interval if device is not found.</p>
+                        <p className='text-xs text-muted-foreground'>Retry interval if device not found (e.g., 60000ms = 1min).</p>
                     </div>
                 </div>
             </TabsContent>

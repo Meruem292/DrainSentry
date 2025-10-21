@@ -71,7 +71,7 @@ export default function DevicesPage() {
             loadcellCalibration: 0,
             sensorReadInterval: 1000,
             configFetchInterval: 300000,
-            dataSendInterval: 60000,
+            dataSendInterval: 2000,
             findDeviceInterval: 60000,
         },
         notifications: {
