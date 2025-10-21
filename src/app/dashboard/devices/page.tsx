@@ -145,22 +145,21 @@ export default function DevicesPage() {
         </CardHeader>
         <CardContent>
              <div className="border rounded-lg">
-                <div className="grid grid-cols-12 gap-4 p-4 font-semibold text-sm text-muted-foreground border-b">
+                <div className="hidden md:grid grid-cols-12 gap-4 p-4 font-semibold text-sm text-muted-foreground border-b bg-muted/20">
                     <div className="col-span-2">Device</div>
-                    <div className="col-span-1">Device ID</div>
                     <div className="col-span-2">Location</div>
                     <div className="col-span-1">Status</div>
                     <div className="col-span-1 text-center">Water Level</div>
                     <div className="col-span-1 text-center">Bin Fullness</div>
                     <div className="col-span-1 text-center">Weight</div>
-                    <div className="col-span-1">Last Updated</div>
+                    <div className="col-span-2">Last Updated</div>
                     <div className="col-span-2 text-center">Actions</div>
                 </div>
                 {loading ? (
                     <div className="p-4 space-y-2">
-                        <Skeleton className="h-12 w-full" />
-                        <Skeleton className="h-12 w-full" />
-                        <Skeleton className="h-12 w-full" />
+                        <Skeleton className="h-16 w-full" />
+                        <Skeleton className="h-16 w-full" />
+                        <Skeleton className="h-16 w-full" />
                     </div>
                 ) : deviceList.length > 0 ? (
                     deviceList.map(device => (
