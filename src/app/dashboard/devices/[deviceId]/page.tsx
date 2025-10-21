@@ -24,7 +24,7 @@ import {
 
 const parseTimestamp = (timestamp: string) => {
     const parts = timestamp.match(/(\d{1,2})\/(\d{1,2})\/(\d{4}), (\d{1,2}):(\d{2}):(\d{2})/);
-    if (!parts) return new Date();
+    if (!parts) return new Date(0); // Return a default date if parsing fails
     // new Date(year, monthIndex, day, hours, minutes, seconds)
     return new Date(parseInt(parts[3]), parseInt(parts[1]) - 1, parseInt(parts[2]), parseInt(parts[4]), parseInt(parts[5]), parseInt(parts[6]));
 };
@@ -34,8 +34,7 @@ const DeviceHistoryTable = ({ history, type, loading }: { history: any, type: 'w
     const data = React.useMemo(() => {
         if (!history) return [];
         return Object.values(history)
-            .sort((a: any, b: any) => parseTimestamp(b.timestamp).getTime() - parseTimestamp(a.timestamp).getTime())
-            .slice(0, 10);
+            .sort((a: any, b: any) => parseTimestamp(b.timestamp).getTime() - parseTimestamp(a.timestamp).getTime());
     }, [history]);
     
     if (loading) return <Skeleton className="h-64 w-full" />;
