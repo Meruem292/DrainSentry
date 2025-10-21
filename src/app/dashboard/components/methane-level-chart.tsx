@@ -3,8 +3,6 @@
 import React from "react"
 import { TrendingUp } from "lucide-react"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
-import { useUser } from "@/firebase"
-import useRtdbValue from "@/firebase/rtdb/use-rtdb-value"
 import {
   Card,
   CardContent,
@@ -26,18 +24,19 @@ const chartConfig = {
   },
 }
 
-export default function MethaneLevelChart() {
-  const { user } = useUser();
-  const path = user ? `users/${user.uid}/devices` : '';
-  const { data: devices, loading } = useRtdbValue(path);
+export default function MethaneLevelChart({ device, loading }: { device: any, loading: boolean }) {
 
   const chartData = React.useMemo(() => {
-    if (!devices) return [];
+    if (!device || !device.wasteBinHistory) {
+      return [
+        { time: "12:00", weight: 5 }, { time: "13:00", weight: 8 },
+        { time: "14:00", weight: 12 }, { time: "15:00", weight: 15 },
+        { time: "16:00", weight: 20 }, { time: "17:00", weight: 22 },
+        { time: "18:00", weight: 18 },
+      ];
+    }
     
-    const deviceId = Object.keys(devices)[0];
-    if (!deviceId || !devices[deviceId].wasteBinHistory) return [];
-
-    const history = devices[deviceId].wasteBinHistory;
+    const history = device.wasteBinHistory;
     
     const dataPoints = Object.values(history)
       .filter((entry: any) => entry.timestamp && entry.weight !== undefined)
@@ -46,12 +45,9 @@ export default function MethaneLevelChart() {
 
     if (dataPoints.length === 0) {
       return [
-        { time: "12:00", weight: 5 },
-        { time: "13:00", weight: 8 },
-        { time: "14:00", weight: 12 },
-        { time: "15:00", weight: 15 },
-        { time: "16:00", weight: 20 },
-        { time: "17:00", weight: 22 },
+        { time: "12:00", weight: 5 }, { time: "13:00", weight: 8 },
+        { time: "14:00", weight: 12 }, { time: "15:00", weight: 15 },
+        { time: "16:00", weight: 20 }, { time: "17:00", weight: 22 },
         { time: "18:00", weight: 18 },
       ]
     }
@@ -61,14 +57,14 @@ export default function MethaneLevelChart() {
       weight: entry.weight, 
     }));
 
-  }, [devices]);
+  }, [device]);
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Waste Weight History</CardTitle>
         <CardDescription>
-          Total collected waste weight from the primary collection point.
+          Total collected waste weight from this device.
         </CardDescription>
       </CardHeader>
       <CardContent className="pb-4">

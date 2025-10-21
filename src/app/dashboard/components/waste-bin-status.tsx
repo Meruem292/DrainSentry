@@ -4,8 +4,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { useUser } from "@/firebase";
-import useRtdbValue from "@/firebase/rtdb/use-rtdb-value";
 import { Skeleton } from "@/components/ui/skeleton";
 import React from "react";
 
@@ -15,61 +13,51 @@ const getProgressClass = (level: number): string => {
     return '[&>div]:bg-chart-2';
 };
 
-export default function WasteBinStatus() {
-  const { user } = useUser();
-  const path = user ? `users/${user.uid}/devices` : '';
-  const { data: devices, loading } = useRtdbValue(path);
+export default function WasteBinStatus({ device, loading }: { device: any, loading: boolean }) {
 
-  const bins = React.useMemo(() => {
-    if (!devices) return [];
+  const bin = React.useMemo(() => {
+    if (!device) return null;
     
-    return Object.values(devices).map((device: any) => {
-        const history = device.wasteBinHistory ? Object.values(device.wasteBinHistory) : [];
-        const latestEntry: any = history.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
-        
-        return {
-            id: device.id,
-            location: device.location,
-            fullness: latestEntry ? latestEntry.fullness : 0,
-        };
-    }).sort((a: any, b: any) => b.fullness - a.fullness);
-
-  }, [devices]);
+    const history = device.wasteBinHistory ? Object.values(device.wasteBinHistory) : [];
+    const latestEntry: any = history.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+    
+    return {
+        id: device.id,
+        location: device.location,
+        fullness: latestEntry ? latestEntry.fullness : 0,
+    };
+  }, [device]);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Waste Bin Levels</CardTitle>
-        <CardDescription>Fill status for high-traffic monitored bins.</CardDescription>
+        <CardTitle>Waste Bin Level</CardTitle>
+        <CardDescription>Current fill status for this device.</CardDescription>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[350px]">
+        {loading ? (
           <div className="space-y-6 pr-4">
-            {loading ? (
-              Array.from({ length: 5 }).map((_, index) => (
-                <div key={index} className="flex flex-col gap-2">
-                  <div className="flex justify-between items-baseline">
-                    <Skeleton className="h-5 w-3/4" />
-                    <Skeleton className="h-5 w-1/4" />
-                  </div>
-                  <Skeleton className="h-2 w-full" />
-                </div>
-              ))
-            ) : bins.length > 0 ? (
-              bins.map((bin: any) => (
-                <div key={bin.id} className="flex flex-col gap-2">
-                  <div className="flex justify-between items-baseline">
-                    <p className="font-medium text-sm">{bin.id} - <span className="text-muted-foreground">{bin.location}</span></p>
-                    <p className="font-semibold text-sm">{bin.fullness}%</p>
-                  </div>
-                  <Progress value={bin.fullness} className={cn("h-2", getProgressClass(bin.fullness))} />
-                </div>
-              ))
-            ) : (
-                <div className="text-center text-muted-foreground pt-16">No waste bin data available.</div>
-            )}
+            <div className="flex flex-col gap-2">
+              <div className="flex justify-between items-baseline">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-5 w-1/4" />
+              </div>
+              <Skeleton className="h-2 w-full" />
+            </div>
           </div>
-        </ScrollArea>
+        ) : bin ? (
+          <div className="space-y-6 pr-4">
+            <div key={bin.id} className="flex flex-col gap-2">
+              <div className="flex justify-between items-baseline">
+                <p className="font-medium text-sm">{bin.id} - <span className="text-muted-foreground">{bin.location}</span></p>
+                <p className="font-semibold text-sm">{bin.fullness}%</p>
+              </div>
+              <Progress value={bin.fullness} className={cn("h-2", getProgressClass(bin.fullness))} />
+            </div>
+          </div>
+        ) : (
+            <div className="text-center text-muted-foreground pt-16">No waste bin data available.</div>
+        )}
       </CardContent>
     </Card>
   );

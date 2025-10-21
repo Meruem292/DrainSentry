@@ -14,7 +14,7 @@ import {
   SidebarInset,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Map, Settings, LogOut, ChevronLeft } from "lucide-react";
+import { LayoutDashboard, Settings, LogOut, ChevronLeft } from "lucide-react";
 import Logo from "@/components/icons/logo";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -52,6 +52,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
+  const getHeaderText = () => {
+    if (pathname.startsWith('/dashboard/devices/')) {
+        const deviceId = pathname.split('/').pop();
+        return `Device Details`;
+    }
+    if (pathname === '/dashboard') {
+        return 'Dashboard';
+    }
+    return 'Dashboard';
+  }
+
   return (
     <SidebarProvider>
       <Sidebar>
@@ -83,22 +94,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === "/dashboard/map"}
-                tooltip="Map View"
-              >
-                <Link href="/dashboard">
-                  <Map />
-                  <span>Map View</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
                 isActive={pathname === "/dashboard/settings"}
                 tooltip="Settings"
               >
-                <Link href="/dashboard">
+                <Link href="/dashboard/settings">
                   <Settings />
                   <span>Settings</span>
                 </Link>
@@ -123,7 +122,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <SidebarTrigger className="md:hidden">
                     <ChevronLeft className="rotate-180" />
                 </SidebarTrigger>
-                <h1 className="text-xl font-semibold font-headline">Dashboard</h1>
+                <h1 className="text-xl font-semibold font-headline">{getHeaderText()}</h1>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

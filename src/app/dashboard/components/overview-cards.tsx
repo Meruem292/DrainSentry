@@ -4,25 +4,17 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import WaterLevelIcon from "@/components/icons/water-level-icon";
 import WasteBinIcon from "@/components/icons/waste-bin-icon";
-import { useUser } from "@/firebase";
-import useRtdbValue from "@/firebase/rtdb/use-rtdb-value";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Weight } from "lucide-react";
 
-export default function OverviewCards() {
-  const { user } = useUser();
-  const { data: devicesData, loading: devicesLoading } = useRtdbValue(user ? `users/${user.uid}/devices` : '');
+export default function OverviewCards({ device, loading }: { device: any, loading: boolean }) {
 
   const overviewData = React.useMemo(() => {
     let avgWaterLevel = 0;
     let binsAtCapacity = 0;
     let totalWasteWeight = 0;
-    const loading = devicesLoading;
 
-    if (devicesData) {
-      const deviceId = Object.keys(devicesData)[0];
-      if (deviceId) {
-        const device = devicesData[deviceId];
+    if (device) {
         const binFullnessThreshold = device.thresholds?.binFullness ?? 80;
 
         // Calculate Avg Water Level from the last entry in waterLevelHistory
@@ -39,12 +31,11 @@ export default function OverviewCards() {
             if (wasteHistory.length > 0) {
                 const latestBinState = wasteHistory[0];
                 if (latestBinState.fullness > binFullnessThreshold) {
-                    binsAtCapacity = 1; // Assuming one device for now
+                    binsAtCapacity = 1; 
                 }
                 totalWasteWeight = latestBinState.weight;
             }
         }
-      }
     }
 
 
@@ -55,15 +46,13 @@ export default function OverviewCards() {
         change: "+2.5%",
         description: "from latest reading",
         icon: <WaterLevelIcon className="h-10 w-10 text-primary" />,
-        loading: loading,
       },
       {
-        title: "Bins at Capacity",
-        value: `${binsAtCapacity}`,
-        change: "above 80%",
+        title: "Bin at Capacity",
+        value: `${binsAtCapacity > 0 ? 'Yes' : 'No'}`,
+        change: `above ${device?.thresholds?.binFullness ?? 80}%`,
         description: "from latest reading",
         icon: <WasteBinIcon className="h-10 w-10 text-primary" />,
-        loading: loading,
       },
       {
         title: "Total Waste Weight",
@@ -71,10 +60,9 @@ export default function OverviewCards() {
         change: "+5.2 kg",
         description: "from latest reading",
         icon: <Weight className="h-10 w-10 text-primary" />,
-        loading: loading, 
       },
     ];
-  }, [devicesData, devicesLoading]);
+  }, [device]);
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -85,7 +73,7 @@ export default function OverviewCards() {
             {item.icon}
           </CardHeader>
           <CardContent>
-            {item.loading ? (
+            {loading ? (
                 <>
                     <Skeleton className="h-8 w-1/2 mb-2" />
                     <Skeleton className="h-4 w-3/4" />
