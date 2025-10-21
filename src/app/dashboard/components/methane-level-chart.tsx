@@ -24,6 +24,14 @@ const chartConfig = {
   },
 }
 
+const parseTimestamp = (timestamp: string) => {
+    const parts = timestamp.match(/(\d{1,2})\/(\d{1,2})\/(\d{4}), (\d{1,2}):(\d{2}):(\d{2})/);
+    if (!parts) return new Date();
+    // new Date(year, monthIndex, day, hours, minutes, seconds)
+    return new Date(parseInt(parts[3]), parseInt(parts[1]) - 1, parseInt(parts[2]), parseInt(parts[4]), parseInt(parts[5]), parseInt(parts[6]));
+};
+
+
 export default function MethaneLevelChart({ device, loading }: { device: any, loading: boolean }) {
 
   const chartData = React.useMemo(() => {
@@ -35,7 +43,7 @@ export default function MethaneLevelChart({ device, loading }: { device: any, lo
     
     const dataPoints = Object.values(history)
       .filter((entry: any) => entry.timestamp && entry.weight !== undefined)
-      .sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+      .sort((a: any, b: any) => parseTimestamp(a.timestamp).getTime() - parseTimestamp(b.timestamp).getTime())
       .slice(-7); 
 
     if (dataPoints.length === 0) {
