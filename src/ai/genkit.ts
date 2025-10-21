@@ -23,7 +23,7 @@ const TrashOutputSchema = z.object({
 export type TrashOutput = z.infer<typeof TrashOutputSchema>;
 
 
-// Define the prompt
+// Define the prompt for trash detection
 const trashDetectionPrompt = ai.definePrompt({
     name: 'trashDetectionPrompt',
     input: { schema: TrashInputSchema },
@@ -40,7 +40,7 @@ const trashDetectionPrompt = ai.definePrompt({
 });
 
 
-// Define the flow and export it
+// Define the flow for trash detection and export it
 export const detectTrashFlow = ai.defineFlow(
   {
     name: 'detectTrashFlow',
@@ -49,6 +49,43 @@ export const detectTrashFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await trashDetectionPrompt(input);
+    if (!output) {
+      throw new Error("The AI model did not return a valid response.");
+    }
+    return output;
+  }
+);
+
+
+// Define Schemas for the image describer
+const DescribeImageInputSchema = z.object({
+  imageUrl: z.string().url().describe('The public URL of the image to analyze.'),
+});
+export type DescribeImageInput = z.infer<typeof DescribeImageInputSchema>;
+
+const DescribeImageOutputSchema = z.object({
+  description: z.string().describe('A concise paragraph describing the contents of the image.'),
+});
+export type DescribeImageOutput = z.infer<typeof DescribeImageOutputSchema>;
+
+
+// Define the prompt for image description
+const describeImagePrompt = ai.definePrompt({
+    name: 'describeImagePrompt',
+    input: { schema: DescribeImageInputSchema },
+    output: { schema: DescribeImageOutputSchema },
+    prompt: `Describe what you see in this image in a concise paragraph. Image: {{media url=imageUrl}}.`,
+});
+
+// Define the flow for image description and export it
+export const describeImageFlow = ai.defineFlow(
+  {
+    name: 'describeImageFlow',
+    inputSchema: DescribeImageInputSchema,
+    outputSchema: DescribeImageOutputSchema,
+  },
+  async (input) => {
+    const { output } = await describeImagePrompt(input);
     if (!output) {
       throw new Error("The AI model did not return a valid response.");
     }
