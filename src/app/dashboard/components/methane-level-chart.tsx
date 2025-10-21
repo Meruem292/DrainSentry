@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { TrendingUp } from "lucide-react"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { useUser } from "@/firebase"
