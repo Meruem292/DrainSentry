@@ -17,13 +17,24 @@ const getProgressClass = (level: number): string => {
 
 export default function WasteBinStatus() {
   const { user } = useUser();
-  const path = user ? `users/${user.uid}/wasteBins` : '';
-  const { data, loading } = useRtdbValue(path);
+  const path = user ? `users/${user.uid}/devices` : '';
+  const { data: devices, loading } = useRtdbValue(path);
 
   const bins = React.useMemo(() => {
-    if (!data) return [];
-    return Object.values(data).sort((a: any, b: any) => b.fullness - a.fullness);
-  }, [data]);
+    if (!devices) return [];
+    
+    return Object.values(devices).map((device: any) => {
+        const history = device.wasteBinHistory ? Object.values(device.wasteBinHistory) : [];
+        const latestEntry: any = history.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+        
+        return {
+            id: device.id,
+            location: device.location,
+            fullness: latestEntry ? latestEntry.fullness : 0,
+        };
+    }).sort((a: any, b: any) => b.fullness - a.fullness);
+
+  }, [devices]);
 
   return (
     <Card>

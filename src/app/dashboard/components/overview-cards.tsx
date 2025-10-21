@@ -11,30 +11,39 @@ import { Weight } from "lucide-react";
 
 export default function OverviewCards() {
   const { user } = useUser();
-  const { data: waterLevelsData, loading: waterLoading } = useRtdbValue(user ? `users/${user.uid}/waterLevels` : '');
-  const { data: wasteBinsData, loading: wasteLoading } = useRtdbValue(user ? `users/${user.uid}/wasteBins` : '');
   const { data: devicesData, loading: devicesLoading } = useRtdbValue(user ? `users/${user.uid}/devices` : '');
 
   const overviewData = React.useMemo(() => {
     let avgWaterLevel = 0;
     let binsAtCapacity = 0;
     let totalWasteWeight = 0;
+    const loading = devicesLoading;
 
-    if (waterLevelsData) {
-      const levels = Object.values(waterLevelsData).map((d: any) => d.level);
-      if (levels.length > 0) {
-        avgWaterLevel = levels.reduce((a, b) => a + b, 0) / levels.length;
-      }
-    }
-    
-    if (wasteBinsData) {
-      const deviceId = devicesData ? Object.keys(devicesData)[0] : null;
-      const binFullnessThreshold = deviceId ? devicesData?.[deviceId]?.thresholds?.binFullness ?? 80 : 80;
-      binsAtCapacity = Object.values(wasteBinsData).filter((b: any) => b.fullness > binFullnessThreshold).length;
+    if (devicesData) {
+      const deviceId = Object.keys(devicesData)[0];
+      if (deviceId) {
+        const device = devicesData[deviceId];
+        const binFullnessThreshold = device.thresholds?.binFullness ?? 80;
 
-      const weights = Object.values(wasteBinsData).map((b: any) => b.weight);
-      if(weights.length > 0){
-        totalWasteWeight = weights.reduce((a, b) => a + b, 0);
+        // Calculate Avg Water Level from the last entry in waterLevelHistory
+        if (device.waterLevelHistory) {
+          const waterHistory = Object.values(device.waterLevelHistory).sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+          if (waterHistory.length > 0) {
+            avgWaterLevel = waterHistory[0].level;
+          }
+        }
+
+        // Calculate Bins at Capacity and Total Weight from wasteBinHistory
+        if (device.wasteBinHistory) {
+            const wasteHistory = Object.values(device.wasteBinHistory).sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            if (wasteHistory.length > 0) {
+                const latestBinState = wasteHistory[0];
+                if (latestBinState.fullness > binFullnessThreshold) {
+                    binsAtCapacity = 1; // Assuming one device for now
+                }
+                totalWasteWeight = latestBinState.weight;
+            }
+        }
       }
     }
 
@@ -44,28 +53,28 @@ export default function OverviewCards() {
         title: "Avg. Water Level",
         value: `${Math.round(avgWaterLevel)}%`,
         change: "+2.5%",
-        description: "from yesterday",
+        description: "from latest reading",
         icon: <WaterLevelIcon className="h-10 w-10 text-primary" />,
-        loading: waterLoading,
+        loading: loading,
       },
       {
         title: "Bins at Capacity",
         value: `${binsAtCapacity}`,
-        change: "-3",
-        description: "from last week",
+        change: "above 80%",
+        description: "from latest reading",
         icon: <WasteBinIcon className="h-10 w-10 text-primary" />,
-        loading: wasteLoading || devicesLoading,
+        loading: loading,
       },
       {
         title: "Total Waste Weight",
         value: `${totalWasteWeight.toFixed(1)} kg`,
         change: "+5.2 kg",
-        description: "since last collection",
+        description: "from latest reading",
         icon: <Weight className="h-10 w-10 text-primary" />,
-        loading: wasteLoading, 
+        loading: loading, 
       },
     ];
-  }, [waterLevelsData, wasteBinsData, devicesData, waterLoading, wasteLoading, devicesLoading]);
+  }, [devicesData, devicesLoading]);
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
