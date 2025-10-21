@@ -36,8 +36,32 @@ const parseTimestamp = (timestamp: string): Date => {
 };
 
 
-const DeviceHistoryTable = ({ history, type, loading }: { history: any[], type: 'water' | 'waste', loading: boolean }) => {
+const DeviceHistoryTable = ({ history, type, loading, thresholds }: { history: any[], type: 'water' | 'waste', loading: boolean, thresholds: any }) => {
     if (loading) return <Skeleton className="h-64 w-full" />;
+    
+    const getRowClass = (entry: any) => {
+        if (!thresholds) return "";
+
+        if (type === 'water') {
+            const level = entry.level;
+            const threshold = thresholds.waterLevel || 80;
+            if (level >= threshold) return "bg-destructive/10 hover:bg-destructive/20";
+            if (level >= threshold * 0.9) return "bg-warning/10 hover:bg-warning/20";
+        }
+        
+        if (type === 'waste') {
+            const fullness = entry.fullness;
+            const weight = entry.weight;
+            const fullnessThreshold = thresholds.binFullness || 80;
+            const weightThreshold = thresholds.wasteWeight || 30;
+
+            if (fullness >= fullnessThreshold || weight >= weightThreshold) return "bg-destructive/10 hover:bg-destructive/20";
+            if (fullness >= fullnessThreshold * 0.9 || weight >= weightThreshold * 0.9) return "bg-warning/10 hover:bg-warning/20";
+        }
+        
+        return "";
+    };
+    
     if (!history || history.length === 0) {
       return (
         <div className="rounded-lg border h-64 flex items-center justify-center">
@@ -59,7 +83,7 @@ const DeviceHistoryTable = ({ history, type, loading }: { history: any[], type: 
                 </TableHeader>
                 <TableBody>
                     {history.map((entry: any, index) => (
-                        <TableRow key={index}>
+                        <TableRow key={index} className={getRowClass(entry)}>
                             <TableCell>{parseTimestamp(entry.timestamp).toLocaleString()}</TableCell>
                             {type === 'water' && <TableCell className="text-right">{entry.level}</TableCell>}
                             {type === 'waste' && <TableCell className="text-right">{entry.fullness ?? 'N/A'}</TableCell>}
@@ -186,13 +210,13 @@ export default function DeviceDetailsPage() {
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-bold">Water Level History</h2>
                 </div>
-                <DeviceHistoryTable history={filteredHistory.water} type="water" loading={loading} />
+                <DeviceHistoryTable history={filteredHistory.water} type="water" loading={loading} thresholds={device?.thresholds} />
             </div>
              <div>
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-bold">Waste Bin History</h2>
                 </div>
-                <DeviceHistoryTable history={filteredHistory.waste} type="waste" loading={loading} />
+                <DeviceHistoryTable history={filteredHistory.waste} type="waste" loading={loading} thresholds={device?.thresholds} />
             </div>
        </div>
     </div>
