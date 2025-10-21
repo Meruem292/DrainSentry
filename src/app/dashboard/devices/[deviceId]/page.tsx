@@ -30,6 +30,15 @@ const DeviceHistoryTable = ({ history, type }: { history: any, type: 'water' | '
             .slice(0, 10);
     }, [history]);
     
+    if (loading) return <Skeleton className="h-64 w-full" />;
+    if (!data || data.length === 0) {
+      return (
+        <div className="rounded-lg border h-64 flex items-center justify-center">
+          <p className="text-muted-foreground">No recent history available.</p>
+        </div>
+      );
+    }
+    
     return (
         <div className="rounded-lg border">
             <Table>
@@ -42,20 +51,14 @@ const DeviceHistoryTable = ({ history, type }: { history: any, type: 'water' | '
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {data.length > 0 ? data.map((entry: any, index) => (
+                    {data.map((entry: any, index) => (
                         <TableRow key={index}>
                             <TableCell>{new Date(entry.timestamp).toLocaleString()}</TableCell>
                             {type === 'water' && <TableCell className="text-right">{entry.level}</TableCell>}
                             {type === 'waste' && <TableCell className="text-right">{entry.fullness ?? 'N/A'}</TableCell>}
                             {type === 'waste' && <TableCell className="text-right">{entry.weight ?? 'N/A'}</TableCell>}
                         </TableRow>
-                    )) : (
-                        <TableRow>
-                            <TableCell colSpan={type === 'water' ? 2 : 3} className="text-center">
-                                No recent history available.
-                            </TableCell>
-                        </TableRow>
-                    )}
+                    ))}
                 </TableBody>
             </Table>
         </div>
@@ -98,11 +101,11 @@ export default function DeviceDetailsPage() {
        <div className="grid gap-8 lg:grid-cols-2">
             <div>
                 <h2 className="text-xl font-bold mb-4">Water Level History</h2>
-                {loading ? <Skeleton className="h-64 w-full" /> : <DeviceHistoryTable history={device?.waterLevelHistory} type="water" />}
+                <DeviceHistoryTable history={device?.waterLevelHistory} type="water" />
             </div>
              <div>
                 <h2 className="text-xl font-bold mb-4">Waste Bin History</h2>
-                {loading ? <Skeleton className="h-64 w-full" /> : <DeviceHistoryTable history={device?.wasteBinHistory} type="waste" />}
+                <DeviceHistoryTable history={device?.wasteBinHistory} type="waste" />
             </div>
        </div>
     </div>
