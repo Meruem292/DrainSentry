@@ -4,14 +4,18 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Sparkles } from "lucide-react";
+import { describeImage } from "@/ai/flows/image-describer";
 
 export default function PhotoPage() {
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [analyzing, setAnalyzing] = useState(false);
+    const [description, setDescription] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchLatestImage = async () => {
@@ -51,6 +55,20 @@ export default function PhotoPage() {
         fetchLatestImage();
     }, []);
 
+    const handleAnalyzeImage = async () => {
+        if (!imageUrl) return;
+        setAnalyzing(true);
+        setDescription(null);
+        setError(null);
+        try {
+            const result = await describeImage(imageUrl);
+            setDescription(result);
+        } catch (err: any) {
+            setError(err.message || "Failed to analyze image.");
+        } finally {
+            setAnalyzing(false);
+        }
+    };
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-background p-4">
@@ -81,6 +99,33 @@ export default function PhotoPage() {
                             )}
                         </div>
                     </CardContent>
+                    <CardFooter className="flex-col items-start gap-4">
+                        <Button onClick={handleAnalyzeImage} disabled={!imageUrl || analyzing || loading}>
+                            <Sparkles className="mr-2 h-4 w-4" />
+                            {analyzing ? 'Analyzing...' : 'Describe Image'}
+                        </Button>
+
+                        {description && !analyzing && (
+                             <Card className="w-full bg-primary/5 border-primary/20">
+                                <CardHeader>
+                                    <CardTitle className="text-base flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> AI Analysis</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="text-sm">{description}</p>
+                                </CardContent>
+                            </Card>
+                        )}
+                        {analyzing && (
+                             <div className="w-full p-4 border rounded-lg">
+                                <Skeleton className="h-4 w-1/4 mb-2" />
+                                <Skeleton className="h-4 w-full" />
+                                <Skeleton className="h-4 w-3/4 mt-2" />
+                            </div>
+                        )}
+                        {error && !analyzing && (
+                            <p className="text-sm text-destructive">{error}</p>
+                        )}
+                    </CardFooter>
                 </Card>
             </div>
         </div>
