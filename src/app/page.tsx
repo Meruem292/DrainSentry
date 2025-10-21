@@ -38,7 +38,7 @@ export default function LandingPage() {
                   Intelligent Monitoring for Modern Sanitation
                 </h1>
                 <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl mt-4">
-                  DrainSentry revolutionizes sanitation with a smart sewerage collecting trash conveyor, providing real-time data on water levels and waste bin fullness and weight. Empower your city with insights for cleaner, more efficient infrastructure.
+                  DrainSentry revolutionizes sanitation with a smart sewerage collecting trash conveyor, providing real-time data on water levels, and waste bin fullness and weight. Empower your city with insights for cleaner, more efficient infrastructure.
                 </p>
                 <div className="mt-6 space-x-4">
                   <Button asChild size="lg">
@@ -59,7 +59,7 @@ export default function LandingPage() {
                     alt="DrainSentry Hero Image"
                     width={1200}
                     height={800}
-                    className="mx-auto overflow-hidden rounded-xl"
+                    className="mx-auto overflow-hidden rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl"
                   />
               </div>
             </div>
