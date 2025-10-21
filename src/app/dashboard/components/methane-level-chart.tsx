@@ -20,9 +20,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 
 const chartConfig = {
-  // Changed from ppm to fullness for generic representation
-  fullness: {
-    label: "Sensor Activity",
+  weight: {
+    label: "Weight (kg)",
     color: "hsl(var(--accent))",
   },
 }
@@ -40,28 +39,26 @@ export default function MethaneLevelChart() {
 
     const history = devices[deviceId].wasteBinHistory;
     
-    // Using fullness from waste bin history as a stand-in for Methane sensor activity
     const dataPoints = Object.values(history)
-      .filter((entry: any) => entry.timestamp && entry.fullness !== undefined)
+      .filter((entry: any) => entry.timestamp && entry.weight !== undefined)
       .sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-      .slice(-7); // Get last 7 entries
+      .slice(-7); 
 
     if (dataPoints.length === 0) {
-      // Fallback data if no relevant history is found
       return [
-        { time: "12:00", fullness: 21 },
-        { time: "13:00", fullness: 25 },
-        { time: "14:00", fullness: 23 },
-        { time: "15:00", fullness: 31 },
-        { time: "16:00", fullness: 35 },
-        { time: "17:00", fullness: 42 },
-        { time: "18:00", fullness: 38 },
+        { time: "12:00", weight: 5 },
+        { time: "13:00", weight: 8 },
+        { time: "14:00", weight: 12 },
+        { time: "15:00", weight: 15 },
+        { time: "16:00", weight: 20 },
+        { time: "17:00", weight: 22 },
+        { time: "18:00", weight: 18 },
       ]
     }
 
     return dataPoints.map((entry: any) => ({
       time: new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
-      fullness: entry.fullness, 
+      weight: entry.weight, 
     }));
 
   }, [devices]);
@@ -69,9 +66,9 @@ export default function MethaneLevelChart() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Methane Gas Levels</CardTitle>
+        <CardTitle>Waste Weight History</CardTitle>
         <CardDescription>
-          Live methane concentration from the primary trunk line (using sensor activity as proxy).
+          Total collected waste weight from the primary collection point.
         </CardDescription>
       </CardHeader>
       <CardContent className="pb-4">
@@ -99,22 +96,22 @@ export default function MethaneLevelChart() {
                     tickFormatter={(value) => value.slice(0, 5)}
                 />
                 <YAxis
-                  dataKey="fullness"
+                  dataKey="weight"
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
-                  tickFormatter={(value) => `${value}`}
+                  tickFormatter={(value) => `${value} kg`}
                 />
                 <ChartTooltip
                     cursor={false}
-                    content={<ChartTooltipContent indicator="line" formatter={(value, name) => [`${Number(value).toFixed(0)}`, 'Sensor Activity']}/>}
+                    content={<ChartTooltipContent indicator="line" formatter={(value, name) => [`${Number(value).toFixed(2)} kg`, 'Waste Weight']}/>}
                 />
                 <Area
-                    dataKey="fullness"
+                    dataKey="weight"
                     type="natural"
-                    fill="var(--color-fullness)"
+                    fill="var(--color-weight)"
                     fillOpacity={0.4}
-                    stroke="var(--color-fullness)"
+                    stroke="var(--color-weight)"
                     stackId="a"
                 />
                 </AreaChart>

@@ -8,6 +8,7 @@ import MethaneIcon from "@/components/icons/methane-icon";
 import { useUser } from "@/firebase";
 import useRtdbValue from "@/firebase/rtdb/use-rtdb-value";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Weight } from "lucide-react";
 
 export default function OverviewCards() {
   const { user } = useUser();
@@ -18,7 +19,7 @@ export default function OverviewCards() {
   const overviewData = React.useMemo(() => {
     let avgWaterLevel = 0;
     let binsAtCapacity = 0;
-    let latestMethane = 0; // Placeholder as methane is not in DB structure
+    let totalWasteWeight = 0;
 
     if (waterLevelsData) {
       const levels = Object.values(waterLevelsData).map((d: any) => d.level);
@@ -27,15 +28,15 @@ export default function OverviewCards() {
       }
     }
     
-    if (wasteBinsData && devicesData) {
-      const deviceId = Object.keys(devicesData)[0];
-      const binFullnessThreshold = devicesData?.[deviceId]?.thresholds?.binFullness ?? 80;
+    if (wasteBinsData) {
+      const deviceId = devicesData ? Object.keys(devicesData)[0] : null;
+      const binFullnessThreshold = deviceId ? devicesData?.[deviceId]?.thresholds?.binFullness ?? 80 : 80;
       binsAtCapacity = Object.values(wasteBinsData).filter((b: any) => b.fullness > binFullnessThreshold).length;
-    }
-    
-    // Using water level as a stand-in for Methane for visualization
-    if(avgWaterLevel > 0) {
-      latestMethane = avgWaterLevel / 20;
+
+      const weights = Object.values(wasteBinsData).map((b: any) => b.weight);
+      if(weights.length > 0){
+        totalWasteWeight = weights.reduce((a, b) => a + b, 0);
+      }
     }
 
 
@@ -57,12 +58,12 @@ export default function OverviewCards() {
         loading: wasteLoading || devicesLoading,
       },
       {
-        title: "Methane Levels",
-        value: `${latestMethane.toFixed(1)} ppm`,
-        change: "+0.1 ppm",
-        description: "but within safe limits",
-        icon: <MethaneIcon className="h-10 w-10 text-primary" />,
-        loading: waterLoading, // piggy-backing on water loading
+        title: "Total Waste Weight",
+        value: `${totalWasteWeight.toFixed(1)} kg`,
+        change: "+5.2 kg",
+        description: "since last collection",
+        icon: <Weight className="h-10 w-10 text-primary" />,
+        loading: wasteLoading, 
       },
     ];
   }, [waterLevelsData, wasteBinsData, devicesData, waterLoading, wasteLoading, devicesLoading]);
