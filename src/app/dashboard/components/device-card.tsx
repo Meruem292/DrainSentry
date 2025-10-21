@@ -15,8 +15,8 @@ export default function DeviceCard({ device }: { device: any }) {
                 <CardHeader className="flex-row items-center gap-4">
                     <Server className="w-8 h-8 text-primary" />
                     <div>
-                        <CardTitle>{device.id}</CardTitle>
-                        <CardDescription>{device.name}</CardDescription>
+                        <CardTitle>{device.name || device.id}</CardTitle>
+                        <CardDescription>{device.id}</CardDescription>
                     </div>
                 </CardHeader>
                 <CardContent className="flex-grow">

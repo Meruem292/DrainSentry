@@ -39,7 +39,7 @@ export default function WasteBinStatus({ device, loading }: { device: any, loadi
           <div className="space-y-6 pr-4">
             <div key={bin.id} className="flex flex-col gap-2">
               <div className="flex justify-between items-baseline">
-                <p className="font-medium text-sm">{bin.id} - <span className="text-muted-foreground">{bin.location}</span></p>
+                <p className="font-medium text-sm">{device.name || device.id} - <span className="text-muted-foreground">{bin.location}</span></p>
                 <p className="font-semibold text-sm">{bin.fullness}%</p>
               </div>
               <Progress value={bin.fullness} className={cn("h-2", getProgressClass(bin.fullness))} />
