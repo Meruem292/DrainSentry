@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from "react";
@@ -8,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { Clock, Droplet, MapPin, Trash2, Weight } from "lucide-react";
+import { BarChart, Clock, Droplet, MapPin, Trash2, Weight } from "lucide-react";
 
 const parseTimestamp = (timestamp: string): Date => {
     if (!timestamp) return new Date(0);
@@ -27,7 +26,7 @@ export default function DeviceOverviewCard({ device }: { device: any }) {
         let waterLevel = 0;
         let waterLevelTime = "Never";
         
-        if (device.wasteBinHistory) {
+        if (device?.wasteBinHistory) {
             const sortedWaste = Object.values(device.wasteBinHistory).sort((a: any, b: any) => parseTimestamp(b.timestamp).getTime() - parseTimestamp(a.timestamp).getTime());
             if (sortedWaste.length > 0) {
                 binFullness = sortedWaste[0].fullness;
@@ -40,7 +39,7 @@ export default function DeviceOverviewCard({ device }: { device: any }) {
             }
         }
         
-        if (device.waterLevelHistory) {
+        if (device?.waterLevelHistory) {
             const sortedWater = Object.values(device.waterLevelHistory).sort((a: any, b: any) => parseTimestamp(b.timestamp).getTime() - parseTimestamp(a.timestamp).getTime());
             if (sortedWater.length > 0) {
                 waterLevel = sortedWater[0].level;
