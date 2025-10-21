@@ -2,7 +2,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { gemini15Flash } from 'genkitx-googleai';
 
 const describeImageFlow = ai.defineFlow(
   {
@@ -11,10 +10,8 @@ const describeImageFlow = ai.defineFlow(
     outputSchema: z.string(),
   },
   async (imageUrl) => {
-    const llm = gemini15Flash;
-
     const response = await ai.generate({
-      model: llm,
+      model: 'googleai/gemini-1.5-flash-latest',
       prompt: [
         {
           text: 'Describe what is in this image in a concise but friendly way. If there is trash, mention it.',
@@ -27,7 +24,7 @@ const describeImageFlow = ai.defineFlow(
       ],
     });
 
-    return response.text();
+    return response.text;
   }
 );
 
