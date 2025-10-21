@@ -28,8 +28,6 @@ const chartConfig = {
 
 export default function WaterLevelChart() {
   const { user } = useUser();
-  // Assuming a single device or aggregating across devices.
-  // Taking the first device found for simplicity.
   const path = user ? `users/${user.uid}/devices` : '';
   const { data: devices, loading } = useRtdbValue(path);
   

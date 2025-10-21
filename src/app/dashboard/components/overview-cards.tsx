@@ -13,6 +13,7 @@ export default function OverviewCards() {
   const { user } = useUser();
   const { data: waterLevelsData, loading: waterLoading } = useRtdbValue(user ? `users/${user.uid}/waterLevels` : '');
   const { data: wasteBinsData, loading: wasteLoading } = useRtdbValue(user ? `users/${user.uid}/wasteBins` : '');
+  const { data: devicesData, loading: devicesLoading } = useRtdbValue(user ? `users/${user.uid}/devices` : '');
 
   const overviewData = React.useMemo(() => {
     let avgWaterLevel = 0;
@@ -26,8 +27,10 @@ export default function OverviewCards() {
       }
     }
     
-    if (wasteBinsData) {
-      binsAtCapacity = Object.values(wasteBinsData).filter((b: any) => b.fullness > 80).length;
+    if (wasteBinsData && devicesData) {
+      const deviceId = Object.keys(devicesData)[0];
+      const binFullnessThreshold = devicesData?.[deviceId]?.thresholds?.binFullness ?? 80;
+      binsAtCapacity = Object.values(wasteBinsData).filter((b: any) => b.fullness > binFullnessThreshold).length;
     }
     
     // Using water level as a stand-in for Methane for visualization
@@ -51,7 +54,7 @@ export default function OverviewCards() {
         change: "-3",
         description: "from last week",
         icon: <WasteBinIcon className="h-10 w-10 text-primary" />,
-        loading: wasteLoading,
+        loading: wasteLoading || devicesLoading,
       },
       {
         title: "Methane Levels",
@@ -62,7 +65,7 @@ export default function OverviewCards() {
         loading: waterLoading, // piggy-backing on water loading
       },
     ];
-  }, [waterLevelsData, wasteBinsData, waterLoading, wasteLoading]);
+  }, [waterLevelsData, wasteBinsData, devicesData, waterLoading, wasteLoading, devicesLoading]);
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

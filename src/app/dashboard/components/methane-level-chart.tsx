@@ -20,8 +20,9 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 
 const chartConfig = {
-  ppm: {
-    label: "ppm",
+  // Changed from ppm to fullness for generic representation
+  fullness: {
+    label: "Sensor Activity",
     color: "hsl(var(--accent))",
   },
 }
@@ -39,27 +40,28 @@ export default function MethaneLevelChart() {
 
     const history = devices[deviceId].wasteBinHistory;
     
+    // Using fullness from waste bin history as a stand-in for Methane sensor activity
     const dataPoints = Object.values(history)
-      .filter((entry: any) => entry.timestamp && entry.level !== undefined)
+      .filter((entry: any) => entry.timestamp && entry.fullness !== undefined)
       .sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
       .slice(-7); // Get last 7 entries
 
     if (dataPoints.length === 0) {
+      // Fallback data if no relevant history is found
       return [
-        { time: "12:00", ppm: 2.1 },
-        { time: "13:00", ppm: 2.5 },
-        { time: "14:00", ppm: 2.3 },
-        { time: "15:00", ppm: 3.1 },
-        { time: "16:00", ppm: 3.5 },
-        { time: "17:00", ppm: 4.2 },
-        { time: "18:00", ppm: 3.8 },
+        { time: "12:00", fullness: 21 },
+        { time: "13:00", fullness: 25 },
+        { time: "14:00", fullness: 23 },
+        { time: "15:00", fullness: 31 },
+        { time: "16:00", fullness: 35 },
+        { time: "17:00", fullness: 42 },
+        { time: "18:00", fullness: 38 },
       ]
     }
 
     return dataPoints.map((entry: any) => ({
       time: new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
-      // Using water level as a stand-in for ppm for visualization
-      ppm: entry.level / 20, 
+      fullness: entry.fullness, 
     }));
 
   }, [devices]);
@@ -69,7 +71,7 @@ export default function MethaneLevelChart() {
       <CardHeader>
         <CardTitle>Methane Gas Levels</CardTitle>
         <CardDescription>
-          Live methane concentration from the primary trunk line.
+          Live methane concentration from the primary trunk line (using sensor activity as proxy).
         </CardDescription>
       </CardHeader>
       <CardContent className="pb-4">
@@ -97,22 +99,22 @@ export default function MethaneLevelChart() {
                     tickFormatter={(value) => value.slice(0, 5)}
                 />
                 <YAxis
-                  dataKey="ppm"
+                  dataKey="fullness"
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
-                  tickFormatter={(value) => `${value.toFixed(1)}`}
+                  tickFormatter={(value) => `${value}`}
                 />
                 <ChartTooltip
                     cursor={false}
-                    content={<ChartTooltipContent indicator="line" formatter={(value) => [`${Number(value).toFixed(2)} ppm`, 'Methane']}/>}
+                    content={<ChartTooltipContent indicator="line" formatter={(value, name) => [`${Number(value).toFixed(0)}`, 'Sensor Activity']}/>}
                 />
                 <Area
-                    dataKey="ppm"
+                    dataKey="fullness"
                     type="natural"
-                    fill="var(--color-ppm)"
+                    fill="var(--color-fullness)"
                     fillOpacity={0.4}
-                    stroke="var(--color-ppm)"
+                    stroke="var(--color-fullness)"
                     stackId="a"
                 />
                 </AreaChart>
