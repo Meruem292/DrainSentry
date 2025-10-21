@@ -1,3 +1,4 @@
+
 "use client"
 
 import React from "react";
@@ -39,9 +40,9 @@ export default function WaterLevelChart({ device, loading }: { device: any, load
       return [];
     }
     
-    const history = device.waterLevelHistory;
+    const history = Array.isArray(device.waterLevelHistory) ? device.waterLevelHistory : Object.values(device.waterLevelHistory);
     
-    const dataPoints = Object.values(history)
+    const dataPoints = history
       .filter((entry: any) => entry.timestamp && entry.level !== undefined)
       .sort((a: any, b: any) => parseTimestamp(a.timestamp).getTime() - parseTimestamp(b.timestamp).getTime())
       .map((entry: any) => ({
@@ -61,7 +62,7 @@ export default function WaterLevelChart({ device, loading }: { device: any, load
     <Card>
       <CardHeader>
         <CardTitle>Water Level - Recent History</CardTitle>
-        <CardDescription>Recent water level readings from this device.</CardDescription>
+        <CardDescription>Water level readings for the selected date range.</CardDescription>
       </CardHeader>
       <CardContent>
         {loading ? (
@@ -93,7 +94,7 @@ export default function WaterLevelChart({ device, loading }: { device: any, load
             </BarChart>
           ) : (
             <div className="flex h-full items-center justify-center">
-              <p className="text-muted-foreground">No water level data available.</p>
+              <p className="text-muted-foreground">No water level data available for this range.</p>
             </div>
           )}
         </ChartContainer>

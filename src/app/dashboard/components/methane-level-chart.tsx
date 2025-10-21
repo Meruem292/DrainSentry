@@ -1,3 +1,4 @@
+
 "use client"
 
 import React from "react"
@@ -39,9 +40,9 @@ export default function MethaneLevelChart({ device, loading }: { device: any, lo
       return [];
     }
     
-    const history = device.wasteBinHistory;
+    const history = Array.isArray(device.wasteBinHistory) ? device.wasteBinHistory : Object.values(device.wasteBinHistory);
     
-    const dataPoints = Object.values(history)
+    const dataPoints = history
       .filter((entry: any) => entry.timestamp && entry.weight !== undefined)
       .sort((a: any, b: any) => parseTimestamp(a.timestamp).getTime() - parseTimestamp(b.timestamp).getTime());
 
@@ -61,7 +62,7 @@ export default function MethaneLevelChart({ device, loading }: { device: any, lo
       <CardHeader>
         <CardTitle>Waste Weight History</CardTitle>
         <CardDescription>
-          Total collected waste weight from this device.
+          Total collected waste weight from this device for the selected date range.
         </CardDescription>
       </CardHeader>
       <CardContent className="pb-4">
@@ -120,10 +121,10 @@ export default function MethaneLevelChart({ device, loading }: { device: any, lo
         {chartData.length > 1 && !loading && (
           <div className="flex items-center justify-center gap-2 pt-4">
               <div className="flex items-center gap-2 font-medium leading-none text-accent">
-                  Trending up <TrendingUp className="h-4 w-4" />
+                  Trending up <TrendingUp className="h-4 w-4 text-accent" />
               </div>
               <div className="leading-none text-muted-foreground">
-                  Showing all historical data
+                  Showing data for selected range
               </div>
           </div>
         )}
