@@ -68,7 +68,11 @@ export default function DevicesPage() {
         manualConveyor: false,
         hardware: {
             binHeight: 100,
-            loadcellCalibration: 0
+            loadcellCalibration: 0,
+            sensorReadInterval: 1000,
+            configFetchInterval: 300000,
+            dataSendInterval: 60000,
+            findDeviceInterval: 60000,
         },
         notifications: {
             enabled: true,

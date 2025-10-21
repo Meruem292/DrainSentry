@@ -42,6 +42,10 @@ export default function EditDeviceDialog({ isOpen, onOpenChange, device, contact
   // Hardware state
   const [binHeight, setBinHeight] = useState(100);
   const [loadcellCalibration, setLoadcellCalibration] = useState(0);
+  const [sensorReadInterval, setSensorReadInterval] = useState(1000);
+  const [configFetchInterval, setConfigFetchInterval] = useState(300000);
+  const [dataSendInterval, setDataSendInterval] = useState(60000);
+  const [findDeviceInterval, setFindDeviceInterval] = useState(60000);
 
   // Notifications state
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -60,6 +64,10 @@ export default function EditDeviceDialog({ isOpen, onOpenChange, device, contact
       if (device.hardware) {
         setBinHeight(device.hardware.binHeight || 100);
         setLoadcellCalibration(device.hardware.loadcellCalibration || 0);
+        setSensorReadInterval(device.hardware.sensorReadInterval || 1000);
+        setConfigFetchInterval(device.hardware.configFetchInterval || 300000);
+        setDataSendInterval(device.hardware.dataSendInterval || 60000);
+        setFindDeviceInterval(device.hardware.findDeviceInterval || 60000);
       }
       if (device.notifications) {
         setNotificationsEnabled(device.notifications.enabled ?? true);
@@ -83,7 +91,11 @@ export default function EditDeviceDialog({ isOpen, onOpenChange, device, contact
         },
         hardware: {
             binHeight,
-            loadcellCalibration
+            loadcellCalibration,
+            sensorReadInterval,
+            configFetchInterval,
+            dataSendInterval,
+            findDeviceInterval,
         }
     };
     onSave(device.id, settings);
@@ -218,27 +230,72 @@ export default function EditDeviceDialog({ isOpen, onOpenChange, device, contact
                 </div>
             </TabsContent>
             <TabsContent value="hardware" className="py-6 px-1 space-y-6">
-                <div className="grid gap-2">
-                    <Label htmlFor="bin-height">Bin Height (cm)</Label>
-                    <Input
-                        id="bin-height"
-                        type="number"
-                        value={binHeight}
-                        onChange={(e) => setBinHeight(Number(e.target.value))}
-                        placeholder="e.g. 100"
-                    />
-                    <p className='text-xs text-muted-foreground'>The total height of the waste bin in centimeters.</p>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="bin-height">Bin Height (cm)</Label>
+                        <Input
+                            id="bin-height"
+                            type="number"
+                            value={binHeight}
+                            onChange={(e) => setBinHeight(Number(e.target.value))}
+                            placeholder="e.g. 100"
+                        />
+                        <p className='text-xs text-muted-foreground'>The total height of the waste bin.</p>
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="loadcell-calibration">Loadcell Calibration Factor</Label>
+                        <Input
+                            id="loadcell-calibration"
+                            type="number"
+                            value={loadcellCalibration}
+                            onChange={(e) => setLoadcellCalibration(Number(e.target.value))}
+                            placeholder="e.g. 430.5"
+                        />
+                        <p className='text-xs text-muted-foreground'>Calibration factor for weight readings.</p>
+                    </div>
                 </div>
-                <div className="grid gap-2">
-                    <Label htmlFor="loadcell-calibration">Loadcell Calibration Factor</Label>
-                    <Input
-                        id="loadcell-calibration"
-                        type="number"
-                        value={loadcellCalibration}
-                        onChange={(e) => setLoadcellCalibration(Number(e.target.value))}
-                        placeholder="e.g. 430.5"
-                    />
-                     <p className='text-xs text-muted-foreground'>The calibration factor for the loadcell to ensure accurate weight readings.</p>
+                 <Separator />
+                 <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="sensor-read-interval">Sensor Read Interval (ms)</Label>
+                        <Input
+                            id="sensor-read-interval"
+                            type="number"
+                            value={sensorReadInterval}
+                            onChange={(e) => setSensorReadInterval(Number(e.target.value))}
+                        />
+                        <p className='text-xs text-muted-foreground'>How often to read sensor data.</p>
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="data-send-interval">Data Send Interval (ms)</Label>
+                        <Input
+                            id="data-send-interval"
+                            type="number"
+                            value={dataSendInterval}
+                            onChange={(e) => setDataSendInterval(Number(e.target.value))}
+                        />
+                        <p className='text-xs text-muted-foreground'>How often to send data to the server.</p>
+                    </div>
+                     <div className="grid gap-2">
+                        <Label htmlFor="config-fetch-interval">Config Fetch Interval (ms)</Label>
+                        <Input
+                            id="config-fetch-interval"
+                            type="number"
+                            value={configFetchInterval}
+                            onChange={(e) => setConfigFetchInterval(Number(e.target.value))}
+                        />
+                        <p className='text-xs text-muted-foreground'>How often to fetch remote configuration.</p>
+                    </div>
+                     <div className="grid gap-2">
+                        <Label htmlFor="find-device-interval">Device Retry Interval (ms)</Label>
+                        <Input
+                            id="find-device-interval"
+                            type="number"
+                            value={findDeviceInterval}
+                            onChange={(e) => setFindDeviceInterval(Number(e.target.value))}
+                        />
+                        <p className='text-xs text-muted-foreground'>Retry interval if device is not found.</p>
+                    </div>
                 </div>
             </TabsContent>
         </Tabs>
