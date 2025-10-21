@@ -28,12 +28,7 @@ export default function MethaneLevelChart({ device, loading }: { device: any, lo
 
   const chartData = React.useMemo(() => {
     if (!device || !device.wasteBinHistory) {
-      return [
-        { time: "12:00", weight: 5 }, { time: "13:00", weight: 8 },
-        { time: "14:00", weight: 12 }, { time: "15:00", weight: 15 },
-        { time: "16:00", weight: 20 }, { time: "17:00", weight: 22 },
-        { time: "18:00", weight: 18 },
-      ];
+      return [];
     }
     
     const history = device.wasteBinHistory;
@@ -44,12 +39,7 @@ export default function MethaneLevelChart({ device, loading }: { device: any, lo
       .slice(-7); 
 
     if (dataPoints.length === 0) {
-      return [
-        { time: "12:00", weight: 5 }, { time: "13:00", weight: 8 },
-        { time: "14:00", weight: 12 }, { time: "15:00", weight: 15 },
-        { time: "16:00", weight: 20 }, { time: "17:00", weight: 22 },
-        { time: "18:00", weight: 18 },
-      ]
+      return [];
     }
 
     return dataPoints.map((entry: any) => ({
@@ -74,54 +64,62 @@ export default function MethaneLevelChart({ device, loading }: { device: any, lo
             </div>
         ) : (
             <div className="h-[218px]">
-            <ChartContainer config={chartConfig}>
-                <AreaChart
-                accessibilityLayer
-                data={chartData}
-                margin={{
-                    left: 12,
-                    right: 12,
-                }}
-                >
-                <CartesianGrid vertical={false} />
-                <XAxis
-                    dataKey="time"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    tickFormatter={(value) => value.slice(0, 5)}
-                />
-                <YAxis
-                  dataKey="weight"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  tickFormatter={(value) => `${value} kg`}
-                />
-                <ChartTooltip
-                    cursor={false}
-                    content={<ChartTooltipContent indicator="line" formatter={(value, name) => [`${Number(value).toFixed(2)} kg`, 'Waste Weight']}/>}
-                />
-                <Area
-                    dataKey="weight"
-                    type="natural"
-                    fill="var(--color-weight)"
-                    fillOpacity={0.4}
-                    stroke="var(--color-weight)"
-                    stackId="a"
-                />
-                </AreaChart>
-            </ChartContainer>
+              {chartData.length > 0 ? (
+                <ChartContainer config={chartConfig}>
+                    <AreaChart
+                    accessibilityLayer
+                    data={chartData}
+                    margin={{
+                        left: 12,
+                        right: 12,
+                    }}
+                    >
+                    <CartesianGrid vertical={false} />
+                    <XAxis
+                        dataKey="time"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        tickFormatter={(value) => value.slice(0, 5)}
+                    />
+                    <YAxis
+                      dataKey="weight"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      tickFormatter={(value) => `${value} kg`}
+                    />
+                    <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent indicator="line" formatter={(value, name) => [`${Number(value).toFixed(2)} kg`, 'Waste Weight']}/>}
+                    />
+                    <Area
+                        dataKey="weight"
+                        type="natural"
+                        fill="var(--color-weight)"
+                        fillOpacity={0.4}
+                        stroke="var(--color-weight)"
+                        stackId="a"
+                    />
+                    </AreaChart>
+                </ChartContainer>
+              ) : (
+                <div className="flex h-full items-center justify-center">
+                  <p className="text-muted-foreground">No waste weight data available.</p>
+                </div>
+              )}
             </div>
         )}
-        <div className="flex items-center justify-center gap-2 pt-4">
-            <div className="flex items-center gap-2 font-medium leading-none">
-                Trending up <TrendingUp className="h-4 w-4" />
-            </div>
-            <div className="leading-none text-muted-foreground">
-                Showing data for the last few hours
-            </div>
-        </div>
+        {chartData.length > 0 && !loading && (
+          <div className="flex items-center justify-center gap-2 pt-4">
+              <div className="flex items-center gap-2 font-medium leading-none">
+                  Trending up <TrendingUp className="h-4 w-4" />
+              </div>
+              <div className="leading-none text-muted-foreground">
+                  Showing data for the last few hours
+              </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   )

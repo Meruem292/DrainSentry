@@ -2,9 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
 import React from "react";
 
 const getProgressClass = (level: number): string => {
@@ -36,16 +34,8 @@ export default function WasteBinStatus({ device, loading }: { device: any, loadi
       </CardHeader>
       <CardContent>
         {loading ? (
-          <div className="space-y-6 pr-4">
-            <div className="flex flex-col gap-2">
-              <div className="flex justify-between items-baseline">
-                <Skeleton className="h-5 w-3/4" />
-                <Skeleton className="h-5 w-1/4" />
-              </div>
-              <Skeleton className="h-2 w-full" />
-            </div>
-          </div>
-        ) : bin ? (
+          <div className="h-24 animate-pulse rounded-md bg-muted" />
+        ) : bin && bin.fullness > 0 ? (
           <div className="space-y-6 pr-4">
             <div key={bin.id} className="flex flex-col gap-2">
               <div className="flex justify-between items-baseline">
@@ -56,7 +46,9 @@ export default function WasteBinStatus({ device, loading }: { device: any, loadi
             </div>
           </div>
         ) : (
-            <div className="text-center text-muted-foreground pt-16">No waste bin data available.</div>
+            <div className="flex h-24 items-center justify-center">
+              <p className="text-center text-muted-foreground">No waste bin data available.</p>
+            </div>
         )}
       </CardContent>
     </Card>

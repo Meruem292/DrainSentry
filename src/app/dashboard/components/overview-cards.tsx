@@ -13,11 +13,11 @@ export default function OverviewCards({ device, loading }: { device: any, loadin
     let avgWaterLevel = 0;
     let binsAtCapacity = 0;
     let totalWasteWeight = 0;
+    let binFullnessThreshold = 80;
 
     if (device) {
-        const binFullnessThreshold = device.thresholds?.binFullness ?? 80;
+        binFullnessThreshold = device.thresholds?.binFullness ?? 80;
 
-        // Calculate Avg Water Level from the last entry in waterLevelHistory
         if (device.waterLevelHistory) {
           const waterHistory = Object.values(device.waterLevelHistory).sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
           if (waterHistory.length > 0) {
@@ -25,7 +25,6 @@ export default function OverviewCards({ device, loading }: { device: any, loadin
           }
         }
 
-        // Calculate Bins at Capacity and Total Weight from wasteBinHistory
         if (device.wasteBinHistory) {
             const wasteHistory = Object.values(device.wasteBinHistory).sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
             if (wasteHistory.length > 0) {
@@ -43,21 +42,18 @@ export default function OverviewCards({ device, loading }: { device: any, loadin
       {
         title: "Avg. Water Level",
         value: `${Math.round(avgWaterLevel)}%`,
-        change: "+2.5%",
         description: "from latest reading",
         icon: <WaterLevelIcon className="h-10 w-10 text-primary" />,
       },
       {
         title: "Bin at Capacity",
         value: `${binsAtCapacity > 0 ? 'Yes' : 'No'}`,
-        change: `above ${device?.thresholds?.binFullness ?? 80}%`,
-        description: "from latest reading",
+        description: `above ${binFullnessThreshold}%`,
         icon: <WasteBinIcon className="h-10 w-10 text-primary" />,
       },
       {
         title: "Total Waste Weight",
         value: `${totalWasteWeight.toFixed(1)} kg`,
-        change: "+5.2 kg",
         description: "from latest reading",
         icon: <Weight className="h-10 w-10 text-primary" />,
       },
@@ -82,8 +78,6 @@ export default function OverviewCards({ device, loading }: { device: any, loadin
                 <>
                     <div className="text-2xl font-bold">{item.value}</div>
                     <p className="text-xs text-muted-foreground">
-                        <span className="font-medium text-foreground">{item.change}</span>
-                        {" "}
                         {item.description}
                     </p>
                 </>
