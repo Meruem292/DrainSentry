@@ -95,7 +95,7 @@ function InnerDashboardLayout({ children }: { children: React.ReactNode }) {
             </SidebarMenuItem>
              <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={pathname.startsWith("/dashboard/contacts")} tooltip="Contacts">
-                <Link href="#"><Users /><span>Contacts</span></Link>
+                <Link href="/dashboard/contacts"><Users /><span>Contacts</span></Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
