@@ -3,17 +3,23 @@
 
 import React from "react";
 import useRtdbValue from "@/firebase/rtdb/use-rtdb-value";
-import { useUser } from "@/firebase";
+import { useUser, useDatabase } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import DeviceRow from "./components/device-row";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import AddDeviceDialog from "./components/add-device-dialog";
+import { ref, set } from "firebase/database";
+import { useToast } from "@/hooks/use-toast";
 
 export default function DevicesPage() {
   const { user } = useUser();
+  const { database } = useDatabase();
   const path = user ? `users/${user.uid}/devices` : "";
   const { data: devices, loading } = useRtdbValue(path);
+  const [isAddDialogOpen, setAddDialogOpen] = React.useState(false);
+  const { toast } = useToast();
 
   const deviceList = React.useMemo(() => {
     if (!devices) return [];
@@ -22,6 +28,54 @@ export default function DevicesPage() {
       ...devices[key],
     }));
   }, [devices]);
+
+  const handleAddDevice = (device: { id: string; name: string; location: string }) => {
+    if (!user || !database) {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Not logged in or database not available.'
+        });
+        return;
+    }
+    
+    const newDeviceRef = ref(database, `users/${user.uid}/devices/${device.id}`);
+    
+    set(newDeviceRef, {
+        id: device.id,
+        name: device.name || "Unnamed Device",
+        location: device.location || "Unknown Location",
+        status: 'inactive',
+        lastSeen: new Date().toLocaleString(),
+        manualConveyor: false,
+        notifications: {
+            enabled: true,
+            notifyContacts: [],
+            notifyOnBinFullness: true,
+            notifyOnWaterLevel: true,
+            notifyOnWeight: true,
+        },
+        thresholds: {
+            binFullness: 80,
+            wasteWeight: 30,
+            waterLevel: 80,
+        },
+        wasteBinHistory: {},
+        waterLevelHistory: {}
+    }).then(() => {
+        toast({
+            title: 'Device Added',
+            description: `Device ${device.id} has been added successfully.`
+        });
+        setAddDialogOpen(false);
+    }).catch(error => {
+        toast({
+            variant: 'destructive',
+            title: 'Failed to add device',
+            description: error.message
+        });
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -32,7 +86,7 @@ export default function DevicesPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
             <h3 className="text-lg font-semibold">Connected Devices</h3>
-            <Button>
+            <Button onClick={() => setAddDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add New Device
             </Button>
@@ -68,6 +122,12 @@ export default function DevicesPage() {
             </div>
         </CardContent>
       </Card>
+      
+      <AddDeviceDialog 
+        isOpen={isAddDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        onAddDevice={handleAddDevice}
+      />
     </div>
   );
 }
