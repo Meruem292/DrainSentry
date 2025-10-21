@@ -2,12 +2,15 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, BarChart, CheckCircle, Droplet, Plus, Server, Settings, Trash2, AlertTriangle, Users } from "lucide-react";
+import { CheckCircle, Droplet, Plus, Server, Trash2, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import useRtdbValue from "@/firebase/rtdb/use-rtdb-value";
 import { useUser } from "@/firebase";
+import { useToast } from "@/hooks/use-toast";
 import DeviceOverviewCard from "./components/device-overview-card";
 import AddDeviceIcon from "@/components/icons/add-device-icon";
 import WasteBinIcon from "@/components/icons/waste-bin-icon";
@@ -26,17 +29,21 @@ const parseTimestamp = (timestamp: string): Date => {
 export default function DashboardPage() {
 
   const { user } = useUser();
+  const router = useRouter();
+  const { toast } = useToast();
   const path = user ? `users/${user.uid}/devices` : "";
   const { data: devices, loading } = useRtdbValue(path);
 
-  const { deviceList, summary } = React.useMemo(() => {
-    if (!devices) return { deviceList: [], summary: { total: 0, active: 0, warnings: 0, criticalWater: 0, criticalWaste: 0 } };
+  const { deviceList, summary, firstCriticalWaterDevice, firstCriticalWasteDevice } = React.useMemo(() => {
+    if (!devices) return { deviceList: [], summary: { total: 0, active: 0, warnings: 0, criticalWater: 0, criticalWaste: 0 }, firstCriticalWaterDevice: null, firstCriticalWasteDevice: null };
     
     const deviceKeys = Object.keys(devices);
     const deviceList = deviceKeys.map(key => ({ ...devices[key], key }));
 
     let criticalWater = 0;
     let criticalWaste = 0;
+    let firstCriticalWaterDevice: string | null = null;
+    let firstCriticalWasteDevice: string | null = null;
 
     deviceList.forEach(device => {
       const waterThreshold = device.thresholds?.waterLevel ?? 80;
@@ -46,6 +53,7 @@ export default function DashboardPage() {
         const latestWater = Object.values(device.waterLevelHistory).sort((a: any, b: any) => parseTimestamp(b.timestamp).getTime() - parseTimestamp(a.timestamp).getTime())[0];
         if (latestWater && latestWater.level >= waterThreshold) {
           criticalWater++;
+          if (!firstCriticalWaterDevice) firstCriticalWaterDevice = device.key;
         }
       }
 
@@ -53,6 +61,7 @@ export default function DashboardPage() {
         const latestWaste = Object.values(device.wasteBinHistory).sort((a: any, b: any) => parseTimestamp(b.timestamp).getTime() - parseTimestamp(a.timestamp).getTime())[0];
         if (latestWaste && latestWaste.fullness >= binThreshold) {
           criticalWaste++;
+          if (!firstCriticalWasteDevice) firstCriticalWasteDevice = device.key;
         }
       }
     });
@@ -65,20 +74,36 @@ export default function DashboardPage() {
       criticalWaste,
     };
 
-    return { deviceList, summary };
+    return { deviceList, summary, firstCriticalWaterDevice, firstCriticalWasteDevice };
   }, [devices]);
+
+  const handleCardClick = (type: 'water' | 'waste') => {
+    if (type === 'water') {
+      if (firstCriticalWaterDevice) {
+        router.push(`/dashboard/devices/${firstCriticalWaterDevice}`);
+      } else {
+        toast({ title: "All Good!", description: "No critical water levels detected." });
+      }
+    } else if (type === 'waste') {
+      if (firstCriticalWasteDevice) {
+        router.push(`/dashboard/devices/${firstCriticalWasteDevice}`);
+      } else {
+        toast({ title: "All Good!", description: "No critical waste bins detected." });
+      }
+    }
+  };
 
 
   const quickActions = [
     {
       title: "Add Device",
       icon: <AddDeviceIcon className="w-8 h-8" />,
-      href: "#"
+      href: "/dashboard/devices"
     },
     {
-      title: "Water Levels",
-      icon: <WaterLevelIcon className="w-8 h-8" />,
-      href: "#"
+      title: "Contacts",
+      icon: <Users className="w-8 h-8 text-primary" />,
+      href: "/dashboard/contacts"
     },
     {
       title: "Waste Bins",
@@ -88,7 +113,7 @@ export default function DashboardPage() {
     {
       title: "Settings",
       icon: <SettingsIcon className="w-8 h-8" />,
-      href: "#"
+      href: "/dashboard/settings"
     }
   ];
 
@@ -112,13 +137,13 @@ export default function DashboardPage() {
       icon: <Droplet className={cn(summary.criticalWater > 0 ? "text-warning" : "text-primary")} />,
       details: summary.criticalWater > 0 ?
         [
-          { label: "Warning levels detected", value: "", className: "text-warning" },
-          { label: "devices need attention", value: summary.criticalWater }
+          { label: "devices need attention", value: summary.criticalWater, className: "text-warning" }
         ] :
         [{ label: "All levels normal", value: "", className: "text-muted-foreground" }],
       iconBg: <Droplet className={cn("w-12 h-12", summary.criticalWater > 0 ? "text-warning/10" : "text-primary/10")} />,
       borderColor: summary.criticalWater > 0 ? "border-warning" : "border-primary",
-      bgColor: summary.criticalWater > 0 ? "bg-warning/5" : "bg-primary/5"
+      bgColor: summary.criticalWater > 0 ? "bg-warning/5" : "bg-primary/5",
+      onClick: () => handleCardClick('water')
     },
     {
       title: "Critical Waste Bins",
@@ -130,7 +155,8 @@ export default function DashboardPage() {
         [{ label: "All bins normal", value: "", className: "text-muted-foreground" }],
       iconBg: <Trash2 className={cn("w-12 h-12", summary.criticalWaste > 0 ? "text-warning/10" : "text-accent/10")} />,
       borderColor: summary.criticalWaste > 0 ? "border-warning" : "border-accent",
-      bgColor: summary.criticalWaste > 0 ? "bg-warning/5" : "bg-accent/5"
+      bgColor: summary.criticalWaste > 0 ? "bg-warning/5" : "bg-accent/5",
+      onClick: () => handleCardClick('waste')
     },
     {
       title: "System Health",
@@ -149,7 +175,16 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {systemOverviewCards.map((card, index) => (
-                <Card key={index} className={cn("flex flex-col justify-between overflow-hidden border-l-4", card.borderColor, card.bgColor)}>
+                <Card 
+                  key={index} 
+                  className={cn(
+                    "flex flex-col justify-between overflow-hidden border-l-4", 
+                    card.borderColor, 
+                    card.bgColor,
+                    card.onClick && "cursor-pointer hover:shadow-md transition-shadow"
+                  )}
+                  onClick={card.onClick}
+                >
                     <CardHeader className="flex flex-row items-start justify-between pb-2">
                         <div className="flex items-center gap-2">
                              {card.icon}
@@ -179,12 +214,14 @@ export default function DashboardPage() {
         <h2 className="text-lg font-semibold">Quick Actions</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
           {quickActions.map(action => (
-            <Card key={action.title} className="hover:shadow-md transition-shadow bg-card/50">
-              <Button variant="ghost" className="w-full h-full flex flex-col items-center justify-center gap-2 p-4">
-                  {action.icon}
-                  <span className="text-sm font-medium">{action.title}</span>
-              </Button>
-            </Card>
+            <Link href={action.href} key={action.title}>
+              <Card className="hover:shadow-md transition-shadow bg-card/50 h-full">
+                <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-4">
+                    {action.icon}
+                    <span className="text-sm font-medium">{action.title}</span>
+                </div>
+              </Card>
+            </Link>
           ))}
         </div>
       </div>
@@ -192,8 +229,12 @@ export default function DashboardPage() {
       <div className="mt-4">
         <div className="flex items-center gap-4 mb-4">
           <h2 className="text-lg font-semibold">Device Overview</h2>
-          <Button variant="ghost" size="sm" className="bg-primary/10 text-primary rounded-full h-8 px-4">All Devices</Button>
-          <Button variant="ghost" size="sm" className="rounded-full h-8 px-4">Alerts ({summary.warnings})</Button>
+          <Link href="/dashboard/devices">
+            <Button variant="ghost" size="sm" className="bg-primary/10 text-primary rounded-full h-8 px-4">All Devices</Button>
+          </Link>
+          {summary.warnings > 0 && (
+            <Button variant="ghost" size="sm" className="rounded-full h-8 px-4 bg-warning/10 text-warning-foreground">Alerts ({summary.warnings})</Button>
+          )}
         </div>
 
         {loading ? (
@@ -217,3 +258,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
