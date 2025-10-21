@@ -3,9 +3,9 @@
 
 import React from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useUser } from "@/firebase";
+import { useUser, useDatabase } from "@/firebase";
 import useRtdbValue from "@/firebase/rtdb/use-rtdb-value";
-import { ref, push, getDatabase } from "firebase/database";
+import { ref, push } from "firebase/database";
 import OverviewCards from "../../components/overview-cards";
 import WaterLevelChart from "../../components/water-level-chart";
 import MethaneLevelChart from "../../components/methane-level-chart";
@@ -80,7 +80,7 @@ export default function DeviceDetailsPage() {
   const router = useRouter();
   const { deviceId } = params;
   const { user } = useUser();
-  const database = getDatabase();
+  const { database } = useDatabase();
   const path = user ? `users/${user.uid}/devices/${deviceId}` : "";
   const { data: device, loading } = useRtdbValue(path);
 
