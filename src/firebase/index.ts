@@ -1,6 +1,7 @@
 import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
+import { getDatabase, Database } from 'firebase/database';
 import { firebaseConfig } from './config';
 
 import { 
@@ -8,6 +9,7 @@ import {
   useFirebase, 
   useFirebaseApp, 
   useFirestore,
+  useDatabase,
   FirebaseProvider
 } from './provider';
 import { FirebaseClientProvider } from './client-provider';
@@ -23,9 +25,10 @@ if (!getApps().length) {
 
 const auth = getAuth(firebaseApp);
 const firestore = getFirestore(firebaseApp);
+const database = getDatabase(firebaseApp);
 
 export function initializeFirebase() {
-  return { firebaseApp, auth, firestore };
+  return { firebaseApp, auth, firestore, database };
 }
 
 export { 
@@ -34,9 +37,11 @@ export {
   useFirebase,
   useFirebaseApp,
   useFirestore,
+  useDatabase,
   FirebaseProvider,
   FirebaseClientProvider,
   firebaseApp, 
   auth, 
-  firestore 
+  firestore,
+  database
 };

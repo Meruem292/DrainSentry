@@ -1,6 +1,9 @@
 "use client"
 
+import React from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { useUser } from "@/firebase";
+import useRtdbValue from "@/firebase/rtdb/use-rtdb-value";
 import {
   Card,
   CardContent,
@@ -13,21 +16,8 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+import { Skeleton } from "@/components/ui/skeleton";
 
-const chartData = [
-  { time: "00:00", level: 65 },
-  { time: "02:00", level: 62 },
-  { time: "04:00", level: 68 },
-  { time: "06:00", level: 75 },
-  { time: "08:00", level: 80 },
-  { time: "10:00", level: 78 },
-  { time: "12:00", level: 70 },
-  { time: "14:00", level: 72 },
-  { time: "16:00", level: 74 },
-  { time: "18:00", level: 82 },
-  { time: "20:00", level: 79 },
-  { time: "22:00", level: 71 },
-];
 
 const chartConfig = {
   level: {
@@ -37,13 +27,42 @@ const chartConfig = {
 };
 
 export default function WaterLevelChart() {
+  const { user } = useUser();
+  // Assuming a single device or aggregating across devices.
+  // Taking the first device found for simplicity.
+  const path = user ? `users/${user.uid}/devices` : '';
+  const { data: devices, loading } = useRtdbValue(path);
+  
+  const chartData = React.useMemo(() => {
+    if (!devices) return [];
+
+    const deviceId = Object.keys(devices)[0];
+    if (!deviceId || !devices[deviceId].wasteBinHistory) return [];
+    
+    const history = devices[deviceId].wasteBinHistory;
+    
+    // Filter for entries that have a timestamp and level, then sort and take the last 12
+    return Object.values(history)
+      .filter((entry: any) => entry.timestamp && entry.level !== undefined)
+      .sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+      .slice(-12)
+      .map((entry: any) => ({
+        time: new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
+        level: entry.level,
+      }));
+  }, [devices]);
+  
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Water Level - Last 24 Hours</CardTitle>
+        <CardTitle>Water Level - Recent History</CardTitle>
         <CardDescription>Average water level across all monitored sewer lines.</CardDescription>
       </CardHeader>
       <CardContent>
+        {loading ? (
+            <Skeleton className="h-[300px] w-full" />
+        ) : (
         <ChartContainer config={chartConfig} className="h-[300px] w-full">
           <BarChart accessibilityLayer data={chartData} margin={{ top: 20, right: 20, left: -10, bottom: 0 }}>
             <CartesianGrid vertical={false} />
@@ -55,6 +74,7 @@ export default function WaterLevelChart() {
               tickFormatter={(value) => value}
             />
             <YAxis 
+                dataKey="level"
                 tickFormatter={(value) => `${value}%`}
                 tickLine={false}
                 axisLine={false}
@@ -67,6 +87,7 @@ export default function WaterLevelChart() {
             <Bar dataKey="level" fill="var(--color-level)" radius={4} />
           </BarChart>
         </ChartContainer>
+        )}
       </CardContent>
     </Card>
   )
