@@ -39,7 +39,11 @@ const parseTimestamp = (timestamp: string): Date => {
 };
 
 
+const ITEMS_PER_PAGE = 10;
+
 const DeviceHistoryTable = ({ history, type, loading, thresholds, setDate }: { history: any[], type: 'water' | 'fullness' | 'weight', loading: boolean, thresholds: any, setDate: (date: DateRange | undefined) => void }) => {
+    const [currentPage, setCurrentPage] = React.useState(1);
+    
     if (loading) return <Skeleton className="h-64 w-full" />;
     
     const getValueClass = (value: number, threshold: number) => {
@@ -50,6 +54,17 @@ const DeviceHistoryTable = ({ history, type, loading, thresholds, setDate }: { h
     };
 
     const hasData = history && history.length > 0;
+    
+    const totalPages = hasData ? Math.ceil(history.length / ITEMS_PER_PAGE) : 1;
+    const paginatedHistory = hasData ? history.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE) : [];
+
+    const handlePrevPage = () => {
+        setCurrentPage((prev) => Math.max(prev - 1, 1));
+    };
+
+    const handleNextPage = () => {
+        setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+    };
     
     if (!hasData) {
         return (
@@ -71,45 +86,70 @@ const DeviceHistoryTable = ({ history, type, loading, thresholds, setDate }: { h
     }
     
     return (
-        <div className="rounded-lg border">
-            <Table>
-                <TableHeader>
-                    <TableRow className="bg-muted/50 hover:bg-muted/50">
-                        <TableHead>Timestamp</TableHead>
-                        {type === 'water' && <TableHead className="text-right">Level (%)</TableHead>}
-                        {type === 'fullness' && <TableHead className="text-right">Fullness (%)</TableHead>}
-                        {type === 'weight' && <TableHead className="text-right">Weight (kg)</TableHead>}
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {history.map((entry: any, index) => {
-                        const isWaste = type === 'fullness' || type === 'weight';
-                        const value = isWaste ? entry.fullness : entry.level;
-                        const threshold = isWaste ? thresholds?.binFullness || 80 : thresholds?.waterLevel || 80;
-                        const weightValue = type === 'weight' ? entry.weight : (isWaste ? entry.weight : 0);
-                        const weightThreshold = thresholds?.wasteWeight || 30;
-
-                        // Determine the highest severity for the row
-                        let rowStatusClass = "text-success";
-                        if (type === 'water') {
-                            rowStatusClass = getValueClass(value, threshold);
-                        } else if(type === 'fullness') {
-                            rowStatusClass = getValueClass(value, threshold);
-                        } else if(type === 'weight') {
-                            rowStatusClass = getValueClass(weightValue, weightThreshold);
-                        }
-                        
-                        return (
-                        <TableRow key={index}>
-                            <TableCell className={cn(rowStatusClass, 'font-semibold')}>{parseTimestamp(entry.timestamp).toLocaleString()}</TableCell>
-                            {type === 'water' && <TableCell className={cn("text-right", getValueClass(entry.level, thresholds?.waterLevel || 80))}>{entry.level}</TableCell>}
-                            {type === 'fullness' && <TableCell className={cn("text-right", getValueClass(entry.fullness, thresholds?.binFullness || 80))}>{entry.fullness ?? 'N/A'}</TableCell>}
-                            {type === 'weight' && <TableCell className={cn("text-right", getValueClass(entry.weight, thresholds?.wasteWeight || 30))}>{entry.weight ?? 'N/A'}</TableCell>}
+        <div>
+            <div className="rounded-lg border">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="bg-muted/50 hover:bg-muted/50">
+                            <TableHead>Timestamp</TableHead>
+                            {type === 'water' && <TableHead className="text-right">Level (%)</TableHead>}
+                            {type === 'fullness' && <TableHead className="text-right">Fullness (%)</TableHead>}
+                            {type === 'weight' && <TableHead className="text-right">Weight (kg)</TableHead>}
                         </TableRow>
-                        );
-                    })}
-                </TableBody>
-            </Table>
+                    </TableHeader>
+                    <TableBody>
+                        {paginatedHistory.map((entry: any, index) => {
+                            const isWaste = type === 'fullness' || type === 'weight';
+                            const value = isWaste ? entry.fullness : entry.level;
+                            const threshold = isWaste ? thresholds?.binFullness || 80 : thresholds?.waterLevel || 80;
+                            const weightValue = type === 'weight' ? entry.weight : (isWaste ? entry.weight : 0);
+                            const weightThreshold = thresholds?.wasteWeight || 30;
+
+                            // Determine the highest severity for the row
+                            let rowStatusClass = "text-success";
+                            if (type === 'water') {
+                                rowStatusClass = getValueClass(value, threshold);
+                            } else if(type === 'fullness') {
+                                rowStatusClass = getValueClass(value, threshold);
+                            } else if(type === 'weight') {
+                                rowStatusClass = getValueClass(weightValue, weightThreshold);
+                            }
+                            
+                            return (
+                            <TableRow key={index}>
+                                <TableCell className={cn(rowStatusClass, 'font-semibold')}>{parseTimestamp(entry.timestamp).toLocaleString()}</TableCell>
+                                {type === 'water' && <TableCell className={cn("text-right", getValueClass(entry.level, thresholds?.waterLevel || 80))}>{entry.level}</TableCell>}
+                                {type === 'fullness' && <TableCell className={cn("text-right", getValueClass(entry.fullness, thresholds?.binFullness || 80))}>{entry.fullness ?? 'N/A'}</TableCell>}
+                                {type === 'weight' && <TableCell className={cn("text-right", getValueClass(entry.weight, thresholds?.wasteWeight || 30))}>{entry.weight ?? 'N/A'}</TableCell>}
+                            </TableRow>
+                            );
+                        })}
+                    </TableBody>
+                </Table>
+            </div>
+            {totalPages > 1 && (
+                <div className="flex items-center justify-end space-x-2 py-4">
+                    <span className="text-sm text-muted-foreground">
+                        Page {currentPage} of {totalPages}
+                    </span>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handlePrevPage}
+                        disabled={currentPage === 1}
+                    >
+                        Previous
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleNextPage}
+                        disabled={currentPage === totalPages}
+                    >
+                        Next
+                    </Button>
+                </div>
+            )}
         </div>
     )
 }
