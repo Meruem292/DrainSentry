@@ -119,7 +119,7 @@ export default function MethaneLevelChart({ device, loading }: { device: any, lo
         )}
         {chartData.length > 1 && !loading && (
           <div className="flex items-center justify-center gap-2 pt-4">
-              <div className="flex items-center gap-2 font-medium leading-none">
+              <div className="flex items-center gap-2 font-medium leading-none text-accent">
                   Trending up <TrendingUp className="h-4 w-4" />
               </div>
               <div className="leading-none text-muted-foreground">

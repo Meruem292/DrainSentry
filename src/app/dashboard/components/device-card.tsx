@@ -23,7 +23,7 @@ export default function DeviceCard({ device }: { device: any }) {
                      <p className="text-sm text-muted-foreground">{device.location}</p>
                 </CardContent>
                 <CardFooter>
-                    <div className={cn("flex items-center gap-2 text-sm font-medium", isActive ? "text-chart-2" : "text-destructive")}>
+                    <div className={cn("flex items-center gap-2 text-sm font-medium", isActive ? "text-success" : "text-destructive")}>
                         {isActive ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
                         <span>{isActive ? 'Active' : 'Inactive'}</span>
                     </div>

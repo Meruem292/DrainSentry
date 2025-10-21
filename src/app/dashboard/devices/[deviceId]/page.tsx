@@ -132,7 +132,7 @@ export default function DeviceDetailsPage() {
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-bold">Water Level History</h2>
                     <Button onClick={handleAddWaterLevel} size="sm">
-                        <PlusCircle className="mr-2 h-4 w-4" />
+                        <PlusCircle className="mr-2 h-4 w-4 text-primary-foreground" />
                         Add Water Level Entry
                     </Button>
                 </div>
@@ -142,7 +142,7 @@ export default function DeviceDetailsPage() {
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-bold">Waste Bin History</h2>
                     <Button onClick={handleAddWasteBin} size="sm">
-                        <PlusCircle className="mr-2 h-4 w-4" />
+                        <PlusCircle className="mr-2 h-4 w-4 text-primary-foreground" />
                         Add Waste Bin Entry
                     </Button>
                 </div>
