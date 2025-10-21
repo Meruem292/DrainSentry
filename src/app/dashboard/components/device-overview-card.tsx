@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from "react";
@@ -7,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { BarChart, Clock, Droplet, MapPin, Trash2, Weight } from "lucide-react";
+import { Clock, MapPin, Trash2 } from "lucide-react";
 
 const parseTimestamp = (timestamp: string): Date => {
     if (!timestamp) return new Date(0);
@@ -67,75 +68,73 @@ export default function DeviceOverviewCard({ device }: { device: any }) {
     };
     
     return (
-        <Card className="flex flex-col bg-card/50 hover:shadow-lg transition-shadow">
-            <CardHeader>
-                <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                         <div className="p-2 bg-primary/10 rounded-lg">
-                            <Trash2 className="h-6 w-6 text-primary" />
-                         </div>
+        <Link href={`/dashboard/devices/${device.key}`} className="block transition-all hover:scale-[1.02] hover:shadow-xl">
+            <Card className="flex flex-col bg-card/50 h-full">
+                <CardHeader>
+                    <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-primary/10 rounded-lg">
+                                <Trash2 className="h-6 w-6 text-primary" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-base font-bold">{device.name}</CardTitle>
+                                <CardDescription className="flex items-center gap-1 text-xs">
+                                    <MapPin className="w-3 h-3" /> {device.location}
+                                </CardDescription>
+                            </div>
+                        </div>
+                        <Badge variant={device.status === 'active' ? 'default' : 'destructive'} className={cn(device.status !== 'active' && "bg-muted text-muted-foreground")}>
+                            {device.status === 'active' ? 'Active' : 'Inactive'}
+                        </Badge>
+                    </div>
+                </CardHeader>
+                <CardContent className="flex-grow space-y-4">
+                    <Separator />
+                    <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                            <CardTitle className="text-base font-bold">{device.name}</CardTitle>
-                            <CardDescription className="flex items-center gap-1 text-xs">
-                                <MapPin className="w-3 h-3" /> {device.location}
-                            </CardDescription>
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="font-semibold">Bin Fullness</span>
+                                <Badge variant="outline" className={cn("text-xs", getBinStatus(latestData.binFullness).className)}>{getBinStatus(latestData.binFullness).text}</Badge>
+                            </div>
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                                <span>Current: {latestData.binFullness}%</span>
+                                <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Last emptied: {latestData.lastEmptied}</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div className="flex items-center justify-between mb-1">
+                                <span className="font-semibold">Weight</span>
+                                <span className="font-bold">{latestData.binWeight} kg</span>
+                            </div>
+                            <Progress value={weightPercentage} className="h-2" />
+                            <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                                <span>Capacity: {weightCapacity}kg</span>
+                                <span>{Math.round(weightPercentage)}% full</span>
+                            </div>
                         </div>
                     </div>
-                    <Badge variant={device.status === 'active' ? 'default' : 'destructive'} className={cn(device.status !== 'active' && "bg-muted text-muted-foreground")}>
-                        {device.status === 'active' ? 'Active' : 'Inactive'}
-                    </Badge>
-                </div>
-            </CardHeader>
-            <CardContent className="flex-grow space-y-4">
-                <Separator />
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="font-semibold">Bin Fullness</span>
-                            <Badge variant="outline" className={cn("text-xs", getBinStatus(latestData.binFullness).className)}>{getBinStatus(latestData.binFullness).text}</Badge>
-                        </div>
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>Current: {latestData.binFullness}%</span>
-                            <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Last emptied: {latestData.lastEmptied}</span>
-                        </div>
-                    </div>
-                    <div>
-                        <div className="flex items-center justify-between mb-1">
-                            <span className="font-semibold">Weight</span>
-                            <span className="font-bold">{latestData.binWeight} kg</span>
-                        </div>
-                         <Progress value={weightPercentage} className="h-2" />
-                         <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                            <span>Capacity: {weightCapacity}kg</span>
-                            <span>{Math.round(weightPercentage)}% full</span>
-                        </div>
-                    </div>
-                </div>
 
-                <Separator />
+                    <Separator />
 
-                <div>
-                    <div className="flex items-center justify-between text-sm">
-                        <span className="font-semibold">Water Level</span>
-                        <div className="flex items-center gap-2">
-                             <Badge variant="outline" className={cn("text-xs", getWaterStatus(latestData.waterLevel).className)}>{getWaterStatus(latestData.waterLevel).text}</Badge>
-                             <span className="font-bold text-lg">{latestData.waterLevel}%</span>
+                    <div>
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="font-semibold">Water Level</span>
+                            <div className="flex items-center gap-2">
+                                <Badge variant="outline" className={cn("text-xs", getWaterStatus(latestData.waterLevel).className)}>{getWaterStatus(latestData.waterLevel).text}</Badge>
+                                <span className="font-bold text-lg">{latestData.waterLevel}%</span>
+                            </div>
+                        </div>
+                        <div className="text-xs text-muted-foreground flex items-center justify-end gap-1 mt-1">
+                            <Clock className="w-3 h-3" /> {latestData.waterLevelTime}
                         </div>
                     </div>
-                    <div className="text-xs text-muted-foreground flex items-center justify-end gap-1 mt-1">
-                        <Clock className="w-3 h-3" /> {latestData.waterLevelTime}
+                </CardContent>
+                <CardFooter className="text-xs text-muted-foreground justify-between bg-background/50 py-2 px-4 rounded-b-lg">
+                    <div className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> Last seen: {device.lastSeen}
                     </div>
-                </div>
-            </CardContent>
-            <CardFooter className="text-xs text-muted-foreground justify-between bg-background/50 py-2 px-4 rounded-b-lg">
-                <div className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> Last seen: {device.lastSeen}
-                </div>
-                <div className="flex items-center gap-4">
-                    <Link href={`/dashboard/devices/${device.key}`} className="text-primary font-semibold hover:underline">Details &gt;</Link>
-                    <Link href={`/dashboard/devices/${device.key}`} className="text-primary font-semibold hover:underline flex items-center gap-1">History <BarChart className="w-4 h-4 rotate-90" /></Link>
-                </div>
-            </CardFooter>
-        </Card>
+                </CardFooter>
+            </Card>
+        </Link>
     )
 }
