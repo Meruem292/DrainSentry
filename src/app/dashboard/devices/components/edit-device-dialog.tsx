@@ -84,7 +84,7 @@ export default function EditDeviceDialog({ isOpen, onOpenChange, device, contact
   
   const waterStatus = getStatus(waterLevel, 80);
   const fullnessStatus = getStatus(binFullness, 80);
-  const weightStatus = getStatus(wasteWeight, 50);
+  const weightStatus = getStatus(wasteWeight, 30);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -142,7 +142,7 @@ export default function EditDeviceDialog({ isOpen, onOpenChange, device, contact
                     <Slider
                         id="waste-weight"
                         min={0}
-                        max={100}
+                        max={30}
                         step={1}
                         value={[wasteWeight]}
                         onValueChange={(value) => setWasteWeight(value[0])}

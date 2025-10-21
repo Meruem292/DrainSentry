@@ -51,7 +51,7 @@ export default function DeviceOverviewCard({ device }: { device: any }) {
         return { binFullness, binWeight, lastEmptied, waterLevel, waterLevelTime };
     }, [device]);
 
-    const weightCapacity = device.thresholds?.wasteWeight || 100;
+    const weightCapacity = 30; // Max capacity is 30kg
     const weightPercentage = (latestData.binWeight / weightCapacity) * 100;
 
     const getBinStatus = (fullness: number) => {
