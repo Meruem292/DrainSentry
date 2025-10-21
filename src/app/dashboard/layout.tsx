@@ -53,8 +53,6 @@ function InnerDashboardLayout({ children }: { children: React.ReactNode }) {
   const getHeaderText = () => {
     if (pathname === '/dashboard') return 'Dashboard';
     if (pathname.startsWith('/dashboard/devices')) return 'Devices';
-    if (pathname.startsWith('/dashboard/water-levels')) return 'Water Levels';
-    if (pathname.startsWith('/dashboard/waste-bins')) return 'Waste Bins';
     if (pathname.startsWith('/dashboard/contacts')) return 'Contacts';
     if (pathname.startsWith('/dashboard/conveyor')) return 'Conveyor Control';
     if (pathname.startsWith('/dashboard/settings')) return 'Settings';
@@ -76,16 +74,6 @@ function InnerDashboardLayout({ children }: { children: React.ReactNode }) {
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={pathname === "/dashboard"} tooltip="Dashboard">
                 <Link href="/dashboard"><LayoutDashboard /><span>Dashboard</span></Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith("/dashboard/water-levels")} tooltip="Water Levels">
-                <Link href="#"><Droplet /><span>Water Levels</span></Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith("/dashboard/waste-bins")} tooltip="Waste Bins">
-                <Link href="#"><Trash2 /><span>Waste Bins</span></Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
