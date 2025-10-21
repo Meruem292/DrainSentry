@@ -1,16 +1,18 @@
+
 "use client";
 
 import React from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useUser } from "@/firebase";
+import { useUser, useDatabase } from "@/firebase";
 import useRtdbValue from "@/firebase/rtdb/use-rtdb-value";
+import { ref, push } from "firebase/database";
 import OverviewCards from "../../components/overview-cards";
 import WaterLevelChart from "../../components/water-level-chart";
 import MethaneLevelChart from "../../components/methane-level-chart";
 import WasteBinStatus from "../../components/waste-bin-status";
 import InteractiveMap from "../../components/interactive-map";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, PlusCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -22,7 +24,7 @@ import {
 } from "@/components/ui/table"
 
 
-const parseTimestamp = (timestamp: string) => {
+const parseTimestamp = (timestamp: string): Date => {
     const parts = timestamp.match(/(\d{1,2})\/(\d{1,2})\/(\d{4}), (\d{1,2}):(\d{2}):(\d{2})/);
     if (!parts) return new Date(0); 
     // new Date(year, monthIndex, day, hours, minutes, seconds)
@@ -78,8 +80,28 @@ export default function DeviceDetailsPage() {
   const router = useRouter();
   const { deviceId } = params;
   const { user } = useUser();
+  const { database } = useDatabase();
   const path = user ? `users/${user.uid}/devices/${deviceId}` : "";
   const { data: device, loading } = useRtdbValue(path);
+
+  const handleAddWaterLevel = () => {
+    if (!database || !user) return;
+    const historyRef = ref(database, `users/${user.uid}/devices/${deviceId}/waterLevelHistory`);
+    push(historyRef, {
+      level: Math.floor(Math.random() * 100),
+      timestamp: new Date().toLocaleString(),
+    });
+  };
+
+  const handleAddWasteBin = () => {
+    if (!database || !user) return;
+    const historyRef = ref(database, `users/${user.uid}/devices/${deviceId}/wasteBinHistory`);
+    push(historyRef, {
+      fullness: Math.floor(Math.random() * 100),
+      weight: parseFloat((Math.random() * 50).toFixed(1)),
+      timestamp: new Date().toLocaleString(),
+    });
+  };
 
   return (
     <div className="flex flex-col gap-8">
@@ -107,11 +129,23 @@ export default function DeviceDetailsPage() {
 
        <div className="grid gap-8 lg:grid-cols-2">
             <div>
-                <h2 className="text-xl font-bold mb-4">Water Level History</h2>
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-bold">Water Level History</h2>
+                    <Button onClick={handleAddWaterLevel} size="sm">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Water Level Entry
+                    </Button>
+                </div>
                 <DeviceHistoryTable history={device?.waterLevelHistory} type="water" loading={loading} />
             </div>
              <div>
-                <h2 className="text-xl font-bold mb-4">Waste Bin History</h2>
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-bold">Waste Bin History</h2>
+                    <Button onClick={handleAddWasteBin} size="sm">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Waste Bin Entry
+                    </Button>
+                </div>
                 <DeviceHistoryTable history={device?.wasteBinHistory} type="waste" loading={loading} />
             </div>
        </div>
