@@ -94,29 +94,6 @@ export default function DashboardPage() {
   };
 
 
-  const quickActions = [
-    {
-      title: "Add Device",
-      icon: <AddDeviceIcon className="w-8 h-8" />,
-      href: "/dashboard/devices"
-    },
-    {
-      title: "Contacts",
-      icon: <Users className="w-8 h-8 text-primary" />,
-      href: "/dashboard/contacts"
-    },
-    {
-      title: "Waste Bins",
-      icon: <WasteBinIcon className="w-8 h-8" />,
-      href: "#"
-    },
-    {
-      title: "Settings",
-      icon: <SettingsIcon className="w-8 h-8" />,
-      href: "/dashboard/settings"
-    }
-  ];
-
   const systemOverviewCards = [
     {
       title: "Total Devices",
@@ -210,22 +187,6 @@ export default function DashboardPage() {
             ))}
         </div>
 
-      <div>
-        <h2 className="text-lg font-semibold">Quick Actions</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
-          {quickActions.map(action => (
-            <Link href={action.href} key={action.title}>
-              <Card className="hover:shadow-md transition-shadow bg-card/50 h-full">
-                <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-4">
-                    {action.icon}
-                    <span className="text-sm font-medium">{action.title}</span>
-                </div>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      </div>
-      
       <div className="mt-4">
         <div className="flex items-center gap-4 mb-4">
           <h2 className="text-lg font-semibold">Device Overview</h2>
