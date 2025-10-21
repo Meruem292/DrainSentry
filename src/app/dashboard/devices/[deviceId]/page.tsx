@@ -24,7 +24,7 @@ import {
 
 const parseTimestamp = (timestamp: string) => {
     const parts = timestamp.match(/(\d{1,2})\/(\d{1,2})\/(\d{4}), (\d{1,2}):(\d{2}):(\d{2})/);
-    if (!parts) return new Date(0); // Return a default date if parsing fails
+    if (!parts) return new Date(0); 
     // new Date(year, monthIndex, day, hours, minutes, seconds)
     return new Date(parseInt(parts[3]), parseInt(parts[1]) - 1, parseInt(parts[2]), parseInt(parts[4]), parseInt(parts[5]), parseInt(parts[6]));
 };
@@ -60,7 +60,7 @@ const DeviceHistoryTable = ({ history, type, loading }: { history: any, type: 'w
                 <TableBody>
                     {data.map((entry: any, index) => (
                         <TableRow key={index}>
-                            <TableCell>{new Date(entry.timestamp).toLocaleString()}</TableCell>
+                            <TableCell>{new Date(parseTimestamp(entry.timestamp)).toLocaleString()}</TableCell>
                             {type === 'water' && <TableCell className="text-right">{entry.level}</TableCell>}
                             {type === 'waste' && <TableCell className="text-right">{entry.fullness ?? 'N/A'}</TableCell>}
                             {type === 'waste' && <TableCell className="text-right">{entry.weight ?? 'N/A'}</TableCell>}

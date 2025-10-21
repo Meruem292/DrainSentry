@@ -26,7 +26,7 @@ const chartConfig = {
 
 const parseTimestamp = (timestamp: string) => {
     const parts = timestamp.match(/(\d{1,2})\/(\d{1,2})\/(\d{4}), (\d{1,2}):(\d{2}):(\d{2})/);
-    if (!parts) return new Date(0); // Return a default date if parsing fails
+    if (!parts) return new Date(0); 
     // new Date(year, monthIndex, day, hours, minutes, seconds)
     return new Date(parseInt(parts[3]), parseInt(parts[1]) - 1, parseInt(parts[2]), parseInt(parts[4]), parseInt(parts[5]), parseInt(parts[6]));
 };
@@ -45,7 +45,7 @@ export default function WaterLevelChart({ device, loading }: { device: any, load
       .filter((entry: any) => entry.timestamp && entry.level !== undefined)
       .sort((a: any, b: any) => parseTimestamp(a.timestamp).getTime() - parseTimestamp(b.timestamp).getTime())
       .map((entry: any) => ({
-        time: new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
+        time: parseTimestamp(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
         level: entry.level,
       }));
 
