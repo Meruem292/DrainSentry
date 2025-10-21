@@ -79,12 +79,12 @@ export default function DeviceRow({ device, onEdit }: { device: any, onEdit: (de
 
     const renderActions = () => (
         <div className="flex justify-center items-center gap-1 md:gap-2">
-            <Link href={`/dashboard/devices/${device.id}`} legacyBehavior>
+            <Link href={`/dashboard/devices/${device.id}`}>
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" aria-label="View Charts">
                     <BarChart className="h-4 w-4" />
                 </Button>
             </Link>
-            <Link href={`/dashboard/devices/${device.id}`} legacyBehavior>
+            <Link href={`/dashboard/devices/${device.id}`}>
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" aria-label="View Details">
                     <Eye className="h-4 w-4" />
                 </Button>
