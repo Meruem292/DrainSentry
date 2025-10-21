@@ -85,7 +85,7 @@ export default function DeviceDetailsPage() {
   const { data: device, loading } = useRtdbValue(path);
 
   const handleAddWaterLevel = () => {
-    if (!database || !user) return;
+    if (!database || !user || !deviceId) return;
     const historyRef = ref(database, `users/${user.uid}/devices/${deviceId}/waterLevelHistory`);
     push(historyRef, {
       level: Math.floor(Math.random() * 100),
@@ -94,7 +94,7 @@ export default function DeviceDetailsPage() {
   };
 
   const handleAddWasteBin = () => {
-    if (!database || !user) return;
+    if (!database || !user || !deviceId) return;
     const historyRef = ref(database, `users/${user.uid}/devices/${deviceId}/wasteBinHistory`);
     push(historyRef, {
       fullness: Math.floor(Math.random() * 100),
