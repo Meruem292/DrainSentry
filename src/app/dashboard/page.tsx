@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from "react";
@@ -18,7 +19,9 @@ export default function DashboardPage() {
         { label: "0 active", color: "" },
         { label: "1 with warnings", color: "text-warning" },
       ],
-      chartIcon: <BarChart className="h-8 w-8 text-muted-foreground/50" />
+      chartIcon: <BarChart className="h-8 w-8 text-muted-foreground/50" />,
+      borderColor: "border-l-4 border-primary",
+      bgColor: "bg-primary/10"
     },
     {
       title: "Critical Water Levels",
@@ -29,7 +32,8 @@ export default function DashboardPage() {
         { label: "1 devices need attention", color: "" },
       ],
       chartIcon: <Droplet className="h-8 w-8 text-warning/20" />,
-      borderColor: "border-l-4 border-warning"
+      borderColor: "border-l-4 border-warning",
+      bgColor: "bg-warning/10"
     },
     {
       title: "Critical Waste Bins",
@@ -39,7 +43,8 @@ export default function DashboardPage() {
         { label: "All normal", color: "text-success" },
       ],
       chartIcon: <Trash2 className="h-8 w-8 text-success/20" />,
-      borderColor: "border-l-4 border-success"
+      borderColor: "border-l-4 border-success",
+      bgColor: "bg-success/10"
     },
     {
       title: "System Health",
@@ -49,7 +54,8 @@ export default function DashboardPage() {
         { label: "Network status: online", color: "" },
       ],
       chartIcon: <CheckCircle className="h-8 w-8 text-success/20" />,
-      borderColor: "border-l-4 border-success"
+      borderColor: "border-l-4 border-success",
+      bgColor: "bg-success/10"
     },
   ];
 
@@ -85,10 +91,10 @@ export default function DashboardPage() {
         <CardContent>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {overviewCards.map((card, index) => (
-              <Card key={index} className={cn("p-4 flex flex-col justify-between", card.borderColor)}>
+              <Card key={index} className={cn("p-4 flex flex-col justify-between", card.borderColor, card.bgColor)}>
                  <div className="flex items-start justify-between">
                    <div className="flex items-center gap-2">
-                     <div className="p-2 bg-secondary rounded-md">
+                     <div className="p-2 bg-background rounded-md">
                         {card.icon}
                      </div>
                     <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
