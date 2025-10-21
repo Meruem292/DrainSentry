@@ -17,8 +17,11 @@ import EditDeviceDialog from "./components/edit-device-dialog";
 export default function DevicesPage() {
   const { user } = useUser();
   const { database } = useDatabase();
-  const path = user ? `users/${user.uid}/devices` : "";
-  const { data: devices, loading } = useRtdbValue(path);
+  const devicesPath = user ? `users/${user.uid}/devices` : "";
+  const contactsPath = user ? `users/${user.uid}/contacts` : "";
+
+  const { data: devices, loading: devicesLoading } = useRtdbValue(devicesPath);
+  const { data: contacts, loading: contactsLoading } = useRtdbValue(contactsPath);
   
   const [isAddDialogOpen, setAddDialogOpen] = React.useState(false);
   const [isEditDialogOpen, setEditDialogOpen] = React.useState(false);
@@ -33,6 +36,16 @@ export default function DevicesPage() {
       ...devices[key],
     }));
   }, [devices]);
+
+  const contactList = React.useMemo(() => {
+    if (!contacts) return [];
+    return Object.keys(contacts).map(key => ({
+      id: key,
+      ...contacts[key]
+    }));
+  }, [contacts]);
+
+  const loading = devicesLoading || contactsLoading;
 
   const handleAddDevice = (device: { id: string; name: string; location: string }) => {
     if (!user || !database) {
@@ -87,7 +100,7 @@ export default function DevicesPage() {
     setEditDialogOpen(true);
   };
 
-  const handleSaveDeviceSettings = (deviceId: string, thresholds: any) => {
+  const handleSaveDeviceSettings = (deviceId: string, settings: { thresholds: any, notifications: any }) => {
     if (!user || !database) {
       toast({
         variant: 'destructive',
@@ -97,12 +110,12 @@ export default function DevicesPage() {
       return;
     }
 
-    const deviceRef = ref(database, `users/${user.uid}/devices/${deviceId}/thresholds`);
-    update(deviceRef, thresholds)
+    const deviceRef = ref(database, `users/${user.uid}/devices/${deviceId}`);
+    update(deviceRef, settings)
       .then(() => {
         toast({
           title: 'Settings Saved',
-          description: 'Device thresholds have been updated.',
+          description: 'Device settings have been updated.',
         });
         setEditDialogOpen(false);
       })
@@ -172,6 +185,7 @@ export default function DevicesPage() {
           isOpen={isEditDialogOpen}
           onOpenChange={setEditDialogOpen}
           device={selectedDevice}
+          contacts={contactList}
           onSave={handleSaveDeviceSettings}
         />
       )}
