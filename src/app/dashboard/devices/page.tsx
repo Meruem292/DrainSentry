@@ -66,6 +66,10 @@ export default function DevicesPage() {
         status: 'inactive',
         lastSeen: new Date().toLocaleString(),
         manualConveyor: false,
+        hardware: {
+            binHeight: 100,
+            loadcellCalibration: 0
+        },
         notifications: {
             enabled: true,
             notifyContacts: [],
@@ -100,7 +104,7 @@ export default function DevicesPage() {
     setEditDialogOpen(true);
   };
 
-  const handleSaveDeviceSettings = (deviceId: string, settings: { thresholds: any, notifications: any }) => {
+  const handleSaveDeviceSettings = (deviceId: string, settings: { thresholds: any, notifications: any, hardware: any }) => {
     if (!user || !database) {
       toast({
         variant: 'destructive',

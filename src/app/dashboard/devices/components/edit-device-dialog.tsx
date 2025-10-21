@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from '@/components/ui/input';
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,7 +25,7 @@ interface EditDeviceDialogProps {
   onOpenChange: (isOpen: boolean) => void;
   device: any;
   contacts: any[];
-  onSave: (deviceId: string, settings: { thresholds: any, notifications: any }) => void;
+  onSave: (deviceId: string, settings: { thresholds: any, notifications: any, hardware: any }) => void;
 }
 
 const getStatus = (value: number, threshold: number) => {
@@ -37,6 +38,10 @@ export default function EditDeviceDialog({ isOpen, onOpenChange, device, contact
   const [waterLevel, setWaterLevel] = useState(80);
   const [binFullness, setBinFullness] = useState(80);
   const [wasteWeight, setWasteWeight] = useState(30);
+
+  // Hardware state
+  const [binHeight, setBinHeight] = useState(100);
+  const [loadcellCalibration, setLoadcellCalibration] = useState(0);
 
   // Notifications state
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -51,6 +56,10 @@ export default function EditDeviceDialog({ isOpen, onOpenChange, device, contact
         setWaterLevel(device.thresholds.waterLevel || 80);
         setBinFullness(device.thresholds.binFullness || 80);
         setWasteWeight(device.thresholds.wasteWeight || 30);
+      }
+      if (device.hardware) {
+        setBinHeight(device.hardware.binHeight || 100);
+        setLoadcellCalibration(device.hardware.loadcellCalibration || 0);
       }
       if (device.notifications) {
         setNotificationsEnabled(device.notifications.enabled ?? true);
@@ -71,6 +80,10 @@ export default function EditDeviceDialog({ isOpen, onOpenChange, device, contact
             notifyOnBinFullness: notifyOnFullness,
             notifyOnWeight: notifyOnWeight,
             notifyContacts: notifyContacts
+        },
+        hardware: {
+            binHeight,
+            loadcellCalibration
         }
     };
     onSave(device.id, settings);
@@ -97,9 +110,10 @@ export default function EditDeviceDialog({ isOpen, onOpenChange, device, contact
         </DialogHeader>
         
         <Tabs defaultValue="thresholds" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="thresholds">Alert Thresholds</TabsTrigger>
                 <TabsTrigger value="notifications">Notifications</TabsTrigger>
+                <TabsTrigger value="hardware">Hardware</TabsTrigger>
             </TabsList>
             <TabsContent value="thresholds" className="py-6 px-1 space-y-8">
                 <div className="grid gap-2">
@@ -201,6 +215,30 @@ export default function EditDeviceDialog({ isOpen, onOpenChange, device, contact
                             </div>
                         )) : <p className="text-sm text-muted-foreground">No contacts available. Add contacts from the Contacts page.</p>}
                     </div>
+                </div>
+            </TabsContent>
+            <TabsContent value="hardware" className="py-6 px-1 space-y-6">
+                <div className="grid gap-2">
+                    <Label htmlFor="bin-height">Bin Height (cm)</Label>
+                    <Input
+                        id="bin-height"
+                        type="number"
+                        value={binHeight}
+                        onChange={(e) => setBinHeight(Number(e.target.value))}
+                        placeholder="e.g. 100"
+                    />
+                    <p className='text-xs text-muted-foreground'>The total height of the waste bin in centimeters.</p>
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="loadcell-calibration">Loadcell Calibration Factor</Label>
+                    <Input
+                        id="loadcell-calibration"
+                        type="number"
+                        value={loadcellCalibration}
+                        onChange={(e) => setLoadcellCalibration(Number(e.target.value))}
+                        placeholder="e.g. 430.5"
+                    />
+                     <p className='text-xs text-muted-foreground'>The calibration factor for the loadcell to ensure accurate weight readings.</p>
                 </div>
             </TabsContent>
         </Tabs>
