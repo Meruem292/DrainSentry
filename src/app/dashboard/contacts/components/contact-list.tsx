@@ -4,7 +4,6 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2 } from "lucide-react";
 import {
@@ -32,7 +31,6 @@ export default function ContactList({ contacts, loading, onEdit, onDelete }: Con
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Phone Number</TableHead>
-              <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -42,7 +40,6 @@ export default function ContactList({ contacts, loading, onEdit, onDelete }: Con
                 <TableRow key={i}>
                   <TableCell><Skeleton className="h-6 w-32" /></TableCell>
                   <TableCell><Skeleton className="h-6 w-24" /></TableCell>
-                  <TableCell><Skeleton className="h-6 w-16" /></TableCell>
                   <TableCell className="text-right"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
                 </TableRow>
               ))
@@ -51,11 +48,6 @@ export default function ContactList({ contacts, loading, onEdit, onDelete }: Con
                 <TableRow key={contact.id}>
                   <TableCell className="font-medium">{contact.name}</TableCell>
                   <TableCell>{contact.phone}</TableCell>
-                  <TableCell>
-                    <Badge variant={contact.status === 'active' ? 'default' : 'secondary'} className={contact.status === 'active' ? 'bg-success hover:bg-success/90' : ''}>
-                      {contact.status}
-                    </Badge>
-                  </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => onEdit(contact)}>
                       <Pencil className="h-4 w-4" />
@@ -68,7 +60,7 @@ export default function ContactList({ contacts, loading, onEdit, onDelete }: Con
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
+                <TableCell colSpan={3} className="h-24 text-center">
                   No contacts found.
                 </TableCell>
               </TableRow>
