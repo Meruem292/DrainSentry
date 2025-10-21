@@ -67,7 +67,7 @@ export default function DeviceOverviewCard({ device }: { device: any }) {
     };
     
     return (
-        <Card className="flex flex-col bg-card hover:shadow-lg transition-shadow">
+        <Card className="flex flex-col bg-card/50 hover:shadow-lg transition-shadow">
             <CardHeader>
                 <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">

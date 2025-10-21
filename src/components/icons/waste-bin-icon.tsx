@@ -19,14 +19,15 @@ const WasteBinIcon = (props: SVGProps<SVGSVGElement>) => (
         }
         .lid-path {
           animation: lid-lift 2.5s ease-in-out infinite;
-          stroke: hsl(var(--primary));
-          fill: hsl(var(--primary) / 0.1);
+          stroke: hsl(var(--accent));
+          fill: hsl(var(--accent) / 0.1);
         }
         .bin-body {
-            stroke: hsl(var(--muted-foreground));
+            stroke: hsl(var(--primary));
+             fill: hsl(var(--primary) / 0.1);
         }
         .bin-lines {
-            stroke: hsl(var(--muted-foreground));
+            stroke: hsl(var(--primary));
         }
       `}
     </style>

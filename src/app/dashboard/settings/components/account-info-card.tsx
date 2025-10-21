@@ -22,7 +22,7 @@ export default function AccountInfoCard({ user }: AccountInfoCardProps) {
     : "N/A";
 
   return (
-    <Card>
+    <Card className="bg-card/50">
       <CardHeader>
         <CardTitle>Account Information</CardTitle>
       </CardHeader>

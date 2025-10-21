@@ -15,7 +15,7 @@ export default function ConveyorCard({ device, onToggle }: ConveyorCardProps) {
   const isConveyorOn = device.manualConveyor === true;
 
   return (
-    <Card>
+    <Card className="bg-card/50">
       <CardHeader>
         <div className="flex items-center gap-3">
           <Power className={cn("h-6 w-6", isConveyorOn ? "text-success" : "text-muted-foreground")} />

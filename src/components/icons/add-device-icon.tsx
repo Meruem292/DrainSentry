@@ -14,9 +14,9 @@ const AddDeviceIcon = (props: SVGProps<SVGSVGElement>) => (
     strokeLinejoin="round"
     {...props}
   >
-    <rect width="18" height="18" x="3" y="3" rx="2" stroke="hsl(var(--primary))" />
-    <line x1="12" x2="12" y1="8" y2="16" stroke="hsl(var(--primary))" />
-    <line x1="8" x2="16" y1="12" y2="12" stroke="hsl(var(--primary))" />
+    <rect width="18" height="18" x="3" y="3" rx="2" stroke="hsl(var(--accent))" fill="hsl(var(--accent) / 0.1)" />
+    <line x1="12" x2="12" y1="8" y2="16" stroke="hsl(var(--accent))" />
+    <line x1="8" x2="16" y1="12" y2="12" stroke="hsl(var(--accent))" />
   </svg>
 );
 

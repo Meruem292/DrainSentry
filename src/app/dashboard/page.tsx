@@ -72,22 +72,22 @@ export default function DashboardPage() {
   const quickActions = [
     {
       title: "Add Device",
-      icon: <AddDeviceIcon className="w-8 h-8 text-primary" />,
+      icon: <AddDeviceIcon className="w-8 h-8" />,
       href: "#"
     },
     {
       title: "Water Levels",
-      icon: <WaterLevelIcon className="w-8 h-8 text-primary" />,
+      icon: <WaterLevelIcon className="w-8 h-8" />,
       href: "#"
     },
     {
       title: "Waste Bins",
-      icon: <WasteBinIcon className="w-8 h-8 text-primary" />,
+      icon: <WasteBinIcon className="w-8 h-8" />,
       href: "#"
     },
     {
       title: "Settings",
-      icon: <SettingsIcon className="w-8 h-8 text-primary" />,
+      icon: <SettingsIcon className="w-8 h-8" />,
       href: "#"
     }
   ];
@@ -96,20 +96,20 @@ export default function DashboardPage() {
     {
       title: "Total Devices",
       value: summary.total,
-      icon: <BarChart className="text-primary" />,
+      icon: <Server className="text-primary" />,
       details: [
         { label: "active", value: summary.active },
         { label: "with warnings", value: summary.warnings, className: "text-warning" }
       ],
-      iconBg: <BarChart className="w-12 h-12 text-primary/10" />,
+      iconBg: <Server className="w-12 h-12 text-primary/10" />,
       borderColor: "border-primary",
-      bgColor: ""
+      bgColor: "bg-primary/5"
     },
     {
       title: "Critical Water Levels",
       value: summary.criticalWater,
       valueColor: summary.criticalWater > 0 ? "text-warning" : "text-foreground",
-      icon: <Droplet className={cn(summary.criticalWater > 0 ? "text-warning" : "text-foreground")} />,
+      icon: <Droplet className={cn(summary.criticalWater > 0 ? "text-warning" : "text-primary")} />,
       details: summary.criticalWater > 0 ?
         [
           { label: "Warning levels detected", value: "", className: "text-warning" },
@@ -117,20 +117,20 @@ export default function DashboardPage() {
         ] :
         [{ label: "All levels normal", value: "", className: "text-muted-foreground" }],
       iconBg: <Droplet className={cn("w-12 h-12", summary.criticalWater > 0 ? "text-warning/10" : "text-primary/10")} />,
-      borderColor: summary.criticalWater > 0 ? "border-warning" : "border-success",
-      bgColor: summary.criticalWater > 0 ? "bg-warning/5" : ""
+      borderColor: summary.criticalWater > 0 ? "border-warning" : "border-primary",
+      bgColor: summary.criticalWater > 0 ? "bg-warning/5" : "bg-primary/5"
     },
     {
       title: "Critical Waste Bins",
       value: summary.criticalWaste,
       valueColor: summary.criticalWaste > 0 ? "text-warning" : "text-foreground",
-      icon: <Trash2 className={cn(summary.criticalWaste > 0 ? "text-warning" : "text-foreground")} />,
+      icon: <Trash2 className={cn(summary.criticalWaste > 0 ? "text-warning" : "text-accent")} />,
       details: summary.criticalWaste > 0 ?
         [{ label: "bins are full", value: summary.criticalWaste, className: "text-warning" }] :
         [{ label: "All bins normal", value: "", className: "text-muted-foreground" }],
-      iconBg: <Trash2 className={cn("w-12 h-12", summary.criticalWaste > 0 ? "text-warning/10" : "text-primary/10")} />,
-      borderColor: summary.criticalWaste > 0 ? "border-warning" : "border-success",
-      bgColor: summary.criticalWaste > 0 ? "bg-warning/5" : ""
+      iconBg: <Trash2 className={cn("w-12 h-12", summary.criticalWaste > 0 ? "text-warning/10" : "text-accent/10")} />,
+      borderColor: summary.criticalWaste > 0 ? "border-warning" : "border-accent",
+      bgColor: summary.criticalWaste > 0 ? "bg-warning/5" : "bg-accent/5"
     },
     {
       title: "System Health",
@@ -195,7 +195,7 @@ export default function DashboardPage() {
         <h2 className="text-lg font-semibold">Quick Actions</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
           {quickActions.map(action => (
-            <Card key={action.title} className="hover:shadow-md transition-shadow">
+            <Card key={action.title} className="hover:shadow-md transition-shadow bg-card/50">
               <Button variant="ghost" className="w-full h-full flex flex-col items-center justify-center gap-2 p-4">
                   {action.icon}
                   <span className="text-sm font-medium">{action.title}</span>
