@@ -11,7 +11,7 @@ import MethaneLevelChart from "../../components/methane-level-chart";
 import WasteBinStatus from "../../components/waste-bin-status";
 import InteractiveMap from "../../components/interactive-map";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar as CalendarIcon } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, Droplet, Trash2, Weight, Info, AlertTriangle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -24,11 +24,14 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
-import { addDays, format } from "date-fns";
+import { addDays, format, startOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
 
 
 const parseTimestamp = (timestamp: string): Date => {
+    if (!timestamp) return new Date(0);
     const parts = timestamp.match(/(\d{2})\/(\d{2})\/(\d{4}), (\d{1,2}):(\d{2}):(\d{2})/);
     if (!parts) return new Date(timestamp); // Fallback for different formats
     const [, month, day, year, hours, minutes, seconds] = parts.map(Number);
@@ -36,21 +39,35 @@ const parseTimestamp = (timestamp: string): Date => {
 };
 
 
-const DeviceHistoryTable = ({ history, type, loading, thresholds }: { history: any[], type: 'water' | 'waste', loading: boolean, thresholds: any }) => {
+const DeviceHistoryTable = ({ history, type, loading, thresholds, setDate }: { history: any[], type: 'water' | 'fullness' | 'weight', loading: boolean, thresholds: any, setDate: (date: DateRange | undefined) => void }) => {
     if (loading) return <Skeleton className="h-64 w-full" />;
     
     const getValueClass = (value: number, threshold: number) => {
+        if (!value || !threshold) return "";
         if (value >= threshold) return "text-destructive font-bold";
         if (value >= threshold / 2) return "text-warning font-semibold";
         return "text-success font-semibold";
     };
+
+    const hasData = history && history.length > 0;
     
-    if (!history || history.length === 0) {
-      return (
-        <div className="rounded-lg border h-64 flex items-center justify-center">
-          <p className="text-muted-foreground">No recent history available for the selected date range.</p>
-        </div>
-      );
+    if (!hasData) {
+        return (
+          <Card className="h-96 flex items-center justify-center">
+            <CardContent className="text-center">
+              <div className="flex justify-center mb-4">
+                  <div className="p-3 bg-blue-100 rounded-full dark:bg-blue-900/50">
+                      <Info className="h-8 w-8 text-blue-500" />
+                  </div>
+              </div>
+              <h3 className="text-xl font-bold mb-2">No Data Available</h3>
+              <p className="text-muted-foreground mb-4">
+                There are no sensor readings for this device on the selected date.
+              </p>
+              <Button onClick={() => setDate({from: new Date(), to: new Date()})}>Try Today's Date</Button>
+            </CardContent>
+          </Card>
+        );
     }
     
     return (
@@ -60,32 +77,34 @@ const DeviceHistoryTable = ({ history, type, loading, thresholds }: { history: a
                     <TableRow className="bg-muted/50 hover:bg-muted/50">
                         <TableHead>Timestamp</TableHead>
                         {type === 'water' && <TableHead className="text-right">Level (%)</TableHead>}
-                        {type === 'waste' && <TableHead className="text-right">Fullness (%)</TableHead>}
-                        {type === 'waste' && <TableHead className="text-right">Weight (kg)</TableHead>}
+                        {type === 'fullness' && <TableHead className="text-right">Fullness (%)</TableHead>}
+                        {type === 'weight' && <TableHead className="text-right">Weight (kg)</TableHead>}
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {history.map((entry: any, index) => {
-                        const value = type === 'water' ? entry.level : entry.fullness;
-                        const threshold = type === 'water' ? thresholds?.waterLevel || 80 : thresholds?.binFullness || 80;
-                        const weightValue = type === 'waste' ? entry.weight : 0;
+                        const isWaste = type === 'fullness' || type === 'weight';
+                        const value = isWaste ? entry.fullness : entry.level;
+                        const threshold = isWaste ? thresholds?.binFullness || 80 : thresholds?.waterLevel || 80;
+                        const weightValue = type === 'weight' ? entry.weight : (isWaste ? entry.weight : 0);
                         const weightThreshold = thresholds?.wasteWeight || 30;
 
                         // Determine the highest severity for the row
-                        const levelStatus = getValueClass(value, threshold);
-                        const weightStatus = type === 'waste' ? getValueClass(weightValue, weightThreshold) : 'text-success';
-                        
-                        let rowStatus = levelStatus;
-                        if (weightStatus === 'text-destructive font-bold' || (weightStatus === 'text-warning font-semibold' && rowStatus !== 'text-destructive font-bold')) {
-                            rowStatus = weightStatus;
+                        let rowStatusClass = "text-success";
+                        if (type === 'water') {
+                            rowStatusClass = getValueClass(value, threshold);
+                        } else if(type === 'fullness') {
+                            rowStatusClass = getValueClass(value, threshold);
+                        } else if(type === 'weight') {
+                            rowStatusClass = getValueClass(weightValue, weightThreshold);
                         }
-
+                        
                         return (
                         <TableRow key={index}>
-                            <TableCell className={cn(rowStatus)}>{parseTimestamp(entry.timestamp).toLocaleString()}</TableCell>
+                            <TableCell className={cn(rowStatusClass, 'font-semibold')}>{parseTimestamp(entry.timestamp).toLocaleString()}</TableCell>
                             {type === 'water' && <TableCell className={cn("text-right", getValueClass(entry.level, thresholds?.waterLevel || 80))}>{entry.level}</TableCell>}
-                            {type === 'waste' && <TableCell className={cn("text-right", getValueClass(entry.fullness, thresholds?.binFullness || 80))}>{entry.fullness ?? 'N/A'}</TableCell>}
-                            {type === 'waste' && <TableCell className={cn("text-right", getValueClass(entry.weight, thresholds?.wasteWeight || 30))}>{entry.weight ?? 'N/A'}</TableCell>}
+                            {type === 'fullness' && <TableCell className={cn("text-right", getValueClass(entry.fullness, thresholds?.binFullness || 80))}>{entry.fullness ?? 'N/A'}</TableCell>}
+                            {type === 'weight' && <TableCell className={cn("text-right", getValueClass(entry.weight, thresholds?.wasteWeight || 30))}>{entry.weight ?? 'N/A'}</TableCell>}
                         </TableRow>
                         );
                     })}
@@ -119,8 +138,8 @@ export default function DeviceDetailsPage() {
 
         return dataArray.filter((entry: any) => {
             const entryDate = parseTimestamp(entry.timestamp);
-            const from = date.from!;
-            const to = date.to ? addDays(date.to, 1) : addDays(from, 1);
+            const from = startOfDay(date.from!);
+            const to = date.to ? startOfDay(addDays(date.to, 1)) : startOfDay(addDays(from, 1));
             return entryDate >= from && entryDate < to;
         });
     }
@@ -204,19 +223,23 @@ export default function DeviceDetailsPage() {
         <InteractiveMap device={device} />
       </div>
 
-       <div className="grid gap-8 lg:grid-cols-2">
-            <div>
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold">Water Level History</h2>
-                </div>
-                <DeviceHistoryTable history={filteredHistory.water} type="water" loading={loading} thresholds={device?.thresholds} />
-            </div>
-             <div>
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold">Waste Bin History</h2>
-                </div>
-                <DeviceHistoryTable history={filteredHistory.waste} type="waste" loading={loading} thresholds={device?.thresholds} />
-            </div>
+       <div>
+        <Tabs defaultValue="water">
+            <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="water"><Droplet className="mr-2 h-4 w-4" />Water Level</TabsTrigger>
+                <TabsTrigger value="fullness"><Trash2 className="mr-2 h-4 w-4" />Bin Fullness</TabsTrigger>
+                <TabsTrigger value="weight"><Weight className="mr-2 h-4 w-4" />Bin Weight</TabsTrigger>
+            </TabsList>
+            <TabsContent value="water" className="pt-4">
+                <DeviceHistoryTable history={filteredHistory.water} type="water" loading={loading} thresholds={device?.thresholds} setDate={setDate} />
+            </TabsContent>
+            <TabsContent value="fullness" className="pt-4">
+                <DeviceHistoryTable history={filteredHistory.waste} type="fullness" loading={loading} thresholds={device?.thresholds} setDate={setDate} />
+            </TabsContent>
+            <TabsContent value="weight" className="pt-4">
+                 <DeviceHistoryTable history={filteredHistory.waste} type="weight" loading={loading} thresholds={device?.thresholds} setDate={setDate} />
+            </TabsContent>
+        </Tabs>
        </div>
     </div>
   );
