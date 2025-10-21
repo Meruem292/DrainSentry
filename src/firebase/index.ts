@@ -13,7 +13,6 @@ import {
   useDatabase,
   FirebaseProvider
 } from './provider';
-import { FirebaseClientProvider } from './client-provider';
 import { useUser } from './auth/use-user';
 
 
@@ -53,7 +52,6 @@ export {
   useFirestore,
   useDatabase,
   FirebaseProvider,
-  FirebaseClientProvider,
   firebaseApp, 
   auth, 
   firestore,
