@@ -20,9 +20,9 @@ const parseTimestamp = (timestamp: string): Date => {
 export default function WasteBinStatus({ device, loading }: { device: any, loading: boolean }) {
 
   const bin = React.useMemo(() => {
-    if (!device) return null;
+    if (!device || !device.wasteBinHistory) return null;
     
-    const history = device.wasteBinHistory ? Object.values(device.wasteBinHistory) : [];
+    const history = Object.values(device.wasteBinHistory);
     const latestEntry: any = history.sort((a: any, b: any) => parseTimestamp(b.timestamp).getTime() - parseTimestamp(a.timestamp).getTime())[0];
     
     return {
