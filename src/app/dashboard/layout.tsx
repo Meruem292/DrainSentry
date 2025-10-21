@@ -109,7 +109,7 @@ function InnerDashboardLayout({ children }: { children: React.ReactNode }) {
             <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname.startsWith("/dashboard/settings")} tooltip="Settings">
-                    <Link href="#"><Settings /><span>Settings</span></Link>
+                    <Link href="/dashboard/settings"><Settings /><span>Settings</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                  <SidebarMenuItem>
