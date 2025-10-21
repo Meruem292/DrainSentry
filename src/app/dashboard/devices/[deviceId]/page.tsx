@@ -57,7 +57,7 @@ const DeviceHistoryTable = ({ history, type, loading, thresholds }: { history: a
         <div className="rounded-lg border">
             <Table>
                 <TableHeader>
-                    <TableRow>
+                    <TableRow className="bg-muted/50 hover:bg-muted/50">
                         <TableHead>Timestamp</TableHead>
                         {type === 'water' && <TableHead className="text-right">Level (%)</TableHead>}
                         {type === 'waste' && <TableHead className="text-right">Fullness (%)</TableHead>}
@@ -72,17 +72,17 @@ const DeviceHistoryTable = ({ history, type, loading, thresholds }: { history: a
                         const weightThreshold = thresholds?.wasteWeight || 30;
 
                         // Determine the highest severity for the row
-                        const levelClass = getValueClass(value, threshold);
-                        const weightClass = type === 'waste' ? getValueClass(weightValue, weightThreshold) : '';
+                        const levelStatus = getValueClass(value, threshold);
+                        const weightStatus = type === 'waste' ? getValueClass(weightValue, weightThreshold) : 'text-success';
                         
-                        let rowClass = levelClass;
-                        if (weightClass === 'text-destructive font-bold' || (weightClass === 'text-warning font-semibold' && rowClass !== 'text-destructive font-bold')) {
-                            rowClass = weightClass;
+                        let rowStatus = levelStatus;
+                        if (weightStatus === 'text-destructive font-bold' || (weightStatus === 'text-warning font-semibold' && rowStatus !== 'text-destructive font-bold')) {
+                            rowStatus = weightStatus;
                         }
 
                         return (
                         <TableRow key={index}>
-                            <TableCell className={cn(rowClass)}>{parseTimestamp(entry.timestamp).toLocaleString()}</TableCell>
+                            <TableCell className={cn(rowStatus)}>{parseTimestamp(entry.timestamp).toLocaleString()}</TableCell>
                             {type === 'water' && <TableCell className={cn("text-right", getValueClass(entry.level, thresholds?.waterLevel || 80))}>{entry.level}</TableCell>}
                             {type === 'waste' && <TableCell className={cn("text-right", getValueClass(entry.fullness, thresholds?.binFullness || 80))}>{entry.fullness ?? 'N/A'}</TableCell>}
                             {type === 'waste' && <TableCell className={cn("text-right", getValueClass(entry.weight, thresholds?.wasteWeight || 30))}>{entry.weight ?? 'N/A'}</TableCell>}
