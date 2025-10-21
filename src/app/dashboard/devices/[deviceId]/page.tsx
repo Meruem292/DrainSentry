@@ -5,14 +5,13 @@ import React from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useUser, useDatabase } from "@/firebase";
 import useRtdbValue from "@/firebase/rtdb/use-rtdb-value";
-import { ref, push } from "firebase/database";
 import OverviewCards from "../../components/overview-cards";
 import WaterLevelChart from "../../components/water-level-chart";
 import MethaneLevelChart from "../../components/methane-level-chart";
 import WasteBinStatus from "../../components/waste-bin-status";
 import InteractiveMap from "../../components/interactive-map";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, PlusCircle } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -80,28 +79,8 @@ export default function DeviceDetailsPage() {
   const router = useRouter();
   const { deviceId } = params;
   const { user } = useUser();
-  const { database } = useDatabase();
   const path = user ? `users/${user.uid}/devices/${deviceId}` : "";
   const { data: device, loading } = useRtdbValue(path);
-
-  const handleAddWaterLevel = () => {
-    if (!database || !user || !deviceId) return;
-    const historyRef = ref(database, `users/${user.uid}/devices/${deviceId}/waterLevelHistory`);
-    push(historyRef, {
-      level: Math.floor(Math.random() * 100),
-      timestamp: new Date().toLocaleString(),
-    });
-  };
-
-  const handleAddWasteBin = () => {
-    if (!database || !user || !deviceId) return;
-    const historyRef = ref(database, `users/${user.uid}/devices/${deviceId}/wasteBinHistory`);
-    push(historyRef, {
-      fullness: Math.floor(Math.random() * 100),
-      weight: parseFloat((Math.random() * 50).toFixed(1)),
-      timestamp: new Date().toLocaleString(),
-    });
-  };
 
   return (
     <div className="flex flex-col gap-8">
@@ -131,20 +110,12 @@ export default function DeviceDetailsPage() {
             <div>
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-bold">Water Level History</h2>
-                    <Button onClick={handleAddWaterLevel} size="sm">
-                        <PlusCircle className="mr-2 h-4 w-4 text-primary-foreground" />
-                        Add Water Level Entry
-                    </Button>
                 </div>
                 <DeviceHistoryTable history={device?.waterLevelHistory} type="water" loading={loading} />
             </div>
              <div>
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-bold">Waste Bin History</h2>
-                    <Button onClick={handleAddWasteBin} size="sm">
-                        <PlusCircle className="mr-2 h-4 w-4 text-primary-foreground" />
-                        Add Waste Bin Entry
-                    </Button>
                 </div>
                 <DeviceHistoryTable history={device?.wasteBinHistory} type="waste" loading={loading} />
             </div>
