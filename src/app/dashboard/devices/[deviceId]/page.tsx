@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/table"
 
 
-const DeviceHistoryTable = ({ history, type }: { history: any, type: 'water' | 'waste' }) => {
+const DeviceHistoryTable = ({ history, type, loading }: { history: any, type: 'water' | 'waste', loading: boolean }) => {
     const data = React.useMemo(() => {
         if (!history) return [];
         return Object.values(history)
@@ -101,11 +101,11 @@ export default function DeviceDetailsPage() {
        <div className="grid gap-8 lg:grid-cols-2">
             <div>
                 <h2 className="text-xl font-bold mb-4">Water Level History</h2>
-                <DeviceHistoryTable history={device?.waterLevelHistory} type="water" />
+                <DeviceHistoryTable history={device?.waterLevelHistory} type="water" loading={loading} />
             </div>
              <div>
                 <h2 className="text-xl font-bold mb-4">Waste Bin History</h2>
-                <DeviceHistoryTable history={device?.wasteBinHistory} type="waste" />
+                <DeviceHistoryTable history={device?.wasteBinHistory} type="waste" loading={loading} />
             </div>
        </div>
     </div>
