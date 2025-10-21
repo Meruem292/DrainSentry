@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from "react";
@@ -7,15 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Bell } from "lucide-react";
 
-interface NotificationsCardProps {
-  settings: {
-    smsEnabled: boolean;
-  } | undefined;
-  onToggle: (currentState: boolean) => void;
+interface PushNotificationsCardProps {
+  isEnabled: boolean;
+  onToggle: () => void;
+  isSubscribing: boolean;
 }
 
-export default function NotificationsCard({ settings, onToggle }: NotificationsCardProps) {
-  const isEnabled = settings?.smsEnabled === true;
+export default function PushNotificationsCard({ isEnabled, onToggle, isSubscribing }: PushNotificationsCardProps) {
 
   return (
     <Card className="bg-card/50">
@@ -23,7 +20,7 @@ export default function NotificationsCard({ settings, onToggle }: NotificationsC
         <div className="flex items-center gap-3">
             <Bell className="h-6 w-6 text-primary" />
             <div>
-                <CardTitle>SMS Notifications</CardTitle>
+                <CardTitle>Push Notifications</CardTitle>
                 <CardDescription>
                 Receive instant alerts for critical system events and device status changes.
                 </CardDescription>
@@ -36,13 +33,13 @@ export default function NotificationsCard({ settings, onToggle }: NotificationsC
       <CardContent>
         <div className="flex items-center justify-between p-4 border rounded-lg bg-background">
           <div>
-            <h4 className="font-semibold">Enable SMS Notifications</h4>
+            <h4 className="font-semibold">Enable Push Notifications</h4>
             <p className="text-sm text-muted-foreground">
-              Get notified about critical alerts via text message.
+              Get notified about critical alerts even when the app is closed.
             </p>
           </div>
-          <Button onClick={() => onToggle(isEnabled)} variant={isEnabled ? "destructive" : "default"}>
-            {isEnabled ? "Disable" : "Enable"}
+          <Button onClick={onToggle} variant={isEnabled ? "destructive" : "default"} disabled={isSubscribing}>
+            {isSubscribing ? "Subscribing..." : (isEnabled ? "Disable" : "Enable")}
           </Button>
         </div>
       </CardContent>

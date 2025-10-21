@@ -1,7 +1,7 @@
 'use client';
 import { initializeFirebase, FirebaseProvider } from '@/firebase';
 
-const { firebaseApp, auth, firestore, database } = initializeFirebase();
+const { firebaseApp, auth, firestore, database, messaging } = initializeFirebase();
 
 export function FirebaseClientProvider({
   children,
@@ -14,6 +14,7 @@ export function FirebaseClientProvider({
       auth={auth}
       firestore={firestore}
       database={database}
+      messaging={messaging}
     >
       {children}
     </FirebaseProvider>

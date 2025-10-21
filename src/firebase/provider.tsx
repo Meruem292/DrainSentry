@@ -4,12 +4,14 @@ import type { FirebaseApp } from 'firebase/app';
 import type { Auth } from 'firebase/auth';
 import type { Firestore } from 'firebase/firestore';
 import type { Database } from 'firebase/database';
+import type { Messaging } from 'firebase/messaging';
 
 export type FirebaseContextValue = {
   firebaseApp: FirebaseApp | null;
   auth: Auth | null;
   firestore: Firestore | null;
   database: Database | null;
+  messaging: Messaging | null;
 };
 
 const FirebaseContext = createContext<FirebaseContextValue | null>(null);
@@ -20,12 +22,14 @@ export function FirebaseProvider({
   auth,
   firestore,
   database,
+  messaging,
 }: {
   children: React.ReactNode;
   firebaseApp: FirebaseApp;
   auth: Auth;
   firestore: Firestore;
   database: Database;
+  messaging: Messaging | null;
 }) {
   return (
     <FirebaseContext.Provider
@@ -34,6 +38,7 @@ export function FirebaseProvider({
         auth,
         firestore,
         database,
+        messaging,
       }}
     >
       {children}
@@ -87,4 +92,9 @@ export function useDatabase() {
       );
     }
     return { database };
+}
+
+export function useMessaging() {
+    const { messaging } = useFirebase();
+    return { messaging };
 }
