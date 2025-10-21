@@ -147,22 +147,6 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
 
-        <Card className="shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                    <CardTitle className="text-lg">System Overview</CardTitle>
-                    <p className="text-sm text-muted-foreground">Real-time monitoring and analytics</p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <p className="text-sm text-muted-foreground">Time Period:</p>
-                    <Button variant="default" size="sm" className="h-8">Hourly</Button>
-                    <Button variant="ghost" size="sm" className="h-8 text-muted-foreground">Daily</Button>
-                    <Button variant="ghost" size="sm" className="h-8 text-muted-foreground">Weekly</Button>
-                    <Button variant="ghost" size="sm" className="h-8 text-muted-foreground">Monthly</Button>
-                </div>
-            </CardHeader>
-        </Card>
-
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {systemOverviewCards.map((card, index) => (
                 <Card key={index} className={cn("flex flex-col justify-between overflow-hidden border-l-4", card.borderColor, card.bgColor)}>
