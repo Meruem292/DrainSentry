@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -29,7 +30,10 @@
     --destructive-foreground: 0 0% 98%;
 
     --warning: 38 92% 50%; /* Orange for warnings */
+    --warning-foreground: 240 5% 10%;
+
     --success: 142 71% 45%; /* Green for success/normal */
+    --success-foreground: 0 0% 100%;
 
     --border: 220 13% 88%;
     --input: 220 13% 94%;
@@ -79,7 +83,10 @@
     --destructive-foreground: 210 20% 98%;
 
     --warning: 48 96% 50%;
+    --warning-foreground: 240 5% 10%;
+    
     --success: 142 71% 35%;
+    --success-foreground: 0 0% 100%;
 
     --border: 220 14% 15%;
     --input: 220 14% 20%;
