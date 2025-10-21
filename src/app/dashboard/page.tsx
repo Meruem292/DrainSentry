@@ -102,39 +102,45 @@ export default function DashboardPage() {
         { label: "with warnings", value: summary.warnings, className: "text-warning" }
       ],
       iconBg: <BarChart className="w-12 h-12 text-primary/10" />,
-      borderColor: "border-primary/50"
+      borderColor: "border-primary",
+      bgColor: ""
     },
     {
       title: "Critical Water Levels",
       value: summary.criticalWater,
-      icon: <Droplet className="text-warning" />,
-      details: [
-        { label: "Warning levels detected", value: "", className: "text-warning" },
-        { label: "devices need attention", value: summary.criticalWater }
-      ],
-      iconBg: <Droplet className="w-12 h-12 text-warning/10" />,
-      borderColor: "border-warning/50",
-      bgColor: "bg-warning/10"
+      valueColor: summary.criticalWater > 0 ? "text-warning" : "text-foreground",
+      icon: <Droplet className={cn(summary.criticalWater > 0 ? "text-warning" : "text-foreground")} />,
+      details: summary.criticalWater > 0 ?
+        [
+          { label: "Warning levels detected", value: "", className: "text-warning" },
+          { label: "devices need attention", value: summary.criticalWater }
+        ] :
+        [{ label: "All levels normal", value: "", className: "text-muted-foreground" }],
+      iconBg: <Droplet className={cn("w-12 h-12", summary.criticalWater > 0 ? "text-warning/10" : "text-primary/10")} />,
+      borderColor: summary.criticalWater > 0 ? "border-warning" : "border-success",
+      bgColor: summary.criticalWater > 0 ? "bg-warning/5" : ""
     },
     {
       title: "Critical Waste Bins",
       value: summary.criticalWaste,
-      icon: <Trash2 className="text-warning" />,
+      valueColor: summary.criticalWaste > 0 ? "text-warning" : "text-foreground",
+      icon: <Trash2 className={cn(summary.criticalWaste > 0 ? "text-warning" : "text-foreground")} />,
       details: summary.criticalWaste > 0 ?
         [{ label: "bins are full", value: summary.criticalWaste, className: "text-warning" }] :
-        [{ label: "All normal", value: "", className: "text-muted-foreground" }],
-      iconBg: <Trash2 className="w-12 h-12 text-warning/10" />,
-      borderColor: "border-warning/50",
-      bgColor: "bg-warning/10"
+        [{ label: "All bins normal", value: "", className: "text-muted-foreground" }],
+      iconBg: <Trash2 className={cn("w-12 h-12", summary.criticalWaste > 0 ? "text-warning/10" : "text-primary/10")} />,
+      borderColor: summary.criticalWaste > 0 ? "border-warning" : "border-success",
+      bgColor: summary.criticalWaste > 0 ? "bg-warning/5" : ""
     },
     {
       title: "System Health",
       value: "All Systems Normal",
+      valueColor: "text-success",
       icon: <CheckCircle className="text-success" />,
       details: [{ label: "Network status: online", value: "", className: "text-muted-foreground" }],
       iconBg: <CheckCircle className="w-12 h-12 text-success/10" />,
-      borderColor: "border-success/50",
-      bgColor: "bg-success/10"
+      borderColor: "border-success",
+      bgColor: "bg-success/5"
     },
   ];
 
@@ -169,13 +175,13 @@ export default function DashboardPage() {
                     <CardContent className="relative">
                         <div className="absolute right-4 top-0">{card.iconBg}</div>
                         {typeof card.value === 'number' ? (
-                             <p className="text-4xl font-bold">{card.value}</p>
+                             <p className={cn("text-4xl font-bold", card.valueColor)}>{card.value}</p>
                         ) : (
-                            <p className="text-lg font-bold">{card.value}</p>
+                            <p className={cn("text-lg font-bold", card.valueColor)}>{card.value}</p>
                         )}
                         <div className="text-xs text-muted-foreground mt-2">
                             {card.details.map((detail, i) => (
-                                <p key={i} className={cn(detail.className)}>
+                                <p key={i} className={detail.className}>
                                     <span className="font-bold">{detail.value}</span> {detail.label}
                                 </p>
                             ))}
