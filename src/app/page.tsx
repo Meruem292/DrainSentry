@@ -37,7 +37,7 @@ export default function LandingPage() {
                   Intelligent Monitoring for Modern Sanitation
                 </h1>
                 <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl mt-4">
-                  DrainSentry provides real-time data on water, waste, and gas levels, empowering cities with the insights to build smarter, cleaner, and more efficient infrastructure.
+                  DrainSentry revolutionizes sanitation with a smart sewerage collecting trash conveyor, providing real-time data on water levels and waste bin fullness and weight. Empower your city with insights for cleaner, more efficient infrastructure.
                 </p>
                 <div className="mt-6 space-x-4">
                   <Button asChild size="lg">
@@ -78,7 +78,7 @@ export default function LandingPage() {
                 </p>
               </div>
             </div>
-            <div className="mx-auto grid items-start gap-8 sm:max-w-4xl sm:grid-cols-2 md:gap-12 lg:max-w-5xl lg:grid-cols-3">
+            <div className="mx-auto grid items-start gap-8 sm:max-w-4xl sm:grid-cols-1 md:gap-12 lg:max-w-5xl lg:grid-cols-2">
               <Card>
                 <CardHeader className="flex flex-row items-center gap-4">
                   <div className="bg-primary/10 p-3 rounded-full">
@@ -97,24 +97,11 @@ export default function LandingPage() {
                   <div className="bg-primary/10 p-3 rounded-full">
                     <Trash2 className="h-6 w-6 text-primary" />
                   </div>
-                  <CardTitle>Waste Bin Levels</CardTitle>
+                  <CardTitle>Waste Bin Monitoring</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">
-                    Optimize waste collection routes and schedules by monitoring fill levels of public and commercial waste bins.
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center gap-4">
-                  <div className="bg-primary/10 p-3 rounded-full">
-                    <Wind className="h-6 w-6 text-primary" />
-                  </div>
-                  <CardTitle>Methane Gas Detection</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Ensure public safety and environmental compliance by monitoring methane concentrations within sewer lines.
+                    Optimize waste collection by monitoring bin fullness and weight, enabling smarter disposal schedules and preventing overflow.
                   </p>
                 </CardContent>
               </Card>
