@@ -39,26 +39,9 @@ const parseTimestamp = (timestamp: string): Date => {
 const DeviceHistoryTable = ({ history, type, loading, thresholds }: { history: any[], type: 'water' | 'waste', loading: boolean, thresholds: any }) => {
     if (loading) return <Skeleton className="h-64 w-full" />;
     
-    const getRowClass = (entry: any) => {
-        if (!thresholds) return "";
-
-        if (type === 'water') {
-            const level = entry.level;
-            const threshold = thresholds.waterLevel || 80;
-            if (level >= threshold) return "bg-destructive/10 hover:bg-destructive/20";
-            if (level >= threshold * 0.9) return "bg-warning/10 hover:bg-warning/20";
-        }
-        
-        if (type === 'waste') {
-            const fullness = entry.fullness;
-            const weight = entry.weight;
-            const fullnessThreshold = thresholds.binFullness || 80;
-            const weightThreshold = thresholds.wasteWeight || 30;
-
-            if (fullness >= fullnessThreshold || weight >= weightThreshold) return "bg-destructive/10 hover:bg-destructive/20";
-            if (fullness >= fullnessThreshold * 0.9 || weight >= weightThreshold * 0.9) return "bg-warning/10 hover:bg-warning/20";
-        }
-        
+    const getValueClass = (value: number, threshold: number) => {
+        if (value >= threshold) return "text-destructive font-bold";
+        if (value >= threshold / 2) return "text-warning font-semibold";
         return "";
     };
     
@@ -83,11 +66,11 @@ const DeviceHistoryTable = ({ history, type, loading, thresholds }: { history: a
                 </TableHeader>
                 <TableBody>
                     {history.map((entry: any, index) => (
-                        <TableRow key={index} className={getRowClass(entry)}>
+                        <TableRow key={index}>
                             <TableCell>{parseTimestamp(entry.timestamp).toLocaleString()}</TableCell>
-                            {type === 'water' && <TableCell className="text-right">{entry.level}</TableCell>}
-                            {type === 'waste' && <TableCell className="text-right">{entry.fullness ?? 'N/A'}</TableCell>}
-                            {type === 'waste' && <TableCell className="text-right">{entry.weight ?? 'N/A'}</TableCell>}
+                            {type === 'water' && <TableCell className={cn("text-right", getValueClass(entry.level, thresholds?.waterLevel || 80))}>{entry.level}</TableCell>}
+                            {type === 'waste' && <TableCell className={cn("text-right", getValueClass(entry.fullness, thresholds?.binFullness || 80))}>{entry.fullness ?? 'N/A'}</TableCell>}
+                            {type === 'waste' && <TableCell className={cn("text-right", getValueClass(entry.weight, thresholds?.wasteWeight || 30))}>{entry.weight ?? 'N/A'}</TableCell>}
                         </TableRow>
                     ))}
                 </TableBody>
