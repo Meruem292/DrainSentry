@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   SidebarProvider,
   Sidebar,
@@ -19,9 +19,38 @@ import Logo from "@/components/icons/logo";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useAuth, useUser } from "@/firebase";
+import { signOut } from "firebase/auth";
+import { useEffect } from "react";
+
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { auth } = useAuth();
+  const { user, loading } = useUser();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+
+
+  const handleLogout = async () => {
+    if (auth) {
+      await signOut(auth);
+      router.push("/");
+    }
+  };
+
+  if (loading || !user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div>Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <SidebarProvider>
@@ -80,11 +109,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <SidebarFooter>
             <SidebarMenu>
                 <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Log Out">
-                        <Link href="/">
-                            <LogOut />
-                            <span>Log Out</span>
-                        </Link>
+                    <SidebarMenuButton onClick={handleLogout} tooltip="Log Out">
+                        <LogOut />
+                        <span>Log Out</span>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>
@@ -102,17 +129,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                   <Avatar>
-                    <AvatarImage src="https://picsum.photos/seed/user-avatar/40/40" />
-                    <AvatarFallback>JD</AvatarFallback>
+                    <AvatarImage src={user.photoURL ?? "https://picsum.photos/seed/user-avatar/40/40"} />
+                    <AvatarFallback>{user.email?.charAt(0).toUpperCase() ?? 'U'}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">Jane Doe</p>
+                    <p className="text-sm font-medium leading-none">{user.displayName ?? "User"}</p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      jane.doe@example.com
+                      {user.email}
                     </p>
                   </div>
                 </DropdownMenuLabel>
@@ -121,11 +148,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <DropdownMenuItem>Billing</DropdownMenuItem>
                 <DropdownMenuItem>Settings</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                    <Link href="/" className="flex items-center w-full">
-                        <LogOut className="mr-2 h-4 w-4" />
-                        <span>Log out</span>
-                    </Link>
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
