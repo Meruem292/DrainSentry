@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -89,7 +90,7 @@ function InnerDashboardLayout({ children }: { children: React.ReactNode }) {
             </SidebarMenuItem>
              <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={pathname.startsWith("/dashboard/devices")} tooltip="Devices">
-                <Link href="/dashboard"><Server /><span>Devices</span></Link>
+                <Link href="/dashboard/devices"><Server /><span>Devices</span></Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
