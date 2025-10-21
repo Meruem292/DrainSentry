@@ -7,7 +7,6 @@ import Logo from '@/components/icons/logo';
 import { BarChart, Trash2, Wind } from 'lucide-react';
 
 export default function LandingPage() {
-  const heroImage = PlaceHolderImages.find(p => p.id === 'hero-landing');
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
@@ -54,16 +53,13 @@ export default function LandingPage() {
                 </div>
               </div>
               <div className="flex justify-center items-center">
-                {heroImage && (
                   <Image
-                    src={heroImage.imageUrl}
-                    alt={heroImage.description}
-                    data-ai-hint={heroImage.imageHint}
+                    src="/drainSentryHero.png"
+                    alt="DrainSentry Hero Image"
                     width={1200}
                     height={800}
                     className="mx-auto aspect-video overflow-hidden rounded-xl object-cover"
                   />
-                )}
               </div>
             </div>
           </div>
