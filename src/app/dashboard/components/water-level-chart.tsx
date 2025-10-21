@@ -35,9 +35,9 @@ export default function WaterLevelChart() {
     if (!devices) return [];
 
     const deviceId = Object.keys(devices)[0];
-    if (!deviceId || !devices[deviceId].wasteBinHistory) return [];
+    if (!deviceId || !devices[deviceId].waterLevelHistory) return [];
     
-    const history = devices[deviceId].wasteBinHistory;
+    const history = devices[deviceId].waterLevelHistory;
     
     // Filter for entries that have a timestamp and level, then sort and take the last 12
     const dataPoints = Object.values(history)
