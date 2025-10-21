@@ -25,10 +25,8 @@ const chartConfig = {
 }
 
 const parseTimestamp = (timestamp: string): Date => {
-    // Format: "10/16/2025, 17:27:06"
     const parts = timestamp.match(/(\d{2})\/(\d{2})\/(\d{4}), (\d{1,2}):(\d{2}):(\d{2})/);
     if (!parts) return new Date(0);
-    // new Date(year, monthIndex(0-11), day, hour, minute, second)
     return new Date(parseInt(parts[3]), parseInt(parts[1]) - 1, parseInt(parts[2]), parseInt(parts[4]), parseInt(parts[5]), parseInt(parts[6]));
 };
 

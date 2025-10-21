@@ -11,13 +11,19 @@ const getProgressClass = (level: number): string => {
     return '[&>div]:bg-chart-2';
 };
 
+const parseTimestamp = (timestamp: string): Date => {
+    const parts = timestamp.match(/(\d{2})\/(\d{2})\/(\d{4}), (\d{1,2}):(\d{2}):(\d{2})/);
+    if (!parts) return new Date(0);
+    return new Date(parseInt(parts[3]), parseInt(parts[1]) - 1, parseInt(parts[2]), parseInt(parts[4]), parseInt(parts[5]), parseInt(parts[6]));
+};
+
 export default function WasteBinStatus({ device, loading }: { device: any, loading: boolean }) {
 
   const bin = React.useMemo(() => {
     if (!device) return null;
     
     const history = device.wasteBinHistory ? Object.values(device.wasteBinHistory) : [];
-    const latestEntry: any = history.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+    const latestEntry: any = history.sort((a: any, b: any) => parseTimestamp(b.timestamp).getTime() - parseTimestamp(a.timestamp).getTime())[0];
     
     return {
         id: device.id,
