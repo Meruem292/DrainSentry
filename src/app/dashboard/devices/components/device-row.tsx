@@ -100,7 +100,7 @@ export default function DeviceRow({ device, onEdit }: { device: any, onEdit: (de
 
     return (
         <Collapsible asChild>
-            <>
+            <div className="contents">
                 {/* Desktop View */}
                 <div className="hidden md:grid grid-cols-12 gap-4 items-center p-4 border-b last:border-b-0 hover:bg-muted/50 transition-colors">
                     <div className="col-span-2 flex items-center gap-2 font-semibold">
@@ -173,7 +173,7 @@ export default function DeviceRow({ device, onEdit }: { device: any, onEdit: (de
                         </div>
                     </CollapsibleContent>
                 </div>
-            </>
+            </div>
         </Collapsible>
     )
 }
