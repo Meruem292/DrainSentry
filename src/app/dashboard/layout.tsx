@@ -14,12 +14,59 @@ import {
   SidebarFooter,
   SidebarInset,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Settings, LogOut, Droplet, Trash2, Server, Users, Power, User } from "lucide-react";
+import { LayoutDashboard, Settings, LogOut, Server, Users, Power, User } from "lucide-react";
 import Logo from "@/components/icons/logo";
 import { useAuth, useUser } from "@/firebase";
 import { signOut } from "firebase/auth";
 import { useEffect } from "react";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+
+
+const navItems = [
+    { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+    { href: "/dashboard/devices", icon: Server, label: "Devices" },
+    { href: "/dashboard/contacts", icon: Users, label: "Contacts" },
+    { href: "/dashboard/conveyor", icon: Power, label: "Conveyor" },
+    { href: "/dashboard/settings", icon: Settings, label: "Settings" },
+];
+
+
+function BottomNavBar() {
+    const pathname = usePathname();
+    const router = useRouter();
+    const { auth } = useAuth();
+    
+    const handleLogout = async () => {
+        if (auth) {
+            await signOut(auth);
+            router.push("/");
+        }
+    };
+
+    return (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50">
+            <div className="flex justify-around items-center h-16">
+                {navItems.map((item) => {
+                    const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+                    return (
+                        <Link href={item.href} key={item.label}>
+                            <div className={cn("flex flex-col items-center gap-1", isActive ? "text-primary" : "text-muted-foreground")}>
+                                <item.icon className="h-5 w-5" />
+                                <span className="text-xs">{item.label}</span>
+                            </div>
+                        </Link>
+                    )
+                })}
+                <button onClick={handleLogout} className="flex flex-col items-center gap-1 text-muted-foreground">
+                    <LogOut className="h-5 w-5" />
+                    <span className="text-xs">Logout</span>
+                </button>
+            </div>
+        </div>
+    )
+}
 
 
 function InnerDashboardLayout({ children }: { children: React.ReactNode }) {
@@ -61,7 +108,7 @@ function InnerDashboardLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
-      <Sidebar variant="sidebar" collapsible="icon">
+      <Sidebar variant="sidebar" collapsible="icon" className="hidden md:block">
         <SidebarHeader>
           <div className="p-4">
             <Link href="/dashboard" className="inline-flex items-center gap-2">
@@ -116,7 +163,8 @@ function InnerDashboardLayout({ children }: { children: React.ReactNode }) {
                 <span>{user.email}</span>
             </div>
         </header>
-        <main className="flex-1 p-4 sm:p-8 overflow-auto">{children}</main>
+        <main className="flex-1 p-4 sm:p-8 overflow-auto pb-20 md:pb-8">{children}</main>
+        <BottomNavBar />
       </SidebarInset>
     </SidebarProvider>
   );
