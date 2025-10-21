@@ -14,11 +14,13 @@ const MethaneIcon = (props: SVGProps<SVGSVGElement>) => (
     <style>
       {`
         @keyframes pulse-cloud {
-          0%, 100% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.05); opacity: 0.8; }
+          0%, 100% { transform: scale(1); opacity: 0.8; }
+          50% { transform: scale(1.05); opacity: 1; }
         }
         .pulse-path {
           animation: pulse-cloud 3s ease-in-out infinite;
+          fill: hsl(var(--accent) / 0.5);
+          stroke: hsl(var(--accent));
         }
       `}
     </style>
