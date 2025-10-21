@@ -25,9 +25,10 @@ import {
 
 
 const parseTimestamp = (timestamp: string): Date => {
-    const parts = timestamp.match(/(\d{1,2})\/(\d{1,2})\/(\d{4}), (\d{1,2}):(\d{2}):(\d{2})/);
-    if (!parts) return new Date(0); 
-    // new Date(year, monthIndex, day, hours, minutes, seconds)
+    // Format: "10/16/2025, 17:27:06"
+    const parts = timestamp.match(/(\d{2})\/(\d{2})\/(\d{4}), (\d{1,2}):(\d{2}):(\d{2})/);
+    if (!parts) return new Date(0);
+    // new Date(year, monthIndex(0-11), day, hour, minute, second)
     return new Date(parseInt(parts[3]), parseInt(parts[1]) - 1, parseInt(parts[2]), parseInt(parts[4]), parseInt(parts[5]), parseInt(parts[6]));
 };
 
@@ -62,7 +63,7 @@ const DeviceHistoryTable = ({ history, type, loading }: { history: any, type: 'w
                 <TableBody>
                     {data.map((entry: any, index) => (
                         <TableRow key={index}>
-                            <TableCell>{new Date(parseTimestamp(entry.timestamp)).toLocaleString()}</TableCell>
+                            <TableCell>{parseTimestamp(entry.timestamp).toLocaleString()}</TableCell>
                             {type === 'water' && <TableCell className="text-right">{entry.level}</TableCell>}
                             {type === 'waste' && <TableCell className="text-right">{entry.fullness ?? 'N/A'}</TableCell>}
                             {type === 'waste' && <TableCell className="text-right">{entry.weight ?? 'N/A'}</TableCell>}
@@ -109,7 +110,7 @@ export default function DeviceDetailsPage() {
         <Button variant="outline" size="icon" onClick={() => router.back()}>
           <ArrowLeft />
         </Button>
-        {loading ? <Skeleton className="h-8 w-64" /> : <h1 className="text-2xl font-bold">{device?.name || deviceId} - <span className="text-muted-foreground">{device?.location}</span></h1>}
+        {loading ? <Skeleton className="h-8 w-64" /> : <h1 className="text-2xl font-bold">{device?.name || device?.id} - <span className="text-muted-foreground">{device?.location}</span></h1>}
       </div>
       
       <OverviewCards device={device} loading={loading} />

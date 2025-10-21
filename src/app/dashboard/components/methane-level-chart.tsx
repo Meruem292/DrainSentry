@@ -24,10 +24,11 @@ const chartConfig = {
   },
 }
 
-const parseTimestamp = (timestamp: string) => {
-    const parts = timestamp.match(/(\d{1,2})\/(\d{1,2})\/(\d{4}), (\d{1,2}):(\d{2}):(\d{2})/);
-    if (!parts) return new Date(0); 
-    // new Date(year, monthIndex, day, hours, minutes, seconds)
+const parseTimestamp = (timestamp: string): Date => {
+    // Format: "10/16/2025, 17:27:06"
+    const parts = timestamp.match(/(\d{2})\/(\d{2})\/(\d{4}), (\d{1,2}):(\d{2}):(\d{2})/);
+    if (!parts) return new Date(0);
+    // new Date(year, monthIndex(0-11), day, hour, minute, second)
     return new Date(parseInt(parts[3]), parseInt(parts[1]) - 1, parseInt(parts[2]), parseInt(parts[4]), parseInt(parts[5]), parseInt(parts[6]));
 };
 
@@ -117,13 +118,13 @@ export default function MethaneLevelChart({ device, loading }: { device: any, lo
               )}
             </div>
         )}
-        {chartData.length > 0 && !loading && (
+        {chartData.length > 1 && !loading && (
           <div className="flex items-center justify-center gap-2 pt-4">
               <div className="flex items-center gap-2 font-medium leading-none">
                   Trending up <TrendingUp className="h-4 w-4" />
               </div>
               <div className="leading-none text-muted-foreground">
-                  Showing data for the last few hours
+                  Showing all historical data
               </div>
           </div>
         )}
