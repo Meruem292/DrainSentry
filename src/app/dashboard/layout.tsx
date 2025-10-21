@@ -15,13 +15,13 @@ import {
 } from "@/components/ui/sidebar";
 import { LayoutDashboard, Settings, LogOut, Droplet, Trash2, Server, Users, Power, User } from "lucide-react";
 import Logo from "@/components/icons/logo";
-import { Button } from "@/components/ui/button";
 import { useAuth, useUser } from "@/firebase";
 import { signOut } from "firebase/auth";
 import { useEffect } from "react";
+import { FirebaseClientProvider } from "@/firebase/client-provider";
 
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+function InnerDashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { auth } = useAuth();
@@ -111,6 +111,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <Link href="#"><Settings /><span>Settings</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                 <SidebarMenuItem>
+                  <SidebarMenuButton onClick={handleLogout} tooltip="Logout">
+                    <LogOut /><span>Logout</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
             </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
@@ -126,4 +131,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </SidebarInset>
     </SidebarProvider>
   );
+}
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <FirebaseClientProvider>
+      <InnerDashboardLayout>{children}</InnerDashboardLayout>
+    </FirebaseClientProvider>
+  )
 }

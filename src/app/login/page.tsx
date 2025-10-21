@@ -11,9 +11,10 @@ import Logo from "@/components/icons/logo";
 import { useAuth } from "@/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
+import { FirebaseClientProvider } from "@/firebase/client-provider";
 
 
-export default function LoginPage() {
+function LoginPageContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
@@ -100,4 +101,12 @@ export default function LoginPage() {
       </Card>
     </div>
   );
+}
+
+export default function LoginPage() {
+  return (
+    <FirebaseClientProvider>
+      <LoginPageContent />
+    </FirebaseClientProvider>
+  )
 }
