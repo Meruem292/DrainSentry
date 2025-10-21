@@ -77,7 +77,7 @@ export default function DeviceRow({ device, onEdit }: { device: any, onEdit: (de
             <div className="col-span-1 text-sm text-muted-foreground">{device.id}</div>
             <div className="col-span-2 text-sm text-muted-foreground">{device.location}</div>
             <div className="col-span-1">
-                <Badge variant={isActive ? "default" : "destructive"} className={cn(!isActive && "bg-muted text-muted-foreground", isActive && "bg-success hover:bg-success/80")}>
+                <Badge variant={isActive ? "success" : "destructive"} className={cn(!isActive && "bg-muted text-muted-foreground")}>
                     {isActive ? "Active" : "Inactive"}
                 </Badge>
             </div>
