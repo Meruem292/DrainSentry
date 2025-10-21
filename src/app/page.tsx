@@ -58,7 +58,7 @@ export default function LandingPage() {
                     alt="DrainSentry Hero Image"
                     width={1200}
                     height={800}
-                    className="mx-auto aspect-video overflow-hidden rounded-xl object-cover"
+                    className="mx-auto overflow-hidden rounded-xl"
                   />
               </div>
             </div>
