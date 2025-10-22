@@ -7,9 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertTriangle, RefreshCw, Sparkles, Bot } from "lucide-react";
+import { AlertTriangle, RefreshCw, Sparkles, Bot, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { describeImage } from "@/ai/flows/describe-image";
+import { detectTrashInImage } from "@/ai/flows/describe-image";
+import { Badge } from "@/components/ui/badge";
 
 export default function PhotoPage() {
     const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -18,14 +19,14 @@ export default function PhotoPage() {
     const { toast } = useToast();
 
     const [isPending, startTransition] = useTransition();
-    const [description, setDescription] = useState<string | null>(null);
+    const [detectionResult, setDetectionResult] = useState<boolean | null>(null);
     const [aiError, setAiError] = useState<string | null>(null);
 
     const fetchLatestImage = async () => {
         setLoading(true);
         setError(null);
         setImageUrl(null);
-        setDescription(null);
+        setDetectionResult(null);
         setAiError(null);
         try {
             const { data: files, error: listError } = await supabase
@@ -63,7 +64,7 @@ export default function PhotoPage() {
         fetchLatestImage();
     }, []);
 
-    const handleDescribeImage = () => {
+    const handleDetectTrash = () => {
         if (!imageUrl) {
             toast({
                 variant: 'destructive',
@@ -75,12 +76,12 @@ export default function PhotoPage() {
 
         startTransition(async () => {
             setAiError(null);
-            setDescription(null);
+            setDetectionResult(null);
             try {
-                const result = await describeImage({ imageUrl });
-                setDescription(result.description);
+                const result = await detectTrashInImage({ imageUrl });
+                setDetectionResult(result.trashDetected);
             } catch (err: any) {
-                console.error('Failed to describe image:', err);
+                console.error('Failed to detect trash:', err);
                 setAiError('An error occurred while analyzing the image. Please try again.');
                 toast({
                     variant: 'destructive',
@@ -97,7 +98,7 @@ export default function PhotoPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Latest Conveyor Photo</CardTitle>
-                        <CardDescription>Displaying the most recent photo captured by the device.</CardDescription>
+                        <CardDescription>Displaying the most recent photo captured by the device for trash analysis.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="relative aspect-video w-full rounded-lg overflow-hidden border">
@@ -126,7 +127,7 @@ export default function PhotoPage() {
                             <RefreshCw className="mr-2 h-4 w-4" />
                             {loading ? 'Refreshing...' : 'Refresh Photo'}
                         </Button>
-                        <Button onClick={handleDescribeImage} disabled={isPending || !imageUrl}>
+                        <Button onClick={handleDetectTrash} disabled={isPending || !imageUrl}>
                             {isPending ? (
                                 <>
                                     <Sparkles className="mr-2 h-4 w-4 animate-pulse" />
@@ -134,27 +135,27 @@ export default function PhotoPage() {
                                 </>
                             ) : (
                                 <>
-                                    <Sparkles className="mr-2 h-4 w-4" />
-                                    Describe with AI
+                                    <Search className="mr-2 h-4 w-4" />
+                                    Detect Trash
                                 </>
                             )}
                         </Button>
                     </CardFooter>
                 </Card>
 
-                {(isPending || description || aiError) && (
+                {(isPending || detectionResult !== null || aiError) && (
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Bot className="h-6 w-6 text-primary" />
-                                <span>AI Analysis</span>
+                                <span>AI Analysis Result</span>
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="min-h-[100px]">
+                        <CardContent className="min-h-[100px] flex items-center justify-center">
                             {isPending ? (
-                                <div className="space-y-3">
-                                    <Skeleton className="h-4 w-full" />
-                                    <Skeleton className="h-4 w-4/5" />
+                                <div className="space-y-3 w-full">
+                                    <Skeleton className="h-8 w-1/2 mx-auto" />
+                                    <Skeleton className="h-4 w-3/4 mx-auto" />
                                 </div>
                             ) : aiError ? (
                                 <div className="flex flex-col items-center justify-center text-center text-destructive-foreground bg-destructive/80 p-4 rounded-lg">
@@ -162,9 +163,13 @@ export default function PhotoPage() {
                                     <h4 className="font-semibold">Analysis Failed</h4>
                                     <p className="text-sm">{aiError}</p>
                                 </div>
-                            ) : description ? (
-                                <div className="prose prose-sm dark:prose-invert max-w-none">
-                                    <p>{description}</p>
+                            ) : detectionResult !== null ? (
+                                <div className="text-center">
+                                    {detectionResult ? (
+                                        <Badge variant="destructive" className="text-lg px-4 py-2">Trash Detected</Badge>
+                                    ) : (
+                                        <Badge variant="success" className="text-lg px-4 py-2 bg-success">No Trash Detected</Badge>
+                                    )}
                                 </div>
                             ) : null}
                         </CardContent>

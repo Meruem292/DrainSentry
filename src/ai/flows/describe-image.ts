@@ -4,15 +4,15 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { z } from 'zod';
 import { Buffer } from 'buffer';
 
-const DescribeImageInputSchema = z.object({
+const DetectTrashInputSchema = z.object({
   imageUrl: z.string().url(),
 });
-export type DescribeImageInput = z.infer<typeof DescribeImageInputSchema>;
+export type DetectTrashInput = z.infer<typeof DetectTrashInputSchema>;
 
-const ImageDescriptionSchema = z.object({
-  description: z.string().describe("A detailed description of the image."),
+const TrashDetectionResultSchema = z.object({
+  trashDetected: z.boolean().describe("Whether or not trash was detected in the image."),
 });
-export type ImageDescription = z.infer<typeof ImageDescriptionSchema>;
+export type TrashDetectionResult = z.infer<typeof TrashDetectionResultSchema>;
 
 const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 if (!apiKey) {
@@ -33,24 +33,30 @@ async function urlToGenerativePart(url: string, mimeType: string) {
     };
 }
 
-export async function describeImage(input: DescribeImageInput): Promise<ImageDescription> {
+export async function detectTrashInImage(input: DetectTrashInput): Promise<TrashDetectionResult> {
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    const prompt = "Describe this image in detail. What objects do you see? What is the context?";
+    const prompt = `
+        You are an AI assistant for a smart sanitation system. Your task is to detect trash in the provided image.
+        - Analyze the image to identify any form of trash, such as plastic bags, cans, bottles, tires, or other debris.
+        - It is crucial that you IGNORE the conveyor belt machinery itself, which might appear in the photo. Do not classify parts of the conveyor as trash.
+        - Based on your analysis, respond with a simple "Yes" if any trash is detected, or "No" if no trash is found.
+    `;
     
-    // Assuming JPEG images from Supabase. You might need to make this more robust
-    // if you store other image types.
+    // Assuming JPEG images. 
     const imagePart = await urlToGenerativePart(input.imageUrl, "image/jpeg");
 
     const result = await model.generateContent([prompt, imagePart]);
     const response = await result.response;
-    const text = response.text();
+    const text = response.text().trim().toLowerCase();
 
-    return { description: text };
+    const trashDetected = text === 'yes';
+
+    return { trashDetected };
 
   } catch (error: any) {
-    console.error("Error describing image:", error);
-    throw new Error(`Failed to describe image: ${error.message}`);
+    console.error("Error detecting trash in image:", error);
+    throw new Error(`Failed to detect trash: ${error.message}`);
   }
 }
