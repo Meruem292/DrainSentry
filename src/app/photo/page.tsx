@@ -4,10 +4,9 @@
 import React, { useState, useEffect, useTransition } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertTriangle, RefreshCw, Sparkles, Bot, Search } from "lucide-react";
+import { AlertTriangle, RefreshCw, Sparkles, Bot, Search, Loader } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { detectTrashInImage } from "@/ai/flows/describe-image";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +21,6 @@ function PhotoPageComponent() {
     const { toast } = useToast();
     const { user } = useUser();
     const { database } = useDatabase();
-
 
     const [isPending, startTransition] = useTransition();
     const [detectionResult, setDetectionResult] = useState<boolean | null>(null);
@@ -65,20 +63,9 @@ function PhotoPageComponent() {
             setLoading(false);
         }
     };
-
-    useEffect(() => {
-        fetchLatestImage();
-    }, []);
-
+    
     const handleDetectTrash = () => {
-        if (!imageUrl) {
-            toast({
-                variant: 'destructive',
-                title: 'No Image to Analyze',
-                description: 'Please wait for the image to load first.',
-            });
-            return;
-        }
+        if (!imageUrl) return;
 
         if (!user || !database) {
             toast({
@@ -96,7 +83,6 @@ function PhotoPageComponent() {
                 const result = await detectTrashInImage({ imageUrl });
                 setDetectionResult(result.trashDetected);
                 
-                // Update Firebase based on detection result
                 const deviceRef = ref(database, `users/${user.uid}/devices/DS-001`);
                 await update(deviceRef, { manualConveyor: result.trashDetected });
 
@@ -104,8 +90,6 @@ function PhotoPageComponent() {
                     title: `Detection complete: Conveyor ${result.trashDetected ? 'Activated' : 'Deactivated'}`,
                     description: `Trash was ${result.trashDetected ? '' : 'not '}detected.`,
                 });
-
-
             } catch (err: any) {
                 console.error('Failed to detect trash or update device:', err);
                 setAiError('An error occurred during the process. Please try again.');
@@ -118,13 +102,24 @@ function PhotoPageComponent() {
         });
     };
 
+    useEffect(() => {
+        fetchLatestImage();
+    }, []);
+    
+    useEffect(() => {
+        if (imageUrl && !loading) {
+            handleDetectTrash();
+        }
+    }, [imageUrl, loading]);
+
+
     return (
         <div className="flex items-center justify-center min-h-screen bg-background p-4">
             <div className="max-w-3xl w-full space-y-4">
                 <Card>
                     <CardHeader>
                         <CardTitle>Latest Conveyor Photo</CardTitle>
-                        <CardDescription>Displaying the most recent photo captured by the device for trash analysis.</CardDescription>
+                        <CardDescription>Automatically analyzing the most recent photo for trash and controlling the conveyor.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="relative aspect-video w-full rounded-lg overflow-hidden border">
@@ -148,25 +143,6 @@ function PhotoPageComponent() {
                             )}
                         </div>
                     </CardContent>
-                    <CardFooter className="gap-4">
-                        <Button onClick={fetchLatestImage} disabled={loading}>
-                            <RefreshCw className="mr-2 h-4 w-4" />
-                            {loading ? 'Refreshing...' : 'Refresh Photo'}
-                        </Button>
-                        <Button onClick={handleDetectTrash} disabled={isPending || !imageUrl}>
-                            {isPending ? (
-                                <>
-                                    <Sparkles className="mr-2 h-4 w-4 animate-pulse" />
-                                    Analyzing...
-                                </>
-                            ) : (
-                                <>
-                                    <Search className="mr-2 h-4 w-4" />
-                                    Detect Trash & Activate
-                                </>
-                            )}
-                        </Button>
-                    </CardFooter>
                 </Card>
 
                 {(isPending || detectionResult !== null || aiError) && (
@@ -179,9 +155,9 @@ function PhotoPageComponent() {
                         </CardHeader>
                         <CardContent className="min-h-[100px] flex items-center justify-center">
                             {isPending ? (
-                                <div className="space-y-3 w-full">
-                                    <Skeleton className="h-8 w-1/2 mx-auto" />
-                                    <Skeleton className="h-4 w-3/4 mx-auto" />
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <Loader className="h-5 w-5 animate-spin" />
+                                    <span>Analyzing image...</span>
                                 </div>
                             ) : aiError ? (
                                 <div className="flex flex-col items-center justify-center text-center text-destructive-foreground bg-destructive/80 p-4 rounded-lg">
