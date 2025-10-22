@@ -29,6 +29,7 @@ export type AnalysisReport = z.infer<typeof AnalysisReportSchema>;
 
 const analysisPrompt = ai.definePrompt({
     name: 'deviceDataAnalyzer',
+    model: 'googleai/gemini-1.5-flash-latest',
     input: { schema: DeviceDataSchema },
     output: { schema: AnalysisReportSchema },
     prompt: `
