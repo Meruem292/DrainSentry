@@ -11,12 +11,18 @@ import { AlertTriangle, RefreshCw, Sparkles, Bot, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { detectTrashInImage } from "@/ai/flows/describe-image";
 import { Badge } from "@/components/ui/badge";
+import { useUser, useDatabase } from "@/firebase";
+import { ref, update } from "firebase/database";
+import { FirebaseClientProvider } from "@/firebase/client-provider";
 
-export default function PhotoPage() {
+function PhotoPageComponent() {
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { toast } = useToast();
+    const { user } = useUser();
+    const { database } = useDatabase();
+
 
     const [isPending, startTransition] = useTransition();
     const [detectionResult, setDetectionResult] = useState<boolean | null>(null);
@@ -74,18 +80,38 @@ export default function PhotoPage() {
             return;
         }
 
+        if (!user || !database) {
+            toast({
+                variant: 'destructive',
+                title: 'Authentication Error',
+                description: 'You must be logged in to perform this action.',
+            });
+            return;
+        }
+
         startTransition(async () => {
             setAiError(null);
             setDetectionResult(null);
             try {
                 const result = await detectTrashInImage({ imageUrl });
                 setDetectionResult(result.trashDetected);
+                
+                // Update Firebase based on detection result
+                const deviceRef = ref(database, `users/${user.uid}/devices/DS-001`);
+                await update(deviceRef, { manualConveyor: result.trashDetected });
+
+                toast({
+                    title: `Detection complete: Conveyor ${result.trashDetected ? 'Activated' : 'Deactivated'}`,
+                    description: `Trash was ${result.trashDetected ? '' : 'not '}detected.`,
+                });
+
+
             } catch (err: any) {
-                console.error('Failed to detect trash:', err);
-                setAiError('An error occurred while analyzing the image. Please try again.');
+                console.error('Failed to detect trash or update device:', err);
+                setAiError('An error occurred during the process. Please try again.');
                 toast({
                     variant: 'destructive',
-                    title: 'Analysis Failed',
+                    title: 'Process Failed',
                     description: err.message || 'An unknown error occurred.',
                 });
             }
@@ -136,7 +162,7 @@ export default function PhotoPage() {
                             ) : (
                                 <>
                                     <Search className="mr-2 h-4 w-4" />
-                                    Detect Trash
+                                    Detect Trash & Activate
                                 </>
                             )}
                         </Button>
@@ -177,5 +203,13 @@ export default function PhotoPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function PhotoPage() {
+    return (
+        <FirebaseClientProvider>
+            <PhotoPageComponent />
+        </FirebaseClientProvider>
     );
 }
