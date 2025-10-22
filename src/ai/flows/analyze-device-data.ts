@@ -1,6 +1,6 @@
 
 'use server';
-import { ai } from '@/ai/genkit';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { z } from 'zod';
 
 const DeviceDataSchema = z.object({
@@ -27,41 +27,35 @@ const AnalysisReportSchema = z.object({
 });
 export type AnalysisReport = z.infer<typeof AnalysisReportSchema>;
 
-const analysisPrompt = ai.definePrompt({
-    name: 'deviceDataAnalyzer',
-    model: 'gemini-2.5-pro',
-    input: { schema: DeviceDataSchema },
-    output: { schema: AnalysisReportSchema },
-    prompt: `
+const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+if (!apiKey) {
+    throw new Error("GEMINI_API_KEY is not set");
+}
+
+const genAI = new GoogleGenerativeAI(apiKey);
+
+function buildPrompt(deviceData: DeviceData) {
+    const waterHistory = deviceData.history?.water.map(d => `- Timestamp: ${d.timestamp}, Level: ${d.level}%`).join('\n') || 'No water level data reported.';
+    const wasteHistory = deviceData.history?.waste.map(d => `- Timestamp: ${d.timestamp}, Fullness: ${d.fullness}%, Weight: ${d.weight} kg`).join('\n') || 'No waste bin data reported.';
+
+    return `
         You are a senior data analyst for DrainSentry, a smart sanitation monitoring company.
         Your task is to provide a "Daily Health Report" for a monitoring device based on its recent sensor data.
 
         Device Information:
-        - Name: {{{name}}}
-        - Location: {{{location}}}
+        - Name: ${deviceData.name}
+        - Location: ${deviceData.location}
 
         Alerting Thresholds:
-        - Water Level > {{{thresholds.waterLevel}}}%
-        - Bin Fullness > {{{thresholds.binFullness}}}%
-        - Bin Weight > {{{thresholds.wasteWeight}}} kg
+        - Water Level > ${deviceData.thresholds?.waterLevel}%
+        - Bin Fullness > ${deviceData.thresholds?.binFullness}%
+        - Bin Weight > ${deviceData.thresholds?.wasteWeight} kg
 
         Recent Water Level History (last 24 hours):
-        {{#if history.water.length}}
-            {{#each history.water}}
-                - Timestamp: {{{this.timestamp}}}, Level: {{{this.level}}}%
-            {{/each}}
-        {{else}}
-            - No water level data reported.
-        {{/if}}
+        ${waterHistory}
 
         Recent Waste Bin History (last 24 hours):
-        {{#if history.waste.length}}
-            {{#each history.waste}}
-                - Timestamp: {{{this.timestamp}}}, Fullness: {{{this.fullness}}}%, Weight: {{{this.weight}}} kg
-            {{/each}}
-        {{else}}
-            - No waste bin data reported.
-        {{/if}}
+        ${wasteHistory}
 
         Instructions:
         1.  **Analyze the Data**: Carefully review the provided data logs against the thresholds.
@@ -70,27 +64,23 @@ const analysisPrompt = ai.definePrompt({
         4.  **Format as Markdown**: Structure your report using Markdown for readability (headings, lists, bold text).
         5.  **Provide Actionable Insights**: If issues are found, suggest a recommended action. If all is normal, state that clearly.
 
-        Generate the report for the 'report' field in the output.
-    `,
-});
+        Generate a Markdown report.
+    `;
+}
 
+export async function generateHealthReport(deviceData: DeviceData): Promise<AnalysisReport> {
+    try {
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+        const prompt = buildPrompt(deviceData);
+        
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
 
-const analyzeDeviceDataFlow = ai.defineFlow(
-  {
-    name: 'analyzeDeviceDataFlow',
-    inputSchema: DeviceDataSchema,
-    outputSchema: AnalysisReportSchema,
-  },
-  async (deviceData) => {
-    const { output } = await analysisPrompt(deviceData);
-    if (!output) {
-        throw new Error("Unable to generate analysis report.");
+        return { report: text };
+
+    } catch (error: any) {
+        console.error("Error generating health report:", error);
+        throw new Error(`Failed to generate report: ${error.message}`);
     }
-    return output;
-  }
-);
-
-
-export async function generateHealthReport(deviceData: DeviceData) {
-    return await analyzeDeviceDataFlow(deviceData);
 }
