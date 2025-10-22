@@ -9,7 +9,6 @@ import OverviewCards from "../../components/overview-cards";
 import WaterLevelChart from "../../components/water-level-chart";
 import MethaneLevelChart from "../../components/methane-level-chart";
 import WasteBinStatus from "../../components/waste-bin-status";
-import InteractiveMap from "../../components/interactive-map";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Calendar as CalendarIcon, Droplet, Trash2, Weight, Info, AlertTriangle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,6 +27,7 @@ import { addDays, format, startOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
+import DeviceHealthReport from "../../components/device-health-report";
 
 
 const parseTimestamp = (timestamp: string): Date => {
@@ -260,7 +260,7 @@ export default function DeviceDetailsPage() {
       </div>
       <div className="grid gap-8 lg:grid-cols-2">
         <WasteBinStatus device={device} loading={loading} />
-        <InteractiveMap device={device} />
+        <DeviceHealthReport device={device} filteredHistory={filteredHistory} />
       </div>
 
        <div>
