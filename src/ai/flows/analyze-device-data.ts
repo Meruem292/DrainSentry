@@ -70,7 +70,7 @@ function buildPrompt(deviceData: DeviceData) {
 
 export async function generateHealthReport(deviceData: DeviceData): Promise<AnalysisReport> {
     try {
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         const prompt = buildPrompt(deviceData);
         
         const result = await model.generateContent(prompt);
