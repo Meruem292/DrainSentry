@@ -10,17 +10,19 @@ import { AlertTriangle, RefreshCw, Sparkles, Bot, Search, Loader } from "lucide-
 import { useToast } from "@/hooks/use-toast";
 import { detectTrashInImage } from "@/ai/flows/describe-image";
 import { Badge } from "@/components/ui/badge";
-import { useUser, useDatabase } from "@/firebase";
+import { initializeFirebase } from "@/firebase";
 import { ref, update } from "firebase/database";
-import { FirebaseClientProvider } from "@/firebase/client-provider";
+
+// Hardcoded user ID and device ID for the public endpoint
+const SYSTEM_USER_ID = "OpbukfATHoX0LTgeJuNhuqi1gAF3";
+const DEVICE_ID = "DS-001";
 
 function PhotoPageComponent() {
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { toast } = useToast();
-    const { user } = useUser();
-    const { database } = useDatabase();
+    const { database } = initializeFirebase();
 
     const [isPending, startTransition] = useTransition();
     const [detectionResult, setDetectionResult] = useState<boolean | null>(null);
@@ -65,16 +67,7 @@ function PhotoPageComponent() {
     };
     
     const handleDetectTrash = () => {
-        if (!imageUrl) return;
-
-        if (!user || !database) {
-            toast({
-                variant: 'destructive',
-                title: 'Authentication Error',
-                description: 'You must be logged in to perform this action.',
-            });
-            return;
-        }
+        if (!imageUrl || !database) return;
 
         startTransition(async () => {
             setAiError(null);
@@ -83,7 +76,7 @@ function PhotoPageComponent() {
                 const result = await detectTrashInImage({ imageUrl });
                 setDetectionResult(result.trashDetected);
                 
-                const deviceRef = ref(database, `users/${user.uid}/devices/DS-001`);
+                const deviceRef = ref(database, `users/${SYSTEM_USER_ID}/devices/${DEVICE_ID}`);
                 await update(deviceRef, { manualConveyor: result.trashDetected });
 
                 toast({
@@ -184,8 +177,6 @@ function PhotoPageComponent() {
 
 export default function PhotoPage() {
     return (
-        <FirebaseClientProvider>
-            <PhotoPageComponent />
-        </FirebaseClientProvider>
+        <PhotoPageComponent />
     );
 }
