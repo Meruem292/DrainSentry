@@ -23,6 +23,9 @@ const genAI = new GoogleGenerativeAI(apiKey);
 
 async function urlToGenerativePart(url: string, mimeType: string) {
     const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image from URL: ${response.statusText}`);
+    }
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     return {
@@ -41,7 +44,7 @@ export async function detectTrashInImage(input: DetectTrashInput): Promise<Trash
         You are an AI assistant for a smart sanitation system. Your task is to detect trash in the provided image.
         - Analyze the image to identify any form of trash, such as plastic bags, cans, bottles, tires, or other debris.
         - It is crucial that you IGNORE the conveyor belt machinery itself, which might appear in the photo. Do not classify parts of the conveyor as trash.
-        - Based on your analysis, respond with a simple "Yes" if any trash is detected, or "No" if no trash is found.
+        - Based on your analysis, respond with a simple "Yes" if any trash is detected, or "No" if no trash is found. Your response must be ONLY "Yes" or "No".
     `;
     
     // Assuming JPEG images. 
