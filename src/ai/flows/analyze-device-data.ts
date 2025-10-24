@@ -36,7 +36,7 @@ const genAI = new GoogleGenerativeAI(apiKey);
 
 function buildPrompt(deviceData: DeviceData) {
     const waterHistory = deviceData.history?.water.map(d => `- Timestamp: ${d.timestamp}, Level: ${d.level}%`).join('\n') || 'No water level data reported.';
-    const wasteHistory = deviceData.history?.waste.map(d => `- Timestamp: ${d.timestamp}, Fullness: ${d.fullness}%, Weight: ${d.weight} kg`).join('\n') || 'No waste bin data reported.';
+    const wasteHistory = deviceData.history?.waste.map(d => `- Timestamp: ${d.timestamp}, Fullness: ${d.filled}%, Weight: ${d.weight} kg`).join('\n') || 'No waste bin data reported.';
 
     return `
         You are a senior data analyst for DrainSentry, a smart sanitation monitoring company.

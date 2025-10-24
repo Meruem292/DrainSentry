@@ -30,10 +30,10 @@ export default function DeviceOverviewCard({ device }: { device: any }) {
         if (device?.wasteBinHistory) {
             const sortedWaste = Object.values(device.wasteBinHistory).sort((a: any, b: any) => parseTimestamp(b.timestamp).getTime() - parseTimestamp(a.timestamp).getTime());
             if (sortedWaste.length > 0) {
-                binFullness = sortedWaste[0].fullness;
+                binFullness = sortedWaste[0].filled;
                 binWeight = sortedWaste[0].weight;
                 
-                const emptiedEntry = sortedWaste.find((entry: any) => entry.fullness < 10);
+                const emptiedEntry = sortedWaste.find((entry: any) => entry.filled < 10);
                 if (emptiedEntry) {
                     lastEmptied = parseTimestamp(emptiedEntry.timestamp).toLocaleDateString();
                 }

@@ -52,7 +52,7 @@ export default function DeviceRow({ device, onEdit }: { device: any, onEdit: (de
         if (device.wasteBinHistory) {
             const sorted = Object.values(device.wasteBinHistory).sort((a: any, b: any) => parseTimestamp(b.timestamp).getTime() - parseTimestamp(a.timestamp).getTime());
             if (sorted.length > 0) {
-                binFullness = sorted[0].fullness;
+                binFullness = sorted[0].filled;
                 binWeight = sorted[0].weight;
                 allTimestamps.push(parseTimestamp(sorted[0].timestamp));
             }

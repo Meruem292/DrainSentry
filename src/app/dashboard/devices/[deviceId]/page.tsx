@@ -100,7 +100,7 @@ const DeviceHistoryTable = ({ history, type, loading, thresholds, setDate }: { h
                     <TableBody>
                         {paginatedHistory.map((entry: any, index) => {
                             const isWaste = type === 'fullness' || type === 'weight';
-                            const value = isWaste ? entry.fullness : entry.level;
+                            const value = isWaste ? entry.filled : entry.level;
                             const threshold = isWaste ? thresholds?.binFullness || 80 : thresholds?.waterLevel || 80;
                             const weightValue = type === 'weight' ? entry.weight : (isWaste ? entry.weight : 0);
                             const weightThreshold = thresholds?.wasteWeight || 30;
@@ -119,7 +119,7 @@ const DeviceHistoryTable = ({ history, type, loading, thresholds, setDate }: { h
                             <TableRow key={index}>
                                 <TableCell className={cn(rowStatusClass, 'font-semibold')}>{parseTimestamp(entry.timestamp).toLocaleString()}</TableCell>
                                 {type === 'water' && <TableCell className={cn("text-right", getValueClass(entry.level, thresholds?.waterLevel || 80))}>{entry.level}</TableCell>}
-                                {type === 'fullness' && <TableCell className={cn("text-right", getValueClass(entry.fullness, thresholds?.binFullness || 80))}>{entry.fullness ?? 'N/A'}</TableCell>}
+                                {type === 'fullness' && <TableCell className={cn("text-right", getValueClass(entry.filled, thresholds?.binFullness || 80))}>{entry.filled ?? 'N/A'}</TableCell>}
                                 {type === 'weight' && <TableCell className={cn("text-right", getValueClass(entry.weight, thresholds?.wasteWeight || 30))}>{entry.weight ?? 'N/A'}</TableCell>}
                             </TableRow>
                             );

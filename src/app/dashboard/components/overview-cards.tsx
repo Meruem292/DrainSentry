@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from "react";
@@ -37,7 +38,7 @@ export default function OverviewCards({ device, loading }: { device: any, loadin
             const wasteHistory = Object.values(device.wasteBinHistory).sort((a: any, b: any) => parseTimestamp(b.timestamp).getTime() - parseTimestamp(a.timestamp).getTime());
             if (wasteHistory.length > 0) {
                 const latestBinState = wasteHistory[0];
-                latestBinFullness = latestBinState.fullness;
+                latestBinFullness = latestBinState.filled;
                 latestWasteWeight = latestBinState.weight;
             }
         }

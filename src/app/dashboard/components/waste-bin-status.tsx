@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +29,7 @@ export default function WasteBinStatus({ device, loading }: { device: any, loadi
     return {
         id: device.id,
         location: device.location,
-        fullness: latestEntry ? latestEntry.fullness : 0,
+        fullness: latestEntry ? latestEntry.filled : 0,
     };
   }, [device]);
 

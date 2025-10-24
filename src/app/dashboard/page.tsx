@@ -59,7 +59,7 @@ export default function DashboardPage() {
 
       if (device.wasteBinHistory) {
         const latestWaste = Object.values(device.wasteBinHistory).sort((a: any, b: any) => parseTimestamp(b.timestamp).getTime() - parseTimestamp(a.timestamp).getTime())[0];
-        if (latestWaste && latestWaste.fullness >= binThreshold) {
+        if (latestWaste && latestWaste.filled >= binThreshold) {
           criticalWaste++;
           if (!firstCriticalWasteDevice) firstCriticalWasteDevice = device.key;
         }
@@ -219,5 +219,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
